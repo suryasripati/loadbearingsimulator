@@ -5,3 +5,5 @@ node_modules/
 # Personal snapshot exports (may contain allocations). Keep these out of the repo.
 exports/
 *.snapshot.json
+# Uncited calibration material (personal notes, unsourced figures). Only cited, public-source material is committed.
+calibration/private/
