@@ -14,7 +14,7 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 
 ## Commands
 
-- `npm test` runs `node --test` (Node 18 or newer, no dependencies)
+- `npm test` runs `node --test`: model tests and a jsdom UI smoke test against `docs/index.html` (build first). Node 22.22+ or 24.15+. jsdom is a pinned devDependency (test only; the page stays dependency-free).
 - `npm run build` writes `docs/index.html` (self-contained; serve from GitHub Pages using the `/docs` folder)
 
 ## Layout
@@ -25,6 +25,7 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 - `src/template.html` markup and CSS with `/*MODEL*/` and `/*APP*/` placeholders.
 - `scripts/build.js` assembles the page.
 - `test/model.test.js` property tests plus a regression test against `test/fixtures/v0_1_defaults.json`.
+- `test/smoke.test.js` jsdom smoke test of the built page (selection, default verdicts, lead/lag note, Reset). No layout: label overlap and clipping need a real-browser check.
 
 Keep the model pure and testable. Keep the page dependency-free. If a library is ever needed, ask first.
 

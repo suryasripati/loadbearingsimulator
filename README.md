@@ -26,12 +26,15 @@ Open `docs/index.html` in a browser. No server needed.
 
 ## Develop
 
-Requires Node 18 or newer. No dependencies.
+Requires Node 22.22 or 24.15 or newer (the test runner's jsdom needs it). The page itself has no dependencies; `jsdom` is a pinned dev dependency used only by the UI smoke test.
 
 ```
-npm test        # model tests
+npm install     # once, installs jsdom for the smoke test
 npm run build   # assembles docs/index.html from src/
+npm test        # model tests plus a UI smoke test against docs/index.html
 ```
+
+The smoke test checks that the page loads without errors, that every way of choosing a layer works, the default verdicts, the lead/lag note and Reset. jsdom has no layout, so label overlap and clipping on the charts still need a check in a real browser.
 
 Edit files in `src/`, then rebuild. Do not edit `docs/index.html` by hand.
 
