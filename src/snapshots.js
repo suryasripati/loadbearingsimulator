@@ -6,7 +6,9 @@
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 1;
+const SNAP_SCHEMA_VERSION = 2;
+// Schema 1 (no answer date on kill criteria) is still read: answeredAt is filled in as blank.
+const SNAP_SCHEMA_READABLE = [1, 2];
 const SNAP_MAX_BYTES = 1024 * 1024;
 const SNAP_MAX_COUNT = 50; // per file, and in total in this browser
 const SNAP_TEXT_MAX = { name: 120, note: 5000, text: 2000, metric: 120 };
@@ -30,7 +32,7 @@ function snapDeps(){
 }
 
 function snapBlankKill(){
-  return snapDeps().DEFAULT_LAYERS.map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '' }));
+  return snapDeps().DEFAULT_LAYERS.map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
 }
 const snapFinite = (v) => typeof v === 'number' && isFinite(v) ? v : null;
 
@@ -58,7 +60,8 @@ function snapInputs(G, layers){
   return { G: g, layers: ls };
 }
 function snapKillCopy(k){
-  return { id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: k.status };
+  return { id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: k.status,
+    answeredAt: k.answeredAt || '' };
 }
 function makeSnapshot(opts){
   const inputs = snapInputs(opts.G, opts.layers);
@@ -148,7 +151,8 @@ function snapDay(v, where){
   return v;
 }
 function snapSchema(v, where){
-  if (v !== SNAP_SCHEMA_VERSION) snapErr(where, 'schema version ' + String(v).slice(0, 20) + ' is not compatible (this page reads schema version ' + SNAP_SCHEMA_VERSION + ')');
+  if (SNAP_SCHEMA_READABLE.indexOf(v) < 0) snapErr(where, 'schema version ' + String(v).slice(0, 20) + ' is not compatible (this page reads schema versions ' + SNAP_SCHEMA_READABLE.join(' and ') + ')');
+  return v;
 }
 function snapCheckFile(data, opts){
   if (!snapIsObj(data)) snapErr('File', 'expected an object');
@@ -166,7 +170,7 @@ function snapCheckFile(data, opts){
 function snapCheckOne(s, where, withAlloc){
   const d = snapDeps(), ids = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
-  snapSchema(s.schemaVersion, where);
+  const schema = snapSchema(s.schemaVersion, where);
   snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
   if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
   snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'], [], where);
@@ -218,19 +222,35 @@ function snapCheckOne(s, where, withAlloc){
   if (!Array.isArray(s.kill) || s.kill.length !== ids.length) snapErr(where + ' kill criteria', 'expected ' + ids.length + ' layers');
   s.kill.forEach((k, i) => {
     const w = where + ' kill criteria ' + (i + 1);
-    snapKeys(k, ['id', 'text', 'metric', 'direction', 'threshold', 'reviewBy', 'status'], [], w);
+    snapKeys(k, ['id', 'text', 'metric', 'direction', 'threshold', 'reviewBy', 'status'].concat(schema >= 2 ? ['answeredAt'] : []), [], w);
     if (k.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
     out.kill.push({ id: ids[i], text: snapStr(k.text, SNAP_TEXT_MAX.text, w + ' text'), metric: snapStr(k.metric, SNAP_TEXT_MAX.metric, w + ' metric'),
       direction: snapOneOf(k.direction, SNAP_DIRECTIONS, w + ' direction'),
       threshold: k.threshold === null ? null : snapNum(k.threshold, [-1e12, 1e12], w + ' threshold'),
-      reviewBy: snapDay(k.reviewBy, w + ' reviewBy'), status: snapOneOf(k.status, SNAP_STATUS, w + ' status') });
+      reviewBy: snapDay(k.reviewBy, w + ' reviewBy'), status: snapOneOf(k.status, SNAP_STATUS, w + ' status'),
+      answeredAt: schema < 2 || k.answeredAt === '' ? '' : snapDate(k.answeredAt, w + ' answeredAt') });
   });
   return out;
 }
 
-// Overdue: a review-by date (a calendar date, no time) earlier than today's local calendar date, not yet answered.
-// Comparing local calendar dates as YYYY-MM-DD text means a time zone cannot flip the badge; created stays ISO UTC.
-function snapIsOverdue(k, today){ return !!k.reviewBy && k.status === '' && k.reviewBy < today; }
+// Criterion state at review time. Dates: review-by is a calendar date; answeredAt and created are ISO UTC and are
+// converted to the viewer's local calendar date before comparing, so a time zone cannot flip a badge.
+// - 'triggered': answered yes, until a later snapshot is saved or the criterion is reset.
+// - 'overdue': unanswered or "unknown", and the review-by date is before today.
+// - 'reviewed': answered no. Overdue again only if a next review-by date, later than the answer date, has passed.
+// - 'open': has a review-by date still to come, or no date.
+function snapCriterionState(k, today, laterSnapshotSaved){
+  const answeredDay = k.answeredAt ? snapTodayLocal(new Date(k.answeredAt)) : '';
+  if (k.status === 'yes') return laterSnapshotSaved ? { state: 'resolved', answeredDay } : { state: 'triggered', answeredDay };
+  if (k.status === 'no') {
+    const overdue = !!k.reviewBy && k.reviewBy > answeredDay && k.reviewBy < today;
+    return { state: overdue ? 'overdue' : 'reviewed', answeredDay };
+  }
+  return { state: k.reviewBy && k.reviewBy < today ? 'overdue' : 'open', answeredDay };
+}
+function snapIsOverdue(k, today){ return snapCriterionState(k, today, false).state === 'overdue'; }
+// Whether any snapshot in the list was saved after this criterion was answered (clears a "triggered" badge).
+function snapLaterSaved(k, list){ return !!k.answeredAt && list.some(s => s.created > k.answeredAt); }
 function snapTodayLocal(now){
   const d = now || new Date(), p = (n) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
@@ -276,4 +296,32 @@ function compareSnapshots(a, b){
     inputs: diffInputs(a.inputs, b.inputs), layers };
 }
 
-if (typeof module !== 'undefined') module.exports = { SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };
+// Load a snapshot into the simulator: validated through the same strict path as an import, then turned into page
+// state (inputs only; outputs are recomputed by the page). Allocations are restored only if the snapshot has them.
+// Kill criteria fill the next snapshot's form, without answers. Returns { ok, state, warning } or { ok: false, error }.
+function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
+  const d = snapDeps(), cur = currentModelVersion || d.MODEL_VERSION;
+  let checked;
+  try {
+    const wrapped = { format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: [snapshot] };
+    const r = importSnapshotsText(JSON.stringify(wrapped));
+    if (!r.ok) return { ok: false, error: r.error };
+    checked = r.snapshots[0];
+  } catch (e) { return { ok: false, error: 'the snapshot could not be read.' }; }
+  const g = checked.inputs.G;
+  const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
+  G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
+  const layers = currentLayers.map((L, i) => {
+    const src = checked.inputs.layers[i], out = Object.assign({}, L, { driftP: src.driftP.slice(), marginP: src.marginP.slice() });
+    SNAP_LAYER_NUM_KEYS.forEach(k => { out[k] = src[k]; });
+    if (typeof src.alloc === 'number') out.alloc = src.alloc;
+    return out;
+  });
+  const draftKill = checked.kill.map(k => ({ id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: '', answeredAt: '' }));
+  const warning = checked.modelVersion !== cur
+    ? 'This snapshot was saved under model version ' + checked.modelVersion + '; this page uses version ' + cur + '. Its inputs will load, and results will recompute under the current model, so they may differ from the stored ones.'
+    : '';
+  return { ok: true, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
+}
+
+if (typeof module !== 'undefined') module.exports = { snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };

@@ -50,7 +50,7 @@ test('export excludes allocations by default and includes them only when ticked'
 });
 
 test('import checks schema version (file and snapshot) and model version, and says which is incompatible', () => {
-  reject(mutate(f => { f.schemaVersion = 2; }), /File: schema version 2 is not compatible \(this page reads schema version 1\)/);
+  reject(mutate(f => { f.schemaVersion = 3; }), /File: schema version 3 is not compatible \(this page reads schema versions 1 and 2\)/);
   reject(mutate(f => { f.snapshots[0].schemaVersion = 9; }), /Snapshot 1: schema version 9 is not compatible/);
   reject(mutate(f => { f.snapshots[0].modelVersion = M.MODEL_VERSION + 1; }), new RegExp('Snapshot 1: model version ' + (M.MODEL_VERSION + 1) + ' is not compatible: it is newer than this page'));
   reject(mutate(f => { f.format = 'something-else'; }), /not a Load Bearing Simulator snapshot file/);
@@ -134,14 +134,105 @@ test('model-version mismatch is flagged, and both sides are recomputed under the
   assert.equal(S.compareSnapshots(a, b).versionMismatch, false);
 });
 
-test('overdue: past review-by date and not yet answered', () => {
-  const k = (reviewBy, status = '') => ({ reviewBy, status });
-  assert.equal(S.snapIsOverdue(k('2026-10-04'), '2026-10-05'), true);
-  assert.equal(S.snapIsOverdue(k('2026-10-05'), '2026-10-05'), false, 'due today is not overdue');
-  assert.equal(S.snapIsOverdue(k('2026-10-06'), '2026-10-05'), false);
-  assert.equal(S.snapIsOverdue(k(''), '2026-10-05'), false, 'no date, never overdue');
-  for (const st of ['yes', 'no', 'unknown']) assert.equal(S.snapIsOverdue(k('2026-01-01', st), '2026-10-05'), false, 'answered: ' + st);
-  assert.equal(S.snapTodayLocal(new Date(2026, 0, 9)), '2026-01-09');
+test('criterion states: overdue, reviewed (no), triggered (yes), resolved by a later snapshot, open', () => {
+  const k = (o) => ({ reviewBy: '', status: '', answeredAt: '', ...o });
+  const st = (o, today = '2026-10-05', later = false) => S.snapCriterionState(k(o), today, later).state;
+  // Unanswered or "unknown" past the review-by date: overdue. Due today is not overdue.
+  assert.equal(st({ reviewBy: '2026-10-04' }), 'overdue');
+  assert.equal(st({ reviewBy: '2026-10-04', status: 'unknown', answeredAt: '2026-10-01T09:00:00.000Z' }), 'overdue');
+  assert.equal(st({ reviewBy: '2026-10-05' }), 'open');
+  assert.equal(st({ reviewBy: '' }), 'open');
+  // "No" clears the badge; a next review-by date later than the answer makes it overdue again once passed.
+  assert.equal(st({ reviewBy: '2026-10-01', status: 'no', answeredAt: '2026-10-03T09:00:00.000Z' }), 'reviewed');
+  assert.equal(st({ reviewBy: '2026-10-04', status: 'no', answeredAt: '2026-10-03T09:00:00.000Z' }), 'overdue');
+  assert.equal(st({ reviewBy: '2026-10-09', status: 'no', answeredAt: '2026-10-03T09:00:00.000Z' }), 'reviewed');
+  // "Yes": triggered until a later snapshot is saved (or the criterion is reset to blank).
+  assert.equal(st({ reviewBy: '2026-01-01', status: 'yes', answeredAt: '2026-10-03T09:00:00.000Z' }), 'triggered');
+  assert.equal(st({ status: 'yes', answeredAt: '2026-10-03T09:00:00.000Z' }, '2026-10-05', true), 'resolved');
+  assert.equal(S.snapIsOverdue(k({ reviewBy: '2026-01-01', status: 'yes', answeredAt: '2026-10-03T09:00:00.000Z' }), '2026-10-05'), false);
+  // A later snapshot means one created after the answer.
+  const crit = { answeredAt: '2026-10-03T09:00:00.000Z' };
+  assert.equal(S.snapLaterSaved(crit, [{ created: '2026-10-02T09:00:00.000Z' }]), false);
+  assert.equal(S.snapLaterSaved(crit, [{ created: '2026-10-03T09:00:01.000Z' }]), true);
+  assert.equal(S.snapLaterSaved({ answeredAt: '' }, [{ created: '2030-01-01T00:00:00.000Z' }]), false);
+});
+
+test('criterion states: time zones use local calendar dates for both today and the answer date', () => {
+  const saved = process.env.TZ;
+  try {
+    // Answered at 23:30 UTC on 4 October: still 4 October in Los Angeles, already 5 October in Auckland.
+    const answer = { reviewBy: '2026-10-05', status: 'no', answeredAt: '2026-10-04T23:30:00.000Z' };
+    process.env.TZ = 'America/Los_Angeles';
+    assert.equal(S.snapTodayLocal(new Date('2026-10-04T23:30:00.000Z')), '2026-10-04');
+    assert.equal(S.snapCriterionState(answer, '2026-10-06', false).state, 'overdue', 'LA: next review (5 Oct) is after the answer day (4 Oct) and has passed');
+    assert.equal(S.snapCriterionState(answer, '2026-10-05', false).state, 'reviewed', 'LA: due today is not overdue');
+    process.env.TZ = 'Pacific/Auckland';
+    assert.equal(S.snapTodayLocal(new Date('2026-10-04T23:30:00.000Z')), '2026-10-05');
+    assert.equal(S.snapCriterionState(answer, '2026-10-06', false).state, 'reviewed', 'Auckland: answered on 5 Oct, so a 5 Oct review date is already met');
+    // A late-evening local time keeps the local date, whatever the UTC date is.
+    process.env.TZ = 'America/Los_Angeles';
+    const lateLocal = new Date(2026, 9, 4, 23, 30);
+    assert.equal(lateLocal.toISOString().slice(0, 10), '2026-10-05', 'UTC has already moved on');
+    assert.equal(S.snapTodayLocal(lateLocal), '2026-10-04');
+    assert.equal(S.snapIsOverdue({ reviewBy: '2026-10-04', status: '', answeredAt: '' }, S.snapTodayLocal(lateLocal)), false);
+  } finally {
+    if (saved === undefined) delete process.env.TZ; else process.env.TZ = saved;
+  }
+});
+
+test('schema 1 files (no answer date) still import, with a blank answer date', () => {
+  const f = JSON.parse(fileOf([snap()]));
+  f.schemaVersion = 1; f.snapshots[0].schemaVersion = 1;
+  f.snapshots[0].kill.forEach(k => { delete k.answeredAt; });
+  const r = S.importSnapshotsText(JSON.stringify(f));
+  assert.equal(r.ok, true, r.error);
+  assert.ok(r.snapshots[0].kill.every(k => k.answeredAt === ''));
+  assert.equal(r.snapshots[0].schemaVersion, S.SNAP_SCHEMA_VERSION, 'stored in the current schema');
+  // In schema 2 the answer date is required and must be ISO UTC.
+  reject(mutate(f2 => { delete f2.snapshots[0].kill[0].answeredAt; }), /missing field "answeredAt"/);
+  reject(mutate(f2 => { f2.snapshots[0].kill[0].answeredAt = '2026-10-05'; }), /answeredAt: expected an ISO date and time in UTC/);
+});
+
+test('load into simulator: loading then saving reproduces the inputs', () => {
+  const G = baseG(); G.disc = 12.5; G.entryDef = 'B'; G.capexModel = 'vintage'; G.phases = [3, 11];
+  const layers = baseLayers(); layers.forEach((L, i) => { L.offset = D.LEAD_LAG_EXAMPLE[i]; L.unitCostDecline = D.UCD_EXAMPLE[i]; L.alloc = 10 + i; });
+  layers[2].driftP = [-1, -4, -6];
+  const original = S.makeSnapshot({ name: 'Then', G, layers, now: NOW,
+    kill: S.snapBlankKill().map(k => ({ ...k, text: 'revise ' + k.id, reviewBy: '2027-01-31', status: 'yes', answeredAt: '2026-10-01T00:00:00.000Z' })) });
+  const plan = S.snapPrepareLoad(original, baseLayers());
+  assert.equal(plan.ok, true, plan.error);
+  assert.equal(plan.warning, '');
+  const again = S.makeSnapshot({ name: 'Again', G: plan.state.G, layers: plan.state.layers, kill: plan.state.draftKill, now: NOW });
+  assert.deepEqual(again.inputs, original.inputs, 'inputs round trip exactly, allocations included');
+  assert.deepEqual(again.outputs, original.outputs, 'outputs recompute to the same values');
+  // The form gets the criteria but not the answers.
+  plan.state.draftKill.forEach(k => { assert.match(k.text, /^revise /); assert.equal(k.status, ''); assert.equal(k.answeredAt, ''); });
+});
+
+test('load into simulator: allocations are restored only if the snapshot has them', () => {
+  const s = S.importSnapshotsText(fileOf([snap()])).snapshots[0]; // exported without allocations
+  const current = baseLayers().map((L, i) => ({ ...L, alloc: 70 + i }));
+  const plan = S.snapPrepareLoad(s, current);
+  assert.equal(plan.ok, true, plan.error);
+  assert.equal(plan.hasAllocations, false);
+  plan.state.layers.forEach((L, i) => assert.equal(L.alloc, 70 + i, 'current allocations kept'));
+});
+
+test('load into simulator: a model-version mismatch warns that results will recompute', () => {
+  const s = snap();
+  const plan = S.snapPrepareLoad(s, baseLayers(), M.MODEL_VERSION + 1); // as if the page were one version newer
+  assert.equal(plan.ok, true, plan.error);
+  assert.match(plan.warning, new RegExp('saved under model version ' + M.MODEL_VERSION + '; this page uses version ' + (M.MODEL_VERSION + 1) + '.*results will recompute'));
+});
+
+test('load into simulator: a malformed snapshot is rejected with a reason and returns no state', () => {
+  const bad = JSON.parse(JSON.stringify(snap())); bad.inputs.G.disc = 99;
+  const plan = S.snapPrepareLoad(bad, baseLayers());
+  assert.equal(plan.ok, false);
+  assert.match(plan.error, /setting disc: value 99 is outside 5 to 20/);
+  assert.equal(plan.state, undefined);
+  const proto = JSON.parse(JSON.stringify(snap())); proto.inputs.layers[0] = JSON.parse('{"__proto__": {"x": 1}}');
+  assert.equal(S.snapPrepareLoad(proto, baseLayers()).ok, false);
 });
 
 test('fragility direction: a synthetic case forces "mixed", and counts add up to the flips', () => {

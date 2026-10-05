@@ -578,7 +578,7 @@ function snapCleanKill(k, i){
     direction: ['above','below'].indexOf(k && k.direction) >= 0 ? k.direction : '',
     threshold: k && typeof k.threshold === 'number' && isFinite(k.threshold) ? k.threshold : null,
     reviewBy: k && /^\d{4}-\d{2}-\d{2}$/.test(k.reviewBy) ? k.reviewBy : '',
-    status: ['yes','no','unknown'].indexOf(k && k.status) >= 0 ? k.status : '' };
+    status: '', answeredAt: '' }; // the draft is for the next snapshot, so it carries no answers
 }
 function snapBuildKillTable(){
   const t = $('killTable'); t.textContent = '';
@@ -602,7 +602,9 @@ function snapDraft(i, field, e){
   snapSaveStore();
 }
 const snapWhen = (iso) => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); };
-const snapOverdueCount = (s, today) => s.kill.filter(k => snapIsOverdue(k, today)).length;
+const snapStateOf = (k, today) => snapCriterionState(k, today, snapLaterSaved(k, snapStore.snapshots));
+const snapCount = (s, today, state) => s.kill.filter(k => snapStateOf(k, today).state === state).length;
+const snapShowDay = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}); };
 function snapRenderList(){
   const t = $('snapList'); t.textContent = '';
   const list = snapStore.snapshots, today = snapTodayLocal();
@@ -611,14 +613,17 @@ function snapRenderList(){
     t.appendChild(el('thead', null, [el('tr', null, ['Name','Saved','Model version','Kill criteria',''].map((h,i) => el('th', {cls: i<2||i===3 ? 'l' : ''}, [h])))]));
     const tb = el('tbody');
     list.forEach((s,i) => {
-      const set = s.kill.filter(k => k.text || k.metric || k.reviewBy).length, od = snapOverdueCount(s, today);
-      const crit = el('td', {cls:'l'}, [set ? set+' of '+s.kill.length+' layers' : 'none', od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null]);
+      const set = s.kill.filter(k => k.text || k.metric || k.reviewBy).length, od = snapCount(s, today, 'overdue'), tr = snapCount(s, today, 'triggered');
+      const crit = el('td', {cls:'l'}, [set ? set+' of '+s.kill.length+' layers' : 'none',
+        tr ? el('span', {cls:'badge trig', text: 'triggered ('+tr+')'}) : null, od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null]);
       const review = el('button', {'data-snap':'review', 'aria-expanded': String(snapOpen===i)}, [snapOpen===i ? 'Close' : 'Review']);
       review.addEventListener('click', () => { snapOpen = snapOpen===i ? -1 : i; snapRenderList(); });
       const del = el('button', {cls:'reset', 'data-snap':'delete'}, ['Delete']);
       del.addEventListener('click', () => snapDelete(i));
+      const ld = el('button', {'data-snap':'load'}, ['Load into simulator']);
+      ld.addEventListener('click', () => snapLoadInto(i));
       tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.name}), el('td', {cls:'l', text: snapWhen(s.created)}),
-        el('td', {text: 'v'+s.modelVersion + (s.modelVersion!==MODEL_VERSION ? ' (current v'+MODEL_VERSION+')' : '')}), crit, el('td', null, [review, ' ', del])]));
+        el('td', {text: 'v'+s.modelVersion + (s.modelVersion!==MODEL_VERSION ? ' (current v'+MODEL_VERSION+')' : '')}), crit, el('td', null, [review, ' ', ld, ' ', del])]));
     });
     t.appendChild(tb);
   }
@@ -631,15 +636,32 @@ function snapRenderReview(){
   box.appendChild(el('div', {cls:'snapbox'}, [el('h3', {text: 'Review: ' + s.name}), el('p', {cls:'muted', text: 'Saved ' + snapWhen(s.created) + ' under model version ' + s.modelVersion + '.'}),
     el('p', {cls:'pre', text: s.note || '(no note)'})]));
   const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
-  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?'].map((h,i) => el('th', {cls: i<3 ? 'l' : ''}, [h])))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, [h])))]));
   const tb = el('tbody');
   s.kill.forEach((k,i) => {
     const trig = k.metric ? k.metric + (k.direction ? ' ' + k.direction + ' ' : ' ') + (k.threshold===null ? '' : k.threshold) : '—';
     const st = el('select', {cls:'txt', 'aria-label': layers[i].name+': criterion met?'}, [['','not reviewed'],['yes','yes'],['no','no'],['unknown','unknown']].map(o => el('option', {value:o[0]}, [o[1]])));
     st.value = k.status;
-    st.addEventListener('change', () => { k.status = st.value; snapSaveStore(); snapRenderList(); });
+    // Answering records the date and time (ISO UTC); clearing the answer clears the date.
+    st.addEventListener('change', () => { k.status = st.value; k.answeredAt = st.value ? new Date().toISOString() : ''; snapSaveStore(); snapRenderList(); });
+    const cs = snapStateOf(k, today), stateCell = el('td', {cls:'l'});
+    if(cs.state==='triggered') stateCell.appendChild(el('span', {cls:'badge trig', text:'Triggered: revise this layer'}));
+    if(cs.state==='resolved') stateCell.appendChild(el('span', {cls:'muted', text:'Triggered on ' + snapShowDay(k.answeredAt) + '; a later snapshot has been saved.'}));
+    if(cs.state==='overdue') stateCell.appendChild(el('span', {cls:'badge', text:'overdue'}));
+    if(k.status==='no'){
+      stateCell.appendChild(el('span', {cls:'muted', text: 'Last reviewed on ' + snapShowDay(k.answeredAt) + '. Next review by (optional): '}));
+      const nx = el('input', {type:'date', cls:'txt', 'aria-label': layers[i].name+': next review by'});
+      nx.value = k.reviewBy > cs.answeredDay ? k.reviewBy : '';
+      nx.addEventListener('change', () => { k.reviewBy = /^\d{4}-\d{2}-\d{2}$/.test(nx.value) ? nx.value : ''; snapSaveStore(); snapRenderList(); });
+      stateCell.appendChild(nx);
+    }
+    if(k.status){
+      const rs = el('button', {cls:'reset', 'data-snap':'reset-criterion'}, ['Reset']);
+      rs.addEventListener('click', () => { k.status = ''; k.answeredAt = ''; snapSaveStore(); snapRenderList(); });
+      stateCell.appendChild(document.createTextNode(' ')); stateCell.appendChild(rs);
+    }
     tb.appendChild(el('tr', null, [el('td', {text: layers[i].name}), el('td', {cls:'l pre', text: k.text || '—'}), el('td', {cls:'l', text: trig}),
-      el('td', null, [k.reviewBy || '—', snapIsOverdue(k, today) ? el('span', {cls:'badge', text:'overdue'}) : null]), el('td', null, [st])]));
+      el('td', {text: k.reviewBy || '—'}), el('td', null, [st]), stateCell]));
   });
   t.appendChild(tb);
   box.firstChild.appendChild(el('div', {cls:'scroll'}, [t]));
@@ -663,6 +685,33 @@ function snapSaveNew(){
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
   else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
   snapRenderList();
+}
+// One-step undo for "Load into simulator": the settings, layers, selection and kill-criteria draft just before it.
+let snapUndo = null;
+function snapPageState(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)) }; }
+function snapApplyState(st){
+  G = Object.assign(freshG(), st.G); layers = st.layers.map(copyLayer);
+  if(typeof st.sel === 'number') sel = st.sel;
+  snapStore.draftKill = st.draftKill.map(k => Object.assign({}, k));
+  syncDriverInputs(); buildInputs(); update(); snapBuildKillTable(); snapSaveStore();
+}
+function snapLoadInto(i){
+  const s = snapStore.snapshots[i]; if(!s) return;
+  const plan = snapPrepareLoad(s, layers);
+  if(!plan.ok){ $('snapMsg').textContent = 'Not loaded: ' + plan.error; return; }
+  const ask = 'Load “' + s.name + '” into the simulator? Your current settings will be replaced (you can undo once).'
+    + (plan.warning ? '\n\n' + plan.warning : '') + (plan.hasAllocations ? '' : '\n\nThis snapshot has no allocations, so your current allocations stay.');
+  if(!window.confirm(ask)) return;
+  snapUndo = snapPageState();
+  snapApplyState(Object.assign({ sel: sel }, plan.state));
+  $('snapMsg').textContent = 'Loaded “' + s.name + '”. Results are recomputed from its inputs.' + (plan.warning ? ' ' + plan.warning : '');
+  $('snapUndo').hidden = false;
+}
+function snapUndoLoad(){
+  if(!snapUndo) return;
+  snapApplyState(snapUndo); snapUndo = null;
+  $('snapUndo').hidden = true;
+  $('snapMsg').textContent = 'Load undone: your previous settings are back.';
 }
 function snapDelete(i){
   const s = snapStore.snapshots[i]; if(!s) return;
@@ -740,6 +789,7 @@ function snapImportFile(file){
 function snapInit(){
   snapLoad(); snapBuildKillTable(); snapRenderList();
   $('snapSave').addEventListener('click', snapSaveNew);
+  $('snapUndo').addEventListener('click', snapUndoLoad);
   $('cmpGo').addEventListener('click', snapRenderCompare);
   $('snapExport').addEventListener('click', snapExport);
   $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });

@@ -275,6 +275,11 @@ test('build inlines every source file in order and strips their export lines', (
     assert.ok(html.includes(body), f + ' is inlined unchanged apart from its export line');
   }
   assert.ok(html.includes(read('src/app.js')), 'src/app.js is inlined');
+  // All files share one script scope, so a top-level name declared twice would break the whole page.
+  const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
+  const names = [...js.matchAll(/^(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
+  const dup = names.filter((n, i) => names.indexOf(n) !== i);
+  assert.deepEqual(dup, [], 'top-level names declared more than once: ' + dup.join(', '));
 });
 
 test('existing saved settings still load (v3, v2 and v1 keys)', () => {
@@ -423,6 +428,100 @@ test('snapshots: a browser that refuses to store shows a message and keeps the p
   click(win, doc.getElementById('snapSave'));
   assert.ok(/refused to store more/.test(doc.getElementById('snapMsg').textContent), doc.getElementById('snapMsg').textContent);
   assert.ok(/No snapshots yet/.test(doc.getElementById('snapList').textContent), 'nothing half-saved');
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('snapshots: review states in the page (no shows last reviewed and a next date; yes triggers until a new snapshot; reset clears)', () => {
+  const { doc, win, errors } = load();
+  const kt = () => doc.querySelectorAll('#killTable tbody tr');
+  setVal(win, kt()[0].querySelectorAll('input')[0], 'Revise chips if utilisation falls');
+  setVal(win, kt()[1].querySelectorAll('input')[3], '2020-01-01'); // already past
+  setVal(win, doc.getElementById('snapName'), 'Then');
+  click(win, doc.getElementById('snapSave'));
+  const row = () => doc.querySelectorAll('#snapList tbody tr')[0];
+  assert.ok(/overdue \(1\)/.test(row().textContent));
+  click(win, row().querySelector('[data-snap="review"]'));
+  const sel = (i) => doc.querySelectorAll('#snapReview select')[i];
+  const state = (i) => doc.querySelectorAll('#snapReview tbody tr')[i].lastChild;
+  // "unknown" stays overdue.
+  setVal(win, sel(1), 'unknown', 'change');
+  assert.ok(/overdue \(1\)/.test(row().textContent));
+  // "No" clears it, shows the review date and offers a next review-by date.
+  setVal(win, sel(1), 'no', 'change');
+  assert.ok(!/overdue/.test(row().textContent));
+  assert.ok(/Last reviewed on .+ Next review by \(optional\)/.test(state(1).textContent), state(1).textContent);
+  const stored = () => JSON.parse(win.localStorage.getItem('load-bearing-snapshots-v1')).snapshots[0].kill;
+  assert.match(stored()[1].answeredAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'answer date stored as ISO UTC');
+  setVal(win, state(1).querySelector('input[type="date"]'), '2099-12-31', 'change');
+  assert.equal(stored()[1].reviewBy, '2099-12-31');
+  // "Yes" shows the triggered badge, in the review and in the list.
+  setVal(win, sel(0), 'yes', 'change');
+  assert.ok(/Triggered: revise this layer/.test(state(0).textContent));
+  assert.ok(/triggered \(1\)/.test(row().textContent));
+  // Reset clears the answer and its date.
+  click(win, state(0).querySelector('[data-snap="reset-criterion"]'));
+  assert.equal(stored()[0].status, ''); assert.equal(stored()[0].answeredAt, '');
+  assert.ok(!/triggered/.test(row().textContent));
+  // Yes again, then saving a new snapshot resolves the trigger.
+  setVal(win, sel(0), 'yes', 'change');
+  assert.ok(/triggered \(1\)/.test(row().textContent));
+  const later = new win.Date(Date.now() + 2000);
+  const RealDate = win.Date;
+  win.Date = class extends RealDate { constructor(...a){ super(...(a.length ? a : [later.getTime()])); } static now(){ return later.getTime(); } };
+  setVal(win, doc.getElementById('snapName'), 'Now');
+  click(win, doc.getElementById('snapSave'));
+  win.Date = RealDate;
+  assert.ok(!/triggered/.test(doc.querySelectorAll('#snapList tbody tr')[0].textContent), 'trigger resolved by the later snapshot');
+  assert.ok(/a later snapshot has been saved/.test(doc.getElementById('snapReview').textContent));
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('snapshots: load into the simulator (confirm, recompute, undo), and a malformed snapshot changes nothing', () => {
+  const { doc, win, errors } = load();
+  const settings = () => JSON.parse(win.localStorage.getItem('load-bearing-sim-v3'));
+  // Save a snapshot of a distinctive state, with kill criteria.
+  click(win, doc.getElementById('leadlag'));
+  click(win, doc.querySelector('#capexSwitch [data-c="vintage"]'));
+  setVal(win, doc.getElementById('g_disc'), '12');
+  setVal(win, doc.querySelectorAll('#killTable tbody tr')[2].querySelectorAll('input')[0], 'Revise models if prices fall faster');
+  setVal(win, doc.getElementById('snapName'), 'Distinct');
+  click(win, doc.getElementById('snapSave'));
+  const saved = JSON.parse(win.localStorage.getItem('load-bearing-snapshots-v1')).snapshots[0];
+  // Move away from it.
+  click(win, doc.getElementById('reset'));
+  const before = settings();
+  assert.equal(before.G.disc, 10);
+  // Declining the confirmation changes nothing.
+  win.confirm = () => false;
+  click(win, doc.querySelector('#snapList [data-snap="load"]'));
+  assert.deepEqual(settings(), before);
+  // Accepting loads the inputs and recomputes.
+  let asked = '';
+  win.confirm = (m) => { asked = m; return true; };
+  click(win, doc.querySelector('#snapList [data-snap="load"]'));
+  assert.ok(/Load “Distinct” into the simulator\? Your current settings will be replaced \(you can undo once\)\./.test(asked), asked);
+  assert.ok(!/model version/.test(asked), 'no version warning when versions match');
+  assert.equal(doc.getElementById('g_disc').value, '12');
+  assert.equal(doc.querySelector('#capexSwitch [data-c="vintage"]').getAttribute('aria-pressed'), 'true');
+  const S = require('../src/snapshots.js');
+  const now = settings();
+  const resaved = S.makeSnapshot({ name: 'x', G: now.G, layers: now.layers });
+  assert.deepEqual(resaved.inputs, saved.inputs, 'loading then saving reproduces the inputs');
+  assert.deepEqual(verdicts(doc), saved.outputs.map(o => o.bin), 'results recomputed from the loaded inputs');
+  assert.equal(doc.querySelectorAll('#killTable tbody tr')[2].querySelectorAll('input')[0].value, 'Revise models if prices fall faster', 'kill criteria fill the form');
+  // Undo restores the previous state, once.
+  assert.equal(doc.getElementById('snapUndo').hidden, false);
+  click(win, doc.getElementById('snapUndo'));
+  assert.deepEqual(settings(), before);
+  assert.equal(doc.getElementById('g_disc').value, '10');
+  assert.equal(doc.getElementById('snapUndo').hidden, true);
+  // A malformed snapshot is rejected and changes nothing (tampered in memory after it was stored).
+  win.eval('snapStore.snapshots[0].inputs.G.disc = 99');
+  click(win, doc.querySelector('#snapList [data-snap="load"]'));
+  assert.ok(/Not loaded: .*setting disc: value 99 is outside 5 to 20/.test(doc.getElementById('snapMsg').textContent), doc.getElementById('snapMsg').textContent);
+  assert.deepEqual(settings(), before);
   assert.deepEqual(errors, []);
   win.close();
 });

@@ -1,6 +1,6 @@
 // Fixed canonical input set for the model-version fixture. Used by scripts/update-model-fixture.js and
 // test/model-version.test.js. Changing this file changes the fixture: regenerate it deliberately.
-const { runLayer } = require('../../src/model.js');
+const { runLayer, verdictFragility } = require('../../src/model.js');
 const D = require('../../src/defaults.js');
 
 function layerSets(){
@@ -25,8 +25,11 @@ function canonicalOutputs(){
   const res = {};
   for (const c of cases()) {
     res[c.key] = c.layers.map(L => {
-      const o = runLayer(L, c.G);
-      return { id: L.id, npv: num(o.npv), breakEven: num(o.breakEven), breakEvenM: num(o.breakEvenM), irr: num(o.irr),
+      const o = runLayer(L, c.G), f = verdictFragility(L, c.G);
+      return { id: L.id,
+        npvPassThrough0: num(runLayer({ ...L, passThrough: 0 }, c.G).npv), npvPassThrough1: num(runLayer({ ...L, passThrough: 1 }, c.G).npv),
+        fragility: { n: f.n, m: f.m, worse: f.worse, better: f.better, mixed: f.mixed,
+          shocks: f.results.map(r => [r.id, r.bin, num(r.npv), r.direction]) }, npv: num(o.npv), breakEven: num(o.breakEven), breakEvenM: num(o.breakEvenM), irr: num(o.irr),
         payback: o.payback, tv: num(o.tv), flags: o.flags, bin: o.bin, strandedPeakPct: num(o.strandedPeakPct),
         shortfall: num(o.shortfall), minDSCR: num(o.minDSCR), shareLeftPct: num(o.shareLeftPct) };
     });

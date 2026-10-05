@@ -106,6 +106,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 .badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--red-bg);color:var(--red);margin-left:6px}
 .pre{white-space:pre-wrap;word-break:break-word}
 .notice.strong{border-width:2px;font-weight:700}
+.badge.trig{background:var(--amber-bg);color:var(--amber)}
 .snapbox{margin-top:16px;border-top:1px solid var(--hair);padding-top:12px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
@@ -273,10 +274,10 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
         <div class="ctl"><label for="snapName">Name</label><input type="text" id="snapName" class="txt" maxlength="120" placeholder="e.g. Base view, October"></div>
         <div class="ctl"><label for="snapNote">Note</label><textarea id="snapNote" class="txt" maxlength="5000" rows="3" placeholder="What you believe and why"></textarea></div>
         <details id="killBox"><summary>Kill criteria: what would make me revise each layer</summary>
-          <p class="legend">Optional. A trigger is a metric, a direction and a threshold you will check yourself; nothing is fetched. A review-by date shows as overdue once it passes and the criterion is still unanswered.</p>
+          <p class="legend">Optional. A trigger is a metric, a direction and a threshold you will check yourself; nothing is fetched. At review time, mark each criterion. <b>Overdue</b>: unanswered or “unknown” after the review-by date. <b>No</b> clears the badge, records the review date and lets you set a next review-by date. <b>Yes</b> shows “Triggered: revise this layer” until you save a new snapshot or reset the criterion. Dates are compared as calendar dates where you are.</p>
           <div class="scroll"><table id="killTable" aria-label="Kill criteria for the next snapshot"></table></div>
         </details>
-        <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button></div>
+        <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button><button id="snapUndo" class="reset" hidden>Undo load</button></div>
         <p class="legend" id="snapMsg" role="status"></p>
       </div>
       <div>
