@@ -111,4 +111,56 @@ function heatmap(L, G, entries, prices){
   const key = G.entryDef === 'B' ? 'mult' : 'premium';
   return entries.map(e => prices.map(p => runLayer(L, Object.assign({}, G, { entry: e, [key]: p })).npv));
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, H };
+// Sensitivity of NPV to one-at-a-time shocks. Shock sizes differ by input: drift moves in points, timing offset
+// in years, the entry premium in points, everything else by 25%. Bars are not like-for-like across inputs.
+const OFFSET_SHOCK = 2;
+const withLayer = (L, f) => {
+  const c = Object.assign({}, L);
+  if (Array.isArray(L.driftP)) c.driftP = L.driftP.slice();
+  if (Array.isArray(L.marginP)) c.marginP = L.marginP.slice();
+  f(c); return c;
+};
+function sensItems(G){
+  const items = [
+    {id:'pool', n:'Value pool', lab:'±25%', g:(g,k)=>{ g.pool*=k; }, lo:0.75, hi:1.25},
+    {id:'share', n:'Layer share of pool', lab:'±25%', L:(L,k)=>{ L.share*=k; }, lo:0.75, hi:1.25},
+    {id:'margin', n:'Cash margin, all phases', lab:'±25%', L:(L,k)=>{ if (Array.isArray(L.marginP)) L.marginP = L.marginP.map(v => v*k); else L.margin*=k; }, lo:0.75, hi:1.25},
+    {id:'speed', n:'Adoption speed', lab:'±25%', g:(g,k)=>{ g.speed*=k; }, lo:1.25, hi:0.75},
+    {id:'mid', n:'Adoption midpoint', lab:'±25%', g:(g,k)=>{ g.mid*=k; }, lo:1.25, hi:0.75},
+    {id:'offset', n:'Layer timing offset', lab:'±'+OFFSET_SHOCK+' years', L:(L,k)=>{ L.offset=(L.offset||0)+k; }, lo:OFFSET_SHOCK, hi:-OFFSET_SHOCK},
+    {id:'steepness', n:'Layer curve steepness', lab:'±25%', L:(L,k)=>{ L.steepness=(L.steepness||1)*k; }, lo:0.75, hi:1.25},
+    {id:'drift', n:'Share drift, all phases', lab:'±3 points', L:(L,k)=>{ if (Array.isArray(L.driftP)) L.driftP = L.driftP.map(v => v+k); else L.drift+=k; }, lo:-3, hi:3},
+    {id:'capex', n:'Build capex', lab:'±25%', L:(L,k)=>{ L.capex*=k; }, lo:1.25, hi:0.75},
+    {id:'life', n:'Asset life', lab:'±25%', L:(L,k)=>{ L.life=Math.max(1,L.life*k); }, lo:0.75, hi:1.25},
+    {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
+    {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
+  ];
+  items.push(G.entryDef === 'B'
+    ? {id:'mult', n:'Entry multiple', lab:'±25%', g:(g,k)=>{ g.mult*=k; }, lo:1.25, hi:0.75}
+    : {id:'premium', n:'Entry premium', lab:'±25 points', g:(g,k)=>{ g.premium+=k; }, lo:25, hi:-25});
+  return items;
+}
+// Returns one bar per input, after merging inputs that are the same shift by construction:
+// - pool, share and margin all multiply operating cash, so +/-25% on each moves NPV identically;
+// - layer adoption depends on midpoint + offset only, so they merge when the midpoint shock equals the offset shock in years.
+function sensitivity(L, G){
+  const base = runLayer(L, G).npv;
+  const one = {};
+  for (const it of sensItems(G)){
+    const run = (k) => { const g = Object.assign({}, G); const l = withLayer(L, x => { if (it.L) it.L(x, k); }); if (it.g) it.g(g, k); return runLayer(l, g).npv; };
+    const a = run(it.lo), b = run(it.hi);
+    one[it.id] = {id:it.id, n:it.n, lab:it.lab, bad:Math.min(a,b), good:Math.max(a,b), swing:Math.abs(b-a)};
+  }
+  const rows = [];
+  rows.push(Object.assign({}, one.pool, {id:'scale', n:'Scale (pool, share or margin)', lab:'±25%', members:['pool','share','margin']}));
+  const midYears = 0.25 * G.mid;
+  if (Math.abs(midYears - OFFSET_SHOCK) < 1e-9){
+    rows.push(Object.assign({}, one.mid, {id:'timing', n:'Timing (midpoint or layer offset)', lab:'±'+OFFSET_SHOCK+' years', members:['mid','offset']}));
+  } else {
+    rows.push(Object.assign({}, one.mid, {lab:'±25%, '+midYears.toFixed(1)+' years'}), one.offset);
+  }
+  for (const id in one) if (['pool','share','margin','mid','offset'].indexOf(id) < 0) rows.push(one[id]);
+  rows.sort((p, q) => q.swing - p.swing);
+  return { base, rows, parts: one };
+}
+if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, H };

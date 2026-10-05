@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { runLayer, adoption, heatmap, H } = require('../src/model.js');
+const { runLayer, adoption, heatmap, sensitivity, H } = require('../src/model.js');
+const D = require('../src/defaults.js');
 
 const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'v0_1_defaults.json'), 'utf8'));
 const G = fx.G;
@@ -187,4 +188,67 @@ test('heatmap cells equal direct runLayer calls under both definitions', () => {
       assert.equal(grid[i][j], runLayer(L, { ...g, entry: e, [key]: p }).npv);
     }));
   }
+});
+
+/* ---------- Part 1 fixes ---------- */
+const DEFAULT_RUN_G = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES };
+
+test('page defaults are neutral (offset 0, steepness 1, Definition A, entry year 0) and reproduce the v0.1 fixture exactly', () => {
+  assert.equal(D.DEFAULT_DEF, 'A');
+  assert.equal(D.DEFAULT_G.entry, 0);
+  for (const k in fx.G) assert.equal(D.DEFAULT_G[k], fx.G[k], 'global input ' + k);
+  assert.equal(D.DEFAULT_LAYERS.length, fx.layers.length);
+  D.DEFAULT_LAYERS.forEach((L, i) => {
+    const row = fx.layers[i];
+    assert.equal(L.id, row.id);
+    assert.equal(L.offset, 0);
+    assert.equal(L.steepness, 1);
+    assert.deepEqual(L.driftP, [row.input.drift, row.input.drift, row.input.drift]);
+    assert.deepEqual(L.marginP, [row.input.margin, row.input.margin, row.input.margin]);
+    const o = runLayer(L, DEFAULT_RUN_G);
+    near(o.npv, row.npv, 1e-6);
+    near(o.breakEven, row.breakEven, 1e-6);
+    near(o.irr, row.irr, 1e-6);
+    assert.equal(o.payback, row.payback);
+    assert.deepEqual(o.flags, row.flags);
+    assert.equal(o.bin, row.bin);
+  });
+});
+
+test('lead/lag example is opt-in: it is not the default and differs from neutral', () => {
+  assert.equal(D.LEAD_LAG_EXAMPLE.length, D.DEFAULT_LAYERS.length);
+  assert.ok(D.LEAD_LAG_EXAMPLE.some(v => v !== 0));
+  assert.ok(D.DEFAULT_LAYERS.every(L => L.offset === 0));
+});
+
+test('sensitivity: the merged scale bar equals the NPV change from pool, share and margin taken one at a time', () => {
+  for (const L of D.DEFAULT_LAYERS) for (const def of ['A', 'B']) {
+    const g = { ...DEFAULT_RUN_G, entryDef: def };
+    const s = sensitivity(L, g);
+    const scale = s.rows.find(r => r.id === 'scale');
+    for (const id of ['pool', 'share', 'margin']) {
+      near(scale.bad, s.parts[id].bad, 1e-6);
+      near(scale.good, s.parts[id].good, 1e-6);
+    }
+    assert.ok(!s.rows.some(r => ['pool', 'share', 'margin'].includes(r.id)));
+  }
+});
+
+test('sensitivity: midpoint and offset merge only when they are the same shift in years', () => {
+  const L = D.DEFAULT_LAYERS[1];
+  const merged = sensitivity(L, { ...DEFAULT_RUN_G, mid: 8 });
+  const t = merged.rows.find(r => r.id === 'timing');
+  assert.ok(t);
+  near(t.bad, merged.parts.offset.bad, 1e-6);
+  near(t.good, merged.parts.offset.good, 1e-6);
+  const apart = sensitivity(L, { ...DEFAULT_RUN_G, mid: 11 });
+  assert.ok(!apart.rows.some(r => r.id === 'timing'));
+  assert.ok(apart.rows.some(r => r.id === 'mid') && apart.rows.some(r => r.id === 'offset'));
+});
+
+test('timing check: with the lead/lag example, setting a layer offset back to 0 reproduces its neutral verdict', () => {
+  D.DEFAULT_LAYERS.forEach((L, i) => {
+    const led = { ...L, offset: D.LEAD_LAG_EXAMPLE[i] };
+    assert.equal(runLayer({ ...led, offset: 0 }, DEFAULT_RUN_G).bin, fx.layers[i].bin);
+  });
 });

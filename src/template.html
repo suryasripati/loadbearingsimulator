@@ -81,6 +81,11 @@ svg text{font-family:Arial,"Helvetica Neue",sans-serif}
 details summary{cursor:pointer;color:var(--ink);font-weight:700}
 .muted{color:var(--cap)}
 .reset{margin-left:8px;border-color:var(--hair)}
+.hint{font-size:13px;color:var(--ink);margin-bottom:4px}
+.rowname:hover{color:var(--copper);text-decoration:underline}
+#quad .dot{cursor:pointer}
+#quad .dot:focus{outline:none}
+#quad .dot:focus-visible circle:first-child{stroke:var(--copper);stroke-width:3}
 </style>
 </head>
 <body>
@@ -114,8 +119,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
   <div class="card">
     <h2>Where each layer lands</h2>
+    <p class="hint">Click any layer name or dot to see its detail.</p>
     <p class="muted" style="font-size:13px;margin-bottom:8px">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag.</p>
     <div id="quad"></div>
+    <div class="notice" id="timingNote" hidden></div>
   </div>
 </div>
 
@@ -149,15 +156,16 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
 <section>
   <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. The starting offsets (infrastructure leads, applications and services lag) are placeholders, not data. Allocation is your own split, in any units.</p>
+  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Allocation is your own split, in any units.</p>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
     <div class="seg" style="margin-top:12px;margin-bottom:0">
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
+      <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict.</div>
   </div>
 </section>
 
@@ -190,6 +198,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
 <section>
   <h2 id="detailTitle">Selected layer</h2>
+  <div class="seg" id="layerPick" role="group" aria-label="Choose a layer" style="margin-top:8px"></div>
   <div class="twocol">
     <div class="card"><h3>Cumulative cash to the investor</h3><p class="muted" style="font-size:13px">Includes your entry premium and sustaining spend. Excludes value beyond year 15.</p><div id="cashChart"></div></div>
     <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>

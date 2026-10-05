@@ -9,11 +9,13 @@ A scenario tool for one question: if a technology works the way you expect, whic
 ## What it does
 
 - Scenario drivers: adoption speed, midpoint and value pool. One end-demand curve drives every layer.
-- Layer timing: each layer leads or lags end demand (offset, in years) and can be steeper or flatter. The starting offsets (infrastructure leads, applications and services lag) are placeholders.
+- Layer timing: each layer can lead or lag end demand (offset, in years) and be steeper or flatter. Defaults are neutral: every layer follows end demand, so the default page reproduces v0.1. The **Load lead/lag example** button sets placeholder offsets (infrastructure leads, applications and services lag) to show how much timing alone can move a verdict; it is an example, not data. When any offset is non-zero, the page names the layers whose verdict depends on it.
 - Phases: share drift and cash margin can differ across three calendar phases (default years 0-4, 5-9, 10-15, editable).
 - Entry: pick an entry year (0 to 10) and one of two price definitions: a premium over replacement cost, or a multiple of next-year operating cash. Present values are stated in entry-year terms.
 - Money assumptions: discount rate, debt interest, value beyond year 15.
 - Five layers with editable demand evidence, share, capex, asset life, debt and your own allocation.
+- Choosing a layer: click any layer name (in the layer, phase or scorecard tables), any dot on the quadrant chart (or tab to it and press Enter), or the layer buttons under the Detail heading. The selected layer is highlighted in every table.
+- Sensitivity chart: inputs that move value identically by construction share one bar (pool, share and margin are one "scale" bar; midpoint and timing offset share a bar when both are a two-year shift). Shock sizes are listed under the chart and are not like-for-like.
 - Outputs: a quadrant chart, a scorecard with three fragility flags (life, debt, tail), cumulative cash, a sensitivity chart, a heatmap of value by entry year and price with the break-even line, and your allocation across slow, base and fast adoption.
 
 It does not say whether there is a bubble. It shows which assumptions carry the answer.

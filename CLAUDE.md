@@ -20,6 +20,7 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 ## Layout
 
 - `src/model.js` pure model, no DOM. CommonJS export for tests; the build script strips the export line so the same file runs in the page.
+- `src/defaults.js` default inputs (neutral) and the opt-in lead/lag example. CommonJS export for tests; stripped and prepended to the UI code by the build.
 - `src/app.js` UI logic, vanilla JS, no framework.
 - `src/template.html` markup and CSS with `/*MODEL*/` and `/*APP*/` placeholders.
 - `scripts/build.js` assembles the page.
@@ -52,6 +53,8 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 5. Keep "Placeholders, not data" and "Not financial advice" notices on the page and in the README.
 6. Brand: cream `#F7F5EF`, navy `#12213D`, copper `#B8752A`, body grey `#4A4D52`. Source Serif 4 for headlines, Arial for body. Light and dark themes via CSS variables. Sentence case labels.
 7. Every change that touches model maths must keep the regression test green or update the fixture deliberately, with a note in the commit message.
+8. Default timing offsets are neutral (0). The default page must reproduce the v0.1 fixture; a test checks `src/defaults.js` against it.
+9. Any feature that demonstrates a verdict (example profiles, example offsets) must be opt-in and labelled as a placeholder. A placeholder must never carry a headline verdict by default.
 
 ## Drop 1 (build first)
 
@@ -62,7 +65,7 @@ Goal: time structure and layer-specific adoption. Reproduce v0.1 results exactly
 - Add per layer: `offset` in years (negative means the layer leads demand, positive means it lags) and `steepness` (multiplier, 1 = neutral; above 1 = steeper, so layer speed = global speed / steepness).
 - Layer adoption = `adoption(t - offset, layer speed)`.
 - Rationale: upstream revenue is derived demand and should follow the same end demand with a lead. Independent curves per layer would let hardware revenue peak before any application has customers.
-- Neutral defaults: offset 0, steepness 1. Suggested starting placeholders for the demo: infrastructure layers lead, applications and services lag. Label them as placeholders.
+- Defaults are neutral: offset 0, steepness 1, so the default page reproduces v0.1. A "Load lead/lag example" button sets placeholder offsets (chips -1, data centres -2, models 0, applications +1, services +2); it is opt-in and labelled as a placeholder, not data. Whenever any offset is non-zero, the page lists layers whose verdict changes when that layer's offset is set to 0.
 
 ### 2. Calendar phases
 - Three phases (default years 0-4, 5-9, 10-15, boundaries editable). Per layer, per phase: share drift and cash margin.

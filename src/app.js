@@ -1,19 +1,4 @@
-const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
-const DEFAULT_DEF = 'A';
-const DEFAULT_PHASES = [5, 10];
-const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mid:5.5} };
-const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
-// Placeholders, not data. Offsets: infrastructure leads end demand, applications and services lag (years).
-// Drift and margin are per calendar phase; the three phases start equal to the v0.1 constants.
-const ph = (v) => [v, v, v];
-const DEFAULT_LAYERS = [
-  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:-1, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildYears:4, life:8,  debt:10, alloc:20},
-  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:-2, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildYears:5, life:10, debt:50, alloc:20},
-  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0,  steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildYears:4, life:4,  debt:10, alloc:20},
-  {id:'ap', name:'Applications',           evidence:3, share:30, offset:1,  steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildYears:3, life:5,  debt:0,  alloc:20},
-  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:2,  steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildYears:2, life:10, debt:0,  alloc:20}
-];
-const KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
+const KEY = 'load-bearing-sim-v3', V2_KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
 const copyLayer = (l) => Object.assign({}, l, {driftP:l.driftP.slice(), marginP:l.marginP.slice()});
 let G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()});
 let layers = DEFAULT_LAYERS.map(copyLayer);
@@ -22,7 +7,8 @@ let sel = 1;
 const num = (v) => typeof v==='number' && isFinite(v);
 function load(){
   try{
-    let s = localStorage.getItem(KEY), old = false;
+    let s = localStorage.getItem(KEY), old = false, v2 = false;
+    if(!s){ s = localStorage.getItem(V2_KEY); v2 = !!s; }
     if(!s){ s = localStorage.getItem(OLD_KEY); old = true; }
     if(!s) return;
     const o = JSON.parse(s);
@@ -42,6 +28,8 @@ function load(){
         if(old){ if(num(l.drift)) layers[i].driftP = ph(l.drift); if(num(l.margin)) layers[i].marginP = ph(l.margin); }
       });
     }
+    // v2 saves started from the lead/lag placeholder offsets. If they are untouched, return to neutral defaults.
+    if(v2 && layers.every((L,i) => L.offset===LEAD_LAG_EXAMPLE[i])) layers.forEach(L => { L.offset = 0; });
     if(Number.isInteger(o.sel) && o.sel>=0 && o.sel<layers.length) sel=o.sel;
   }catch(e){}
 }
@@ -131,7 +119,7 @@ function phaseLabels(){
 function buildInputs(){
   let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => '<th>'+c[1]+'</th>').join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
-    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td><button class="rowname" data-i="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button></td>';
+    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
     COLS.forEach(c => { h += cellInput(L, i, c); });
     h += '</tr>';
   });
@@ -139,20 +127,25 @@ function buildInputs(){
   $('inputs').innerHTML = h;
   buildPhaseTable();
   document.querySelectorAll('#inputs input').forEach(inp => inp.addEventListener('input', onLayerInput));
-  $('inputs').querySelectorAll('button.rowname').forEach(b => b.addEventListener('click', () => { sel = +b.dataset.i; save(); markSel(); renderResults(); }));
+}
+// Any element with data-sel selects that layer: table names, the layer buttons under Detail, and quadrant dots.
+function selectLayer(i){ if(!(i>=0 && i<layers.length)) return; sel = i; save(); markSel(); renderResults(); }
+const nameBtn = (L, i) => '<button class="rowname" data-sel="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button>';
+function buildLayerPick(){
+  $('layerPick').innerHTML = layers.map((L,i) => '<button data-sel="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button>').join('');
 }
 function buildPhaseTable(){
   const pl = phaseLabels();
   let h = '<thead><tr><th class="l" rowspan="2">Layer</th><th colspan="3" style="text-align:center">Share drift, % a year</th><th colspan="3" style="text-align:center">Cash margin, %</th></tr><tr>'
     + pl.map(x => '<th>'+x+'</th>').join('') + pl.map(x => '<th>'+x+'</th>').join('') + '</tr></thead><tbody>';
-  layers.forEach((L,i) => { h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+L.name+'</td>' + PCOLS.map(c => cellInput(L, i, c)).join('') + '</tr>'; });
+  layers.forEach((L,i) => { h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>' + PCOLS.map(c => cellInput(L, i, c)).join('') + '</tr>'; });
   h += '</tbody>';
   $('phaseTable').innerHTML = h;
   $('phaseTable').querySelectorAll('input').forEach(inp => inp.addEventListener('input', onLayerInput));
 }
 function markSel(){
   document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
-  $('inputs').querySelectorAll('button.rowname').forEach(b => b.setAttribute('aria-pressed', +b.dataset.i===sel));
+  document.querySelectorAll('button[data-sel]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.sel===sel ? 'true' : 'false'));
 }
 function onLayerInput(e){
   const inp = e.target, i = +inp.dataset.i, k = inp.dataset.k, p = inp.dataset.p;
@@ -201,22 +194,81 @@ function quadChart(res){
   s += '<text x="'+(m.l+iw/2)+'" y="'+(Hh-8)+'" font-size="12" fill="var(--ink)" text-anchor="middle">'+(isB() ? 'Headroom: break-even multiple minus your multiple' : 'Headroom: break-even premium minus your entry premium')+'</text>';
   s += '<text transform="translate(12 '+(m.t+ih/2)+') rotate(-90)" font-size="12" fill="var(--ink)" text-anchor="middle">Demand evidence</text>';
   const tot = layers.reduce((a,L)=>a+L.alloc,0) || 1;
-  const skipped = [];
+  const skipped = [], dots = [];
   res.forEach((o,i) => {
     const L = layers[i];
     if(!isFinite(o.headroom)){ skipped.push(L.name); return; }
-    const cx = sx(o.headroom), cy = sy(L.evidence);
     const r = 6 + 12*Math.sqrt(L.alloc/tot);
-    const col = binColor(o);
-    s += '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+col+'" fill-opacity="0.85" stroke="var(--card)" stroke-width="1.5"/>';
-    if(o.flags.length) s += '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(r+3.5).toFixed(1)+'" fill="none" stroke="var(--ink)" stroke-width="1.3" stroke-dasharray="3 2"/>';
-    const right = cx < W-m.r-150;
-    const ty = cy + (i%2===0 ? -(r+7) : (r+15));
-    s += '<text x="'+cx.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="11.5" font-weight="700" fill="var(--ink)" text-anchor="'+(right?'start':'end')+'">'+L.name+'</text>';
+    dots.push({i:i, o:o, L:L, cx:sx(o.headroom), cy:sy(L.evidence), r:r, rr:o.flags.length ? r+3.5 : r});
+  });
+  const labels = placeLabels(dots, {x0:m.l, y0:m.t, x1:W-m.r, y1:m.t+ih});
+  dots.forEach((d,k) => {
+    const lb = labels[k];
+    s += '<g class="dot'+(d.i===sel?' on':'')+'" data-sel="'+d.i+'" role="button" tabindex="0" aria-pressed="'+(d.i===sel)+'" aria-label="'+d.L.name+': '+d.o.bin+'. Select to see detail.">';
+    s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+d.r.toFixed(1)+'" fill="'+binColor(d.o)+'" fill-opacity="0.85" stroke="var(--card)" stroke-width="1.5"/>';
+    if(d.o.flags.length) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+d.rr.toFixed(1)+'" fill="none" stroke="var(--ink)" stroke-width="1.3" stroke-dasharray="3 2"/>';
+    if(d.i===sel) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+(d.rr+4).toFixed(1)+'" fill="none" stroke="var(--copper)" stroke-width="2"/>';
+    if(lb.leader) s += '<line x1="'+d.cx.toFixed(1)+'" y1="'+d.cy.toFixed(1)+'" x2="'+lb.lx.toFixed(1)+'" y2="'+lb.ly.toFixed(1)+'" stroke="var(--cap)" stroke-width="0.8"/>';
+    s += '<text class="qlab" x="'+lb.x.toFixed(1)+'" y="'+(lb.y + LAB_BASE).toFixed(1)+'" font-size="11.5" font-weight="700" fill="var(--ink)">'+d.L.name+'</text>';
+    s += '</g>';
   });
   s += '</svg>';
   if(skipped.length) s += '<div class="legend">Not plotted: '+skipped.join(', ')+'. Year '+(G.entry+1)+' operating cash is close to zero, so a cash multiple is not meaningful.</div>';
   $('quad').innerHTML = s;
+}
+
+// Label placement: for each dot, try above, below, right and left; take the first spot that stays inside the plot and
+// clears every placed label and every dot. Otherwise move further out in the same directions and draw a leader line.
+const LAB_H = 15, LAB_BASE = 11; // label box height and baseline offset, in chart units (11.5px bold Arial)
+let measureCtx = null;
+function labelWidth(text){
+  // Measure with a canvas in the same font; fall back to a generous per-character estimate.
+  try{ if(!measureCtx){ measureCtx = document.createElement('canvas').getContext('2d'); measureCtx.font = 'bold 11.5px Arial, "Helvetica Neue", sans-serif'; } return measureCtx.measureText(text).width + 2; }
+  catch(e){ return text.length * 7.2; }
+}
+function placeLabels(dots, box){
+  const placed = [], obstacles = dots.map(d => ({x:d.cx-d.rr, y:d.cy-d.rr, w:2*d.rr, h:2*d.rr}));
+  const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const inside = (a) => a.x >= box.x0 && a.y >= box.y0 && a.x + a.w <= box.x1 && a.y + a.h <= box.y1;
+  const clampBox = (a) => ({x:clamp(a.x, box.x0, box.x1 - a.w), y:clamp(a.y, box.y0, box.y1 - a.h), w:a.w, h:a.h});
+  const ok = (a) => inside(a) && !placed.some(p => hit(a, p)) && !obstacles.some(o => hit(a, o));
+  // Place labels for larger dots first so the most important names get the closest spots.
+  const order = dots.map((d,k) => k).sort((a,b) => dots[b].r - dots[a].r);
+  const out = [];
+  order.forEach(k => {
+    const d = dots[k], w = labelWidth(d.L.name), g = 4;
+    // Above and below: centred on the dot, then slid sideways (kept inside the plot) so edge dots still get a spot.
+    const at = (dist) => {
+      const up = d.cy - d.rr - dist - LAB_H, dn = d.cy + d.rr + dist, mid = d.cy - LAB_H/2;
+      const xs = [d.cx - w/2, d.cx - w + 6, d.cx - 6];
+      return [].concat(
+        xs.map(x => clampBox({x:x, y:up, w:w, h:LAB_H})),
+        xs.map(x => clampBox({x:x, y:dn, w:w, h:LAB_H})),
+        [{x:d.cx + d.rr + dist, y:mid, w:w, h:LAB_H}, {x:d.cx - d.rr - dist - w, y:mid, w:w, h:LAB_H}]
+      ).filter(c => c.y + c.h <= d.cy - d.rr - dist + 0.01 || c.y >= d.cy + d.rr + dist - 0.01 || c.x >= d.cx + d.rr || c.x + c.w <= d.cx - d.rr);
+    };
+    let pick = null, leader = false;
+    for(const c of at(g)){ if(ok(c)){ pick = c; break; } }
+    for(let dist = 16; !pick && dist <= 64; dist += 12){
+      for(const c of at(dist)){ if(ok(c)){ pick = c; leader = true; break; } }
+    }
+    // Then the nearest free spot anywhere in the plot, joined by a leader line.
+    if(!pick){
+      let best = null, bestD = Infinity;
+      for(let y = box.y0; y + LAB_H <= box.y1; y += 6) for(let x = box.x0; x + w <= box.x1; x += 8){
+        const c = {x:x, y:y, w:w, h:LAB_H};
+        const dd = Math.hypot(x + w/2 - d.cx, y + LAB_H/2 - d.cy);
+        if(dd < bestD && ok(c)){ best = c; bestD = dd; }
+      }
+      if(best){ pick = best; leader = true; }
+    }
+    // Last resort: stay inside the plot even if it overlaps, so a name is never clipped.
+    if(!pick){ pick = clampBox({x:d.cx - w/2, y:d.cy - d.rr - g - LAB_H, w:w, h:LAB_H}); }
+    placed.push(pick);
+    const lx = clamp(d.cx, pick.x, pick.x + pick.w), ly = clamp(d.cy, pick.y, pick.y + pick.h);
+    out[k] = {x:pick.x, y:pick.y, leader:leader, lx:lx, ly:ly};
+  });
+  return out;
 }
 
 /* ---------- scorecard ---------- */
@@ -234,7 +286,7 @@ function scoreTable(res){
     const pb = o.payback===null ? 'not by year '+H : 'year '+o.payback+' of a '+L.life+'-year asset';
     const debt = L.debt===0 ? 'None' : (o.flags.indexOf('debt')>=0 ? 'Short by '+money(o.shortfall) : 'Covered');
     const fl = o.flags.length ? o.flags.map(f => f==='life'?'Life':f==='debt'?'Debt':'Tail').join(', ') : 'None';
-    h += '<tr class="'+(i===sel?'sel':'')+'"><td>'+L.name+'</td>'
+    h += '<tr class="'+(i===sel?'sel':'')+'"><td>'+nameBtn(L,i)+'</td>'
       + '<td><span class="chip '+(o.merit?'c-green':'c-amber')+'">'+(o.merit?'Pass':'Forecast bet')+'</span></td>'
       + '<td class="'+(o.npv<0?'neg':'pos')+'">'+money(o.npv)+'</td>'
       + '<td>'+beText(o)+'</td>'
@@ -275,46 +327,22 @@ function cashChart(o){
   $('cashChart').innerHTML = s;
 }
 
-const shiftP = (L, k) => { L.driftP = L.driftP.map(v => v + k); };
-const scaleP = (L, k) => { L.marginP = L.marginP.map(v => v * k); };
-function tornadoItems(){
-  return [
-    {n:'Value pool', f:(g,L,k)=>{ g.pool*=k; }, lo:0.75, hi:1.25, lab:'±25%'},
-    {n:'Adoption speed (slower or faster)', f:(g,L,k)=>{ g.speed*=k; }, lo:1.25, hi:0.75, lab:'±25%'},
-    {n:'Adoption midpoint (later or earlier)', f:(g,L,k)=>{ g.mid*=k; }, lo:1.25, hi:0.75, lab:'±25%'},
-    {n:'Layer timing offset', f:(g,L,k)=>{ L.offset+=k; }, lo:2, hi:-2, lab:'±2 years'},
-    {n:'Layer curve steepness', f:(g,L,k)=>{ L.steepness*=k; }, lo:0.75, hi:1.25, lab:'±25%'},
-    {n:'Layer share of pool', f:(g,L,k)=>{ L.share*=k; }, lo:0.75, hi:1.25, lab:'±25%'},
-    {n:'Share drift, all phases', f:(g,L,k)=>{ shiftP(L,k); }, lo:-3, hi:3, lab:'±3 points'},
-    {n:'Cash margin, all phases', f:(g,L,k)=>{ scaleP(L,k); }, lo:0.75, hi:1.25, lab:'±25%'},
-    {n:'Build capex', f:(g,L,k)=>{ L.capex*=k; }, lo:1.25, hi:0.75, lab:'±25%'},
-    {n:'Asset life', f:(g,L,k)=>{ L.life=Math.max(1,L.life*k); }, lo:0.75, hi:1.25, lab:'±25%'},
-    {n:'Discount rate', f:(g,L,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75, lab:'±25%'},
-    {n:'Value beyond year 15', f:(g,L,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25, lab:'±25%'},
-    isB() ? {n:'Entry multiple', f:(g,L,k)=>{ g.mult*=k; }, lo:1.25, hi:0.75, lab:'±25%'}
-          : {n:'Entry premium', f:(g,L,k)=>{ g.premium+=k; }, lo:25, hi:-25, lab:'±25 points'}
-  ];
-}
 function tornado(){
-  const base = runLayer(layers[sel], G).npv;
-  const rows = tornadoItems().map(it => {
-    const run = (k) => { const g = Object.assign({}, G), L = copyLayer(layers[sel]); it.f(g,L,k); return runLayer(L,g).npv; };
-    const a = run(it.lo), b = run(it.hi);
-    return {n:it.n, lab:it.lab, bad:Math.min(a,b), good:Math.max(a,b), swing:Math.abs(b-a)};
-  }).sort((p,q) => q.swing-p.swing);
-  const W=420, rowH=26, m={l:178,r:12,t:8,b:8}, Hh=m.t+m.b+rows.length*rowH;
+  const sens = sensitivity(layers[sel], G), base = sens.base, rows = sens.rows;
+  const W=420, rowH=26, m={l:190,r:12,t:8,b:8}, Hh=m.t+m.b+rows.length*rowH;
   const maxD = Math.max.apply(null, rows.map(r => Math.max(Math.abs(r.bad-base), Math.abs(r.good-base), 1)));
   const iw = W-m.l-m.r, cx = m.l + iw/2, sc = (iw/2)/maxD;
   let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="img" aria-label="Sensitivity of present value to each input">';
   rows.forEach((r,i) => {
     const y = m.t + i*rowH;
     const xb = cx + (r.bad-base)*sc, xg = cx + (r.good-base)*sc;
-    s += '<text x="'+(m.l-6)+'" y="'+(y+rowH/2+3)+'" font-size="11" fill="var(--ink)" text-anchor="end">'+r.n+' ('+r.lab+')</text>';
+    s += '<text x="'+(m.l-6)+'" y="'+(y+rowH/2+3)+'" font-size="11" fill="var(--ink)" text-anchor="end">'+r.n+'</text>';
     s += '<rect x="'+Math.min(xb,cx).toFixed(1)+'" y="'+(y+4)+'" width="'+Math.abs(xb-cx).toFixed(1)+'" height="'+(rowH-10)+'" fill="var(--red)" fill-opacity="0.75"/>';
     s += '<rect x="'+Math.min(xg,cx).toFixed(1)+'" y="'+(y+4)+'" width="'+Math.abs(xg-cx).toFixed(1)+'" height="'+(rowH-10)+'" fill="var(--green)" fill-opacity="0.75"/>';
   });
   s += '<line x1="'+cx+'" x2="'+cx+'" y1="'+m.t+'" y2="'+(Hh-m.b)+'" stroke="var(--ink)" stroke-width="1.2"/></svg>';
-  s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end. Shock sizes differ by input, so compare bar lengths with that in mind.</div>';
+  s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end.</div>';
+  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like.</div>';
   $('tornado').innerHTML = s;
 }
 
@@ -384,9 +412,20 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res);
+  quadChart(res); scoreTable(res); timingNote(res);
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
+  buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
+}
+// Shown whenever any offset is non-zero: layers whose verdict changes when their own offset is set to 0.
+function timingNote(res){
+  const el = $('timingNote');
+  if(layers.every(L => L.offset===0)){ el.hidden = true; return; }
+  const dep = layers.filter((L,i) => runLayer(Object.assign({}, L, {offset:0}), G).bin !== res[i].bin).map(L => L.name);
+  el.hidden = false;
+  el.innerHTML = dep.length
+    ? '<b>Verdict depends on the timing offset for: '+dep.join(', ')+'.</b> Set to 0, the verdict changes. Offsets are your judgement, not data.'
+    : 'Timing offsets are set, but no layer’s verdict changes when its offset is set to 0.';
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }
@@ -407,6 +446,12 @@ function bind(){
   document.querySelectorAll('#defSwitch button').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
   $('ph1').addEventListener('change', onPhaseBounds); $('ph2').addEventListener('change', onPhaseBounds);
   $('arch_rail').addEventListener('click', () => setProfile({life:25, drift:-6, margin:35, debt:60, buildYears:5, evidence:4}));
+  $('leadlag').addEventListener('click', () => { layers.forEach((L,i) => { L.offset = LEAD_LAG_EXAMPLE[i]; }); refreshInputsFromState(); save(); renderResults(); });
+  document.addEventListener('click', e => { const t = e.target.closest('[data-sel]'); if(t) selectLayer(+t.dataset.sel); });
+  $('quad').addEventListener('keydown', e => {
+    const t = e.target.closest('[data-sel]');
+    if(t && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); selectLayer(+t.dataset.sel); const f = $('quad').querySelector('[data-sel="'+sel+'"]'); if(f) f.focus(); }
+  });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
     G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()}); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
