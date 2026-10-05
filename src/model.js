@@ -103,8 +103,10 @@ function runLayer(L, G){
   }
   const hasDebt = L.debt > 0;
   const flags = [];
-  // Life flag: years from entry to payback exceed asset life (at e = 0 this is the v0.1 rule).
-  if (payback === null || payback - e > L.life) flags.push('life');
+  // Life flag: years from when your capital first goes in (entry year or build start, whichever is later) to payback
+  // exceed asset life. With entry year 0 and build start 0 this is the v0.1 rule.
+  const clockStart = Math.max(e, S);
+  if (payback === null || payback - clockStart > L.life) flags.push('life');
   if (hasDebt && -minCum > 0.25 * D) flags.push('debt');
   if (pvOps > 0 && tvPV / pvOps > 0.5) flags.push('tail');
   const merit = L.evidence >= 3;
@@ -115,7 +117,7 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
 }
 // NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).

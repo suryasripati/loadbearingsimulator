@@ -40,7 +40,7 @@ Keep the model pure and testable. Keep the page dependency-free. If a library is
 - Entry premium marks up build capex only. NPV is unlevered (owner-operator view). Debt drives only the debt flag.
 - Break-even premium solves for the premium that makes NPV zero. IRR uses the same cash flows including terminal value.
 - Debt: share of build capex, drawn with the build, interest-only during the build, then straight-line repayment over 8 years.
-- Flags: life (payback later than asset life, or none by year 15); debt (cash shortfall on debt service above 25% of the debt); tail (more than half of the value after year 15).
+- Flags: life (payback later than asset life, or none by year 15; now measured from max(entry year, build start), which equals v0.1 at entry year 0 and build start 0); debt (cash shortfall on debt service above 25% of the debt); tail (more than half of the value after year 15).
 - Evidence gate: demand evidence score below 3 means forecast bet. Bins combine the gate with NPV sign and flags.
 
 Known weaknesses: one discount rate for all layers; no interaction between layers; sustaining-spend shortcut; deterministic scenarios; evidence scores are judgement.
@@ -63,6 +63,7 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 ## Build start and capacity limit (built after drop 1)
 - Per-layer `buildStart` (whole years, default 0, clamped so buildStart + buildYears <= 15). Build spend runs over buildStart to buildEnd - 1, where buildEnd = buildStart + buildYears; sustaining spend, debt repayment, payback and the DSCR check all start at buildEnd.
 - Capacity limit: see locked decision 11.
+- Life flag clock: payback minus max(entry year, build start) is compared with asset life, so idle years before any capital goes in do not count against the asset.
 - Always-visible line under the scorecard: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
 
 ## Drop 1 (build first)

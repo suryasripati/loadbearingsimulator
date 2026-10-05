@@ -329,3 +329,26 @@ test('sensitivity: the build-start bar is one-sided (two years later only)', () 
   const later = runLayer({ ...D.DEFAULT_LAYERS[1], buildStart: 2 }, GA).npv;
   near(b.bad, Math.min(s.base, later), 1e-9); near(b.good, Math.max(s.base, later), 1e-9);
 });
+
+/* ---------- Life flag clock ---------- */
+test('life flag: payback clock starts at the later of entry year and build start (build starts 0, 2, 4; entry years 0, 3)', () => {
+  for (const L0 of D.DEFAULT_LAYERS) for (const bs of [0, 2, 4]) for (const entry of [0, 3]) for (const s of [{}, ...Object.values(D.SCEN)]) {
+    const L = { ...L0, buildStart: bs }, o = runLayer(L, { ...GA, ...s, entry });
+    const start = Math.max(entry, bs);
+    assert.equal(o.clockStart, start);
+    assert.equal(o.flags.includes('life'), o.payback === null || o.payback - start > L.life,
+      `${L0.id} bs${bs} e${entry}: payback ${o.payback}, life ${L.life}`);
+    if (bs === 0) assert.equal(o.flags.includes('life'), o.payback === null || o.payback - entry > L.life, 'build start 0 keeps the previous rule');
+  }
+});
+
+test('life flag: a later build no longer counts idle years before any capital goes in', () => {
+  // Applications, build starts in year 2, entry year 0: payback in year 7 on a 5-year asset.
+  // Old rule (payback - entry = 7 > 5) flagged life; the new clock (7 - 2 = 5) does not.
+  const L = { ...D.DEFAULT_LAYERS[3], buildStart: 2 }, o = runLayer(L, GA);
+  assert.equal(o.payback, 7);
+  assert.equal(L.life, 5);
+  assert.ok(o.payback - 0 > L.life, 'the old rule would have flagged life');
+  assert.ok(!o.flags.includes('life'));
+  assert.equal(o.bin, 'Durable value');
+});
