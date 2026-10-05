@@ -115,17 +115,68 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 #quad .dot:focus{outline:none}
 #quad .dot:focus-visible circle:first-child{stroke:var(--copper);stroke-width:3}
 </style>
+<style>
+/* Main page only. Kept out of the first style block, which the build shares with calibration.html. */
+:root{padding-top:0}
+html{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px))}
+/* View modes: elements tagged data-min show only in that mode and above. Inputs stay in the page in every mode. */
+body[data-mode="basic"] [data-min="advanced"],body[data-mode="basic"] [data-min="analyst"],body[data-mode="advanced"] [data-min="analyst"]{display:none !important}
+/* Compact sticky header (max 56px on desktop), safe-area aware */
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--hair);padding-top:env(safe-area-inset-top,0px)}
+.tb-in{max-width:1120px;margin:0 auto;padding:6px max(20px,env(safe-area-inset-right,0px)) 6px max(20px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (min-width:760px){.tb-in{flex-wrap:nowrap;min-height:44px;max-height:56px}}
+.tb-title{display:flex;align-items:baseline;gap:10px;min-width:0}
+.tb-name{font-size:19px;line-height:1.1;white-space:nowrap}
+.tb-sub{font-family:"Source Serif 4",Georgia,serif;color:var(--copper);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-right{display:flex;align-items:center;gap:10px}
+.modes{display:inline-flex;border:1px solid var(--copper);border-radius:999px;overflow:hidden}
+.modes button{border:none;border-radius:0;padding:4px 12px;background:var(--tint)}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.pill{font-size:12px;border-color:var(--amber);background:var(--amber-bg);color:var(--ink);padding:3px 10px}
+.tipwrap{position:relative;display:inline-block}
+.tip{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:30;width:min(300px,80vw);background:var(--card);color:var(--body);border:1px solid var(--hair);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 4px 14px rgba(0,0,0,.12);font-weight:400;text-transform:none}
+.tip.tip-r{left:auto;right:0}
+.tipwrap:hover .tip,.tipwrap:focus-within .tip,.tipwrap button[aria-expanded="true"] + .tip{display:block}
+.intro{margin:14px 0 0;font-size:15px}
+/* KPI tiles */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:360px){.kpis{grid-template-columns:1fr}}
+.tile{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .big{font-family:"Source Serif 4",Georgia,serif;font-size:26px;line-height:1.1;color:var(--ink);font-weight:700;overflow-wrap:anywhere}
+.tile .big small{font-size:14px;font-weight:500;color:var(--body);display:block;margin-top:2px}
+.tile .lab{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--cap)}
+.info{width:18px;height:18px;padding:0;border-radius:50%;font-size:11px;line-height:16px;text-align:center;border-color:var(--hair);background:var(--tint);color:var(--ink);flex:none}
+.status{align-self:flex-start;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 9px;border:1px solid currentColor}
+.status.s-stable{color:var(--green);background:var(--green-bg)}
+.status.s-watch{color:var(--amber);background:var(--amber-bg)}
+.status.s-fragile{color:var(--red);background:var(--red-bg)}
+.status.s-none{color:var(--cap);background:var(--tint)}
+.linkish{border:none;background:none;color:var(--copper);text-decoration:underline;padding:0 4px}
+details.evidence{margin-top:8px}
+details.evidence > summary{font-size:13px;color:var(--copper);font-weight:700}
+section > h2::after{content:"";display:block;width:48px;height:3px;background:var(--copper);margin-top:6px}
+.foot{max-width:1120px;margin:0 auto;padding:18px 20px 32px;font-size:12.5px;color:var(--cap);border-top:1px solid var(--hair)}
+</style>
 </head>
-<body>
+<body data-mode="basic">
+<header class="topbar">
+  <div class="tb-in">
+    <div class="tb-title"><h1 class="tb-name">Load Bearing Simulator</h1><span class="tb-sub">Capture Map &amp; Who gets paid?</span></div>
+    <div class="tb-right">
+      <div class="modes" id="modeSwitch" role="group" aria-label="View mode">
+        <button data-mode-btn="basic" aria-pressed="true">Basic</button><button data-mode-btn="advanced" aria-pressed="false">Advanced</button><button data-mode-btn="analyst" aria-pressed="false">Analyst</button>
+      </div>
+      <span class="tipwrap"><button class="pill" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip tip-r" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
+    </div>
+  </div>
+</header>
 <div class="wrap">
 
-<header>
-  <h1>Load Bearing Simulator</h1>
-  <p class="sub">Capture Map &amp; Who gets paid?</p>
-  <div class="rule"></div>
-  <p class="dek">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? This is a scenario tool for testing where your money sits. It is not a forecast and it does not pick winners.</p>
-  <div class="notice"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</div>
-</header>
+<p class="dek intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
+
+<section class="kpis" id="kpis" aria-label="Key figures"></section>
+<div class="notice" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
 
 <div class="hero">
   <div class="stack">
@@ -143,8 +194,12 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       <input type="range" id="g_mid" min="2" max="14" step="0.5"><small>Year in which adoption reaches half of its full level.</small></div>
     <div class="ctl"><label for="g_pool">Value pool at full adoption <output id="o_pool"></output></label>
       <input type="range" id="g_pool" min="200" max="3000" step="50"><small>Yearly revenue, all layers combined. Scale of applications lives here.</small></div>
+    <div class="ctl" id="ctl_prem"><label for="g_prem">Entry premium over build cost <output id="o_prem"></output></label>
+      <input type="range" id="g_prem" min="-50" max="300" step="5"><small>0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</small></div>
+    <div class="ctl"><label for="g_disc">Discount rate <output id="o_disc"></output></label>
+      <input type="range" id="g_disc" min="5" max="20" step="0.5"><small>The return you need to be paid for the risk.</small></div>
   </div>
-  <div class="card" id="timing">
+  <div class="card" id="timing" data-min="analyst">
     <h2>Timing: layers against end demand</h2>
     <p class="muted" style="font-size:13px">Each layer's revenue follows the end-demand curve, shifted earlier (leads) or later (lags) by its timing offset and made steeper or flatter. Set offsets and steepness in the layer table.</p>
     <div id="adoptChart"></div>
@@ -160,7 +215,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
   </div>
 </div>
 
-<section>
+<section data-min="analyst">
   <h2>Money assumptions</h2>
   <div class="card twocol">
     <div>
@@ -171,15 +226,11 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       </div>
       <div class="ctl"><label for="g_entry">Entry year <output id="o_entry"></output></label>
         <input type="range" id="g_entry" min="0" max="10" step="1"><small>You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</small></div>
-      <div class="ctl" id="ctl_prem"><label for="g_prem">Entry premium over build cost <output id="o_prem"></output></label>
-        <input type="range" id="g_prem" min="-50" max="300" step="5"><small>0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</small></div>
       <div class="ctl" id="ctl_mult" hidden><label for="g_mult">Entry multiple of next-year operating cash <output id="o_mult"></output></label>
         <input type="range" id="g_mult" min="0" max="60" step="0.5"><small>Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</small></div>
       <p class="legend" id="defNote" style="margin-top:0"></p>
     </div>
     <div>
-      <div class="ctl"><label for="g_disc">Discount rate <output id="o_disc"></output></label>
-        <input type="range" id="g_disc" min="5" max="20" step="0.5"><small>The return you need to be paid for the risk.</small></div>
       <div class="ctl"><label for="g_rd">Interest on debt <output id="o_rd"></output></label>
         <input type="range" id="g_rd" min="2" max="14" step="0.5"><small>Debt is repaid evenly over eight years after the build ends.</small></div>
       <div class="ctl"><label for="g_tv">Value beyond year 15 <output id="o_tv"></output></label>
@@ -196,21 +247,23 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 
 <section>
   <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</p>
+  <p class="dek" style="font-size:14px">Click a layer name to see its detail. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</p>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
     <div class="seg" style="margin-top:12px;margin-bottom:0">
+      <span class="seg" data-min="analyst" style="margin:0">
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
       <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
+      </span>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
+    <div class="legend" data-min="analyst">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
-<section>
+<section data-min="analyst">
   <h2>Phases</h2>
   <p class="dek" style="font-size:14px">Share drift and cash margin can change over three calendar phases. Each phase starts at the same value, which is the v0.1 model. Change one phase to test, say, a margin squeeze once capacity catches up with demand.</p>
   <div class="card scroll">
@@ -228,6 +281,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 <section>
   <h2>Scorecard</h2>
   <div class="card scroll"><table id="score" aria-label="Scorecard"></table>
+    <details class="evidence" data-min="advanced"><summary>Show evidence +</summary>
     <div class="legend">
       <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
       <span id="beLegend"></span><br>
@@ -237,15 +291,16 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
       <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
     </div>
+    </details>
   </div>
-  <div class="card" style="margin-top:20px">
+  <div class="card" style="margin-top:20px" data-min="analyst">
     <h3>Verdict fragility</h3>
     <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted. Direction is a display rule: <b>worse</b> means present value turns from positive to negative or a fragility flag is added; <b>better</b> means the reverse; <b>mixed</b> means both happen at once. Present value is shown so a layer sitting near zero is visible as such.</p>
     <div id="fragility"></div>
   </div>
 </section>
 
-<section>
+<section data-min="advanced">
   <h2 id="detailTitle">Selected layer</h2>
   <div class="seg" id="layerPick" role="group" aria-label="Choose a layer" style="margin-top:8px"></div>
   <div class="twocol">
@@ -259,13 +314,13 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
   </div>
 </section>
 
-<section>
+<section data-min="advanced">
   <h2>Your allocation across scenarios</h2>
   <div class="card scroll"><table id="expo" aria-label="Allocation exposure"></table>
     <div class="legend" id="expoNote"></div></div>
 </section>
 
-<section id="snapshots">
+<section id="snapshots" data-min="analyst">
   <h2>Snapshots</h2>
   <p class="dek" style="font-size:14px">Save a dated view of every input and result, with a note and what would make you revise each layer, so you can later compare what you believed then with what you believe now. Snapshots stay in this browser. Nothing is sent anywhere; export writes a file you download.</p>
   <div class="card">
@@ -324,12 +379,13 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
-      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. A <a href="calibration.html" style="color:var(--copper)">calibration scaffold</a> exists, with no episode data. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
+      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
     <p class="src" style="margin-top:14px">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
   </div>
 </section>
 
+<footer class="foot">Not financial advice.</footer>
 </div>
 <script>
 const H = 15;
@@ -685,6 +741,87 @@ const GLOBAL_RANGES = {
 };
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
+
+// View modes (Basic, Advanced, Analyst), KPI tiles and the hidden-state check. Pure functions, no DOM; no new
+// maths: everything here reads existing model outputs (runLayer, verdictFragility). Modes only change what is
+// shown, never an input or a result. CommonJS export for tests; stripped by the build and inlined before the UI.
+
+const MODES = ['basic', 'advanced', 'analyst'];
+const MODE_LABELS = { basic: 'Basic', advanced: 'Advanced', analyst: 'Analyst' };
+function modeLevel(m){ return MODES.indexOf(m); }
+function modeFromHash(hash){ const m = String(hash || '').replace(/^#/, '').toLowerCase(); return MODES.indexOf(m) >= 0 ? m : null; }
+
+function modeDeps(){
+  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./model.js'), require('./defaults.js'));
+  return { runLayer, verdictFragility, DEFAULT_LAYERS, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, DEFAULT_PHASES };
+}
+
+// KPI tiles. Status chips are text, never colour alone. Chip rules use signs and counts only, no invented thresholds.
+function kpiTiles(layers, G){
+  const d = modeDeps();
+  const res = layers.map(L => d.runLayer(L, G));
+  const N = layers.length;
+  // (a) Layers that earn their cost (present value at or above zero).
+  const n = res.filter(o => o.npv >= 0).length;
+  const earn = { n, N, chip: n === N ? 'Stable' : n === 0 ? 'Fragile' : 'Watch' };
+  // (b) Tightest layer: lowest headroom (break-even premium or multiple minus what you pay). Not-meaningful headrooms are skipped.
+  let tight = null;
+  res.forEach((o, i) => { if (isFinite(o.headroom) && (tight === null || o.headroom < tight.headroom)) tight = { index: i, name: layers[i].name, headroom: o.headroom }; });
+  if (tight) { tight.unit = G.entryDef === 'B' ? 'x' : '%'; tight.chip = tight.headroom < 0 ? 'Fragile' : 'Stable'; }
+  // (c) Share of my allocation in layers that do not earn their cost.
+  const tot = layers.reduce((a, L) => a + (L.alloc || 0), 0);
+  const placeholder = layers.every(L => { const def = d.DEFAULT_LAYERS.find(x => x.id === L.id); return def && L.alloc === def.alloc; });
+  let alloc;
+  if (tot <= 0) alloc = { pct: null, placeholder, chip: 'No allocation' };
+  else {
+    const pct = res.reduce((a, o, i) => a + (o.pays ? 0 : (layers[i].alloc || 0)), 0) / tot * 100;
+    alloc = { pct, placeholder, chip: pct === 0 ? 'Stable' : pct === 100 ? 'Fragile' : 'Watch' };
+  }
+  // (d) Layers whose verdict flips under at least one of the fragility shocks.
+  const fr = layers.map(L => d.verdictFragility(L, G));
+  const f = fr.filter(x => x.n > 0).length;
+  const flips = { n: f, N, chip: f === 0 ? 'Stable' : f === N ? 'Fragile' : 'Watch', perLayer: fr.map(x => x.n) };
+  return { earn, tight, alloc, flips };
+}
+
+// Analyst-only settings (not editable in Basic or Advanced) that differ from their defaults. Basic-editable inputs
+// (scenario, premium, discount rate, evidence, share, a single cash margin, capex, asset life, allocation) never count.
+const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entry year'], ['mult', 'Entry multiple'], ['rd', 'Interest on debt'],
+  ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model']];
+const ANALYST_LAYER_KEYS = [['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
+  ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
+const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+function analystDiffs(G, layers){
+  const d = modeDeps(), out = [];
+  const defG = Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX });
+  ANALYST_GLOBALS.forEach(([k, label]) => { if (G[k] !== defG[k]) out.push({ scope: 'settings', key: k, label }); });
+  if (!sameArr(G.phases, d.DEFAULT_PHASES)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
+  layers.forEach(L => {
+    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id);
+    if (!def) return;
+    ANALYST_LAYER_KEYS.forEach(([k, label]) => { if (L[k] !== def[k]) out.push({ scope: L.id, key: k, label: L.name + ': ' + label }); });
+    if (!sameArr(L.driftP, def.driftP)) out.push({ scope: L.id, key: 'driftP', label: L.name + ': share drift' });
+    if (!L.marginP.every(v => v === L.marginP[0])) out.push({ scope: L.id, key: 'marginP', label: L.name + ': cash margin varies by phase' });
+  });
+  return out;
+}
+// Reset only the analyst-only settings. Never touches Basic inputs, allocations or snapshots. A cash margin that
+// varies by phase collapses to its first-phase value (the value Basic shows and edits).
+function resetAnalyst(G, layers){
+  const d = modeDeps();
+  const g = Object.assign({}, G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() });
+  ANALYST_GLOBALS.forEach(([k]) => { if (k in d.DEFAULT_G) g[k] = d.DEFAULT_G[k]; });
+  const ls = layers.map(L => {
+    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id), o = Object.assign({}, L, { driftP: L.driftP.slice(), marginP: L.marginP.slice() });
+    if (!def) return o;
+    ANALYST_LAYER_KEYS.forEach(([k]) => { o[k] = def[k]; });
+    o.driftP = def.driftP.slice();
+    o.marginP = [L.marginP[0], L.marginP[0], L.marginP[0]];
+    return o;
+  });
+  return { G: g, layers: ls };
+}
+
 
 // Snapshots: dated views of the whole simulation (inputs, outputs, note, kill criteria), so a past view can be compared
 // with the current one. Pure functions, no DOM. CommonJS export for tests; the build strips the export line and runs
@@ -1216,24 +1353,45 @@ const COLS = [
 ].map(c => c.concat(LR(c[0])));
 const PCOLS = [0,1,2].map(p => ['driftP','Share drift, % a year'].concat(LR('driftP'), [p])).concat([0,1,2].map(p => ['marginP','Cash margin, %'].concat(LR('marginP'), [p])));
 const getV = (L, c) => c[5]===undefined ? L[c[0]] : L[c[0]][c[5]];
+// The view mode in which each layer-table column first appears (Basic otherwise).
+const COL_MODE = { offset:'analyst', steepness:'analyst', buildStart:'analyst', buildYears:'analyst', unitCostDecline:'analyst', passThrough:'analyst', debt:'analyst' };
+const dm = (k) => COL_MODE[k] ? ' data-min="'+COL_MODE[k]+'"' : '';
 function cellInput(L, i, c){
-  return '<td><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
+  return '<td'+(c[5]===undefined ? dm(c[0]) : '')+'><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
 }
 function phaseLabels(){
   const b = G.phases;
   return ['years 0–'+(b[0]-1), 'years '+b[0]+'–'+(b[1]-1), 'years '+b[1]+'–'+H];
 }
 function buildInputs(){
-  let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => '<th>'+c[1]+'</th>').join('') + '</tr></thead><tbody>';
+  // Basic and Advanced show one cash margin per layer; it sets all three phases. When the phases differ (set in
+  // Analyst), the cell says so instead of offering an input that would overwrite them.
+  const head = (c) => '<th'+dm(c[0])+'>'+c[1]+'</th>';
+  let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => head(c) + (c[0]==='share' ? '<th>Cash margin, %</th>' : '')).join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
-    COLS.forEach(c => { h += cellInput(L, i, c); });
+    COLS.forEach(c => { h += cellInput(L, i, c); if(c[0]==='share') h += '<td class="mcell" data-i="'+i+'"></td>'; });
     h += '</tr>';
   });
   h += '</tbody>';
   $('inputs').innerHTML = h;
   buildPhaseTable();
   document.querySelectorAll('#inputs input').forEach(inp => inp.addEventListener('input', onLayerInput));
+  updateMarginCells(true);
+}
+const uniformMargin = (L) => L.marginP.every(v => v === L.marginP[0]);
+function updateMarginCells(force){
+  document.querySelectorAll('#inputs td.mcell').forEach(td => {
+    const i = +td.dataset.i, L = layers[i], inp = td.querySelector('input');
+    if(uniformMargin(L)){
+      if(inp && !force){ if(document.activeElement !== inp) inp.value = L.marginP[0]; return; }
+      const r = LR('marginP');
+      td.innerHTML = '<input type="number" data-i="'+i+'" data-k="marginAll" min="'+r[0]+'" max="'+r[1]+'" step="'+r[2]+'" value="'+L.marginP[0]+'" aria-label="'+L.name+': Cash margin, % (all phases)">';
+      td.querySelector('input').addEventListener('input', onLayerInput);
+    } else if(inp || force || !td.textContent){
+      td.innerHTML = '<span class="muted" title="Set per phase in Analyst mode">varies by phase</span>';
+    }
+  });
 }
 // Any element with data-sel selects that layer: table names, the layer buttons under Detail, and quadrant dots.
 function selectLayer(i){ if(!(i>=0 && i<layers.length)) return; sel = i; save(); markSel(); renderResults(); }
@@ -1268,6 +1426,13 @@ function markSel(){
 }
 function onLayerInput(e){
   const inp = e.target, i = +inp.dataset.i, k = inp.dataset.k, p = inp.dataset.p;
+  if(k==='marginAll'){
+    const r = LR('marginP'); let m = parseFloat(inp.value);
+    if(!isFinite(m)) return;
+    m = clamp(m, r[0], r[1]);
+    layers[i].marginP = [m, m, m];
+    refreshInputsFromState(); save(); renderResults(); return;
+  }
   const col = COLS.concat(PCOLS).find(c => c[0]===k);
   let v = parseFloat(inp.value);
   if(!isFinite(v)) return;
@@ -1282,8 +1447,10 @@ function onLayerInput(e){
 }
 function refreshInputsFromState(){
   document.querySelectorAll('#inputs input, #phaseTable input').forEach(inp => {
+    if(inp.dataset.k==='marginAll') return; // kept in step by updateMarginCells
     const L = layers[+inp.dataset.i]; inp.value = inp.dataset.p===undefined ? L[inp.dataset.k] : L[inp.dataset.k][+inp.dataset.p];
   });
+  updateMarginCells(false);
 }
 function onPhaseBounds(){
   let a = Math.round(parseFloat($('ph1').value)), b = Math.round(parseFloat($('ph2').value));
@@ -1409,7 +1576,9 @@ function ptCells(L){
   return c(a) + c(b) + '<td>'+money(a-b)+'</td>';
 }
 function scoreTable(res){
-  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th>'+(isV()?'<th>Value if owner keeps savings (pass-through 0)</th><th>Value if competition takes savings (pass-through 1)</th><th>Value at stake in pricing power</th><th>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
+  // Basic: layer, present value, headroom, verdict. Advanced adds break-even, IRR, payback and flags. Analyst adds the rest.
+  const A = ' data-min="advanced"', Z = ' data-min="analyst"';
+  let h = '<thead><tr><th class="l">Layer</th><th'+Z+'>Evidence gate</th><th>Present value at year '+G.entry+'</th><th'+A+'>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th'+A+'>Return on cash (IRR)</th><th'+A+'>Cash payback</th><th'+Z+'>Debt</th>'+(isV()?'<th'+Z+'>Value if owner keeps savings (pass-through 0)</th><th'+Z+'>Value if competition takes savings (pass-through 1)</th><th'+Z+'>Value at stake in pricing power</th><th'+Z+'>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th'+A+'>Flags</th><th class="l">Verdict</th></tr></thead><tbody>';
   res.forEach((o,i) => {
     const L = layers[i];
     const irr = isNaN(o.irr) ? (o.npv<0 ? 'below −50%' : 'n/a') : pct(o.irr*100,1);
@@ -1417,11 +1586,11 @@ function scoreTable(res){
     const debt = L.debt===0 ? 'None' : (o.flags.indexOf('debt')>=0 ? 'Short by '+money(o.shortfall) : 'Covered');
     const fl = o.flags.length ? o.flags.map(f => f==='life'?'Life':f==='debt'?'Debt':'Tail').join(', ') : 'None';
     h += '<tr class="'+(i===sel?'sel':'')+'"><td>'+nameBtn(L,i)+'</td>'
-      + '<td><span class="chip '+(o.merit?'c-green':'c-amber')+'">'+(o.merit?'Pass':'Forecast bet')+'</span></td>'
+      + '<td'+Z+'><span class="chip '+(o.merit?'c-green':'c-amber')+'">'+(o.merit?'Pass':'Forecast bet')+'</span></td>'
       + '<td class="'+(o.npv<0?'neg':'pos')+'">'+money(o.npv)+'</td>'
-      + '<td>'+beText(o)+'</td>'
+      + '<td'+A+'>'+beText(o)+'</td>'
       + hrText(o)
-      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td>'+(isV()?ptCells(L)+'<td>'+pct(o.strandedPeakPct)+'</td>':'')+'<td>'+fl+'</td>'
+      + '<td'+A+'>'+irr+'</td><td'+A+'>'+pb+'</td><td'+Z+'>'+debt+'</td>'+(isV()?ptCells(L).replace(/<td/g, '<td'+Z)+'<td'+Z+'>'+pct(o.strandedPeakPct)+'</td>':'')+'<td'+A+'>'+fl+'</td>'
       + '<td class="l"><span class="chip '+binClass(o)+'">'+o.bin+'</span></td></tr>';
   });
   h += '</tbody>';
@@ -1542,7 +1711,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote(); renderKpis(); renderHiddenState(); updateMarginCells(false);
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -1891,7 +2060,77 @@ function snapInit(){
   $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });
   $('snapImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; snapImportFile(f); e.target.value = ''; });
 }
+/* ---------- view modes, KPI tiles, hidden state ---------- */
+// Modes only change what is shown (CSS hides elements tagged data-min above the current mode). Every input stays in
+// the page, so switching modes never changes an input or a result.
+const MODE_KEY = 'load-bearing-mode';
+let mode = 'basic';
+function setMode(m, opts){
+  if(MODES.indexOf(m) < 0) m = 'basic';
+  mode = m;
+  document.body.setAttribute('data-mode', m);
+  document.querySelectorAll('[data-mode-btn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.modeBtn===m ? 'true' : 'false'));
+  if(!(opts && opts.noStore)){ try{ localStorage.setItem(MODE_KEY, m); }catch(e){} }
+  if(!(opts && opts.noHash) && location.hash !== '#'+m){ try{ history.replaceState(null, '', '#'+m); }catch(e){ location.hash = m; } }
+  renderHiddenState();
+}
+function initialMode(){
+  const fromHash = modeFromHash(location.hash);
+  if(fromHash) return fromHash;
+  try{ const st = localStorage.getItem(MODE_KEY); if(MODES.indexOf(st) >= 0) return st; }catch(e){}
+  return 'basic';
+}
+function tile(id, big, sub, label, info, chip){
+  const cls = chip==='Stable' ? 's-stable' : chip==='Watch' ? 's-watch' : chip==='Fragile' ? 's-fragile' : 's-none';
+  return '<div class="tile" id="'+id+'"><div class="big">'+big+(sub ? '<small>'+sub+'</small>' : '')+'</div>'
+    + '<div class="lab"><span>'+label+'</span><span class="tipwrap"><button class="info" aria-label="About: '+label+'" aria-expanded="false" aria-controls="'+id+'Tip">i</button><span class="tip" role="tooltip" id="'+id+'Tip">'+info+'</span></span></div>'
+    + '<span class="status '+cls+'">'+chip+'</span></div>';
+}
+function esc(t){ return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function renderKpis(){
+  const k = kpiTiles(layers, G);
+  const t = k.tight;
+  const tightBig = t ? (t.headroom>0?'+':'') + (t.unit==='x' ? mx(t.headroom) : pct(t.headroom)) : 'n/a';
+  let allocBig = 'n/a', allocLabel = 'Of my allocation in layers that do not earn their cost';
+  if(k.alloc.pct !== null) allocBig = pct(k.alloc.pct);
+  $('kpis').innerHTML =
+    tile('kEarn', k.earn.n+' of '+k.earn.N, null, 'Layers that earn their cost',
+      'Layers whose present value at your entry year is zero or more at your discount rate. Placeholder inputs; not a forecast.', k.earn.chip)
+    + tile('kTight', tightBig, t ? esc(t.name) : 'no meaningful headroom', 'Tightest layer (lowest headroom)',
+      'Headroom is the break-even '+(isB() ? 'multiple' : 'premium')+' minus what you pay. The lowest one is the layer closest to not earning its cost. The status uses the sign only: below zero is Fragile.', t ? t.chip : 'n/a')
+    + tile('kAlloc', allocBig, k.alloc.placeholder ? 'placeholder equal split' : null, allocLabel,
+      'Share of your allocation sitting in layers whose present value is below zero. '+(k.alloc.placeholder ? 'Your allocation is still the placeholder equal split; enter your own in the layer table.' : 'Allocation is your own split, kept in this browser.'), k.alloc.chip)
+    + tile('kFlips', k.flips.n+' of '+k.flips.N, null, 'Layers whose verdict flips under a tested shock',
+      'Layers where at least one of the verdict-fragility shocks (timing, build start, drift, scale, discount rate, asset life, and in Vintage mode pass-through and decline) changes the verdict. The shocks are a display choice.', k.flips.chip);
+}
+// Shown in Basic and Advanced when any Analyst-only setting differs from its default.
+function renderHiddenState(){
+  const el = $('hiddenState'); if(!el) return;
+  const diffs = analystDiffs(G, layers);
+  el.hidden = mode === 'analyst' || !diffs.length;
+  if(el.hidden) return;
+  $('hiddenText').textContent = diffs.length + ' advanced assumption' + (diffs.length===1 ? '' : 's') + ' active: ' + diffs.slice(0, 4).map(d => d.label).join('; ') + (diffs.length > 4 ? '; and ' + (diffs.length - 4) + ' more' : '') + '.';
+}
+function resetHidden(){
+  const r = resetAnalyst(G, layers);
+  G = r.G; layers = r.layers;
+  syncDriverInputs(); buildInputs(); update();
+}
+function bindModes(){
+  document.querySelectorAll('[data-mode-btn]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeBtn)));
+  window.addEventListener('hashchange', () => { const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
+  $('hiddenGo').addEventListener('click', () => setMode('analyst'));
+  $('hiddenReset').addEventListener('click', resetHidden);
+  // Info icons and the placeholder pill: hover and keyboard focus show the tip (CSS); a tap toggles it.
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.tipwrap > button');
+    document.querySelectorAll('.tipwrap > button[aria-expanded="true"]').forEach(x => { if(x !== b) x.setAttribute('aria-expanded', 'false'); });
+    if(b) b.setAttribute('aria-expanded', b.getAttribute('aria-expanded')==='true' ? 'false' : 'true');
+  });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.tipwrap > button[aria-expanded="true"]').forEach(x => x.setAttribute('aria-expanded', 'false')); });
+}
 function init(){
+  setMode(initialMode(), { noStore: false }); bindModes();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
 }
 init();

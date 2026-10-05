@@ -204,7 +204,7 @@ test('verdict fragility panel: one row per layer matching verdictFragility, in b
 // Rebuild a layer object from the default layer plus the values currently in the input tables.
 function layerFromInputs(doc, i){
   const L = { ...D.DEFAULT_LAYERS[i], driftP: D.DEFAULT_LAYERS[i].driftP.slice(), marginP: D.DEFAULT_LAYERS[i].marginP.slice() };
-  doc.querySelectorAll('#inputs input[data-i="' + i + '"], #phaseTable input[data-i="' + i + '"]').forEach(inp => {
+  doc.querySelectorAll('#inputs input[data-i="' + i + '"]:not([data-k="marginAll"]), #phaseTable input[data-i="' + i + '"]').forEach(inp => {
     const v = Number(inp.value);
     if (inp.dataset.p === undefined) L[inp.dataset.k] = v; else L[inp.dataset.k][+inp.dataset.p] = v;
   });
@@ -238,8 +238,10 @@ test('every input range on the page equals the range the snapshot import validat
   assert.deepEqual(r3(doc.getElementById('ph2')), D.PHASE_RANGES[1]);
   const keys = new Set();
   doc.querySelectorAll('#inputs input[data-k], #phaseTable input[data-k]').forEach(inp => {
-    keys.add(inp.dataset.k);
-    assert.deepEqual(r3(inp), D.LAYER_RANGES[inp.dataset.k], inp.dataset.k);
+    // The single cash-margin box (Basic and Advanced) sets all three margin phases, so it uses the margin range.
+    const k = inp.dataset.k === 'marginAll' ? 'marginP' : inp.dataset.k;
+    keys.add(k);
+    assert.deepEqual(r3(inp), D.LAYER_RANGES[k], inp.dataset.k);
   });
   for (const k of ['buildStart', 'unitCostDecline', 'passThrough', 'offset', 'steepness', 'driftP', 'marginP']) assert.ok(keys.has(k), k + ' is on the page');
   assert.deepEqual([...keys].sort(), Object.keys(D.LAYER_RANGES).sort(), 'every layer range has an input on the page');

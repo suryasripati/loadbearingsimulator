@@ -150,24 +150,45 @@ const COLS = [
 ].map(c => c.concat(LR(c[0])));
 const PCOLS = [0,1,2].map(p => ['driftP','Share drift, % a year'].concat(LR('driftP'), [p])).concat([0,1,2].map(p => ['marginP','Cash margin, %'].concat(LR('marginP'), [p])));
 const getV = (L, c) => c[5]===undefined ? L[c[0]] : L[c[0]][c[5]];
+// The view mode in which each layer-table column first appears (Basic otherwise).
+const COL_MODE = { offset:'analyst', steepness:'analyst', buildStart:'analyst', buildYears:'analyst', unitCostDecline:'analyst', passThrough:'analyst', debt:'analyst' };
+const dm = (k) => COL_MODE[k] ? ' data-min="'+COL_MODE[k]+'"' : '';
 function cellInput(L, i, c){
-  return '<td><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
+  return '<td'+(c[5]===undefined ? dm(c[0]) : '')+'><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
 }
 function phaseLabels(){
   const b = G.phases;
   return ['years 0–'+(b[0]-1), 'years '+b[0]+'–'+(b[1]-1), 'years '+b[1]+'–'+H];
 }
 function buildInputs(){
-  let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => '<th>'+c[1]+'</th>').join('') + '</tr></thead><tbody>';
+  // Basic and Advanced show one cash margin per layer; it sets all three phases. When the phases differ (set in
+  // Analyst), the cell says so instead of offering an input that would overwrite them.
+  const head = (c) => '<th'+dm(c[0])+'>'+c[1]+'</th>';
+  let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => head(c) + (c[0]==='share' ? '<th>Cash margin, %</th>' : '')).join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
-    COLS.forEach(c => { h += cellInput(L, i, c); });
+    COLS.forEach(c => { h += cellInput(L, i, c); if(c[0]==='share') h += '<td class="mcell" data-i="'+i+'"></td>'; });
     h += '</tr>';
   });
   h += '</tbody>';
   $('inputs').innerHTML = h;
   buildPhaseTable();
   document.querySelectorAll('#inputs input').forEach(inp => inp.addEventListener('input', onLayerInput));
+  updateMarginCells(true);
+}
+const uniformMargin = (L) => L.marginP.every(v => v === L.marginP[0]);
+function updateMarginCells(force){
+  document.querySelectorAll('#inputs td.mcell').forEach(td => {
+    const i = +td.dataset.i, L = layers[i], inp = td.querySelector('input');
+    if(uniformMargin(L)){
+      if(inp && !force){ if(document.activeElement !== inp) inp.value = L.marginP[0]; return; }
+      const r = LR('marginP');
+      td.innerHTML = '<input type="number" data-i="'+i+'" data-k="marginAll" min="'+r[0]+'" max="'+r[1]+'" step="'+r[2]+'" value="'+L.marginP[0]+'" aria-label="'+L.name+': Cash margin, % (all phases)">';
+      td.querySelector('input').addEventListener('input', onLayerInput);
+    } else if(inp || force || !td.textContent){
+      td.innerHTML = '<span class="muted" title="Set per phase in Analyst mode">varies by phase</span>';
+    }
+  });
 }
 // Any element with data-sel selects that layer: table names, the layer buttons under Detail, and quadrant dots.
 function selectLayer(i){ if(!(i>=0 && i<layers.length)) return; sel = i; save(); markSel(); renderResults(); }
@@ -202,6 +223,13 @@ function markSel(){
 }
 function onLayerInput(e){
   const inp = e.target, i = +inp.dataset.i, k = inp.dataset.k, p = inp.dataset.p;
+  if(k==='marginAll'){
+    const r = LR('marginP'); let m = parseFloat(inp.value);
+    if(!isFinite(m)) return;
+    m = clamp(m, r[0], r[1]);
+    layers[i].marginP = [m, m, m];
+    refreshInputsFromState(); save(); renderResults(); return;
+  }
   const col = COLS.concat(PCOLS).find(c => c[0]===k);
   let v = parseFloat(inp.value);
   if(!isFinite(v)) return;
@@ -216,8 +244,10 @@ function onLayerInput(e){
 }
 function refreshInputsFromState(){
   document.querySelectorAll('#inputs input, #phaseTable input').forEach(inp => {
+    if(inp.dataset.k==='marginAll') return; // kept in step by updateMarginCells
     const L = layers[+inp.dataset.i]; inp.value = inp.dataset.p===undefined ? L[inp.dataset.k] : L[inp.dataset.k][+inp.dataset.p];
   });
+  updateMarginCells(false);
 }
 function onPhaseBounds(){
   let a = Math.round(parseFloat($('ph1').value)), b = Math.round(parseFloat($('ph2').value));
@@ -343,7 +373,9 @@ function ptCells(L){
   return c(a) + c(b) + '<td>'+money(a-b)+'</td>';
 }
 function scoreTable(res){
-  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th>'+(isV()?'<th>Value if owner keeps savings (pass-through 0)</th><th>Value if competition takes savings (pass-through 1)</th><th>Value at stake in pricing power</th><th>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
+  // Basic: layer, present value, headroom, verdict. Advanced adds break-even, IRR, payback and flags. Analyst adds the rest.
+  const A = ' data-min="advanced"', Z = ' data-min="analyst"';
+  let h = '<thead><tr><th class="l">Layer</th><th'+Z+'>Evidence gate</th><th>Present value at year '+G.entry+'</th><th'+A+'>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th'+A+'>Return on cash (IRR)</th><th'+A+'>Cash payback</th><th'+Z+'>Debt</th>'+(isV()?'<th'+Z+'>Value if owner keeps savings (pass-through 0)</th><th'+Z+'>Value if competition takes savings (pass-through 1)</th><th'+Z+'>Value at stake in pricing power</th><th'+Z+'>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th'+A+'>Flags</th><th class="l">Verdict</th></tr></thead><tbody>';
   res.forEach((o,i) => {
     const L = layers[i];
     const irr = isNaN(o.irr) ? (o.npv<0 ? 'below −50%' : 'n/a') : pct(o.irr*100,1);
@@ -351,11 +383,11 @@ function scoreTable(res){
     const debt = L.debt===0 ? 'None' : (o.flags.indexOf('debt')>=0 ? 'Short by '+money(o.shortfall) : 'Covered');
     const fl = o.flags.length ? o.flags.map(f => f==='life'?'Life':f==='debt'?'Debt':'Tail').join(', ') : 'None';
     h += '<tr class="'+(i===sel?'sel':'')+'"><td>'+nameBtn(L,i)+'</td>'
-      + '<td><span class="chip '+(o.merit?'c-green':'c-amber')+'">'+(o.merit?'Pass':'Forecast bet')+'</span></td>'
+      + '<td'+Z+'><span class="chip '+(o.merit?'c-green':'c-amber')+'">'+(o.merit?'Pass':'Forecast bet')+'</span></td>'
       + '<td class="'+(o.npv<0?'neg':'pos')+'">'+money(o.npv)+'</td>'
-      + '<td>'+beText(o)+'</td>'
+      + '<td'+A+'>'+beText(o)+'</td>'
       + hrText(o)
-      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td>'+(isV()?ptCells(L)+'<td>'+pct(o.strandedPeakPct)+'</td>':'')+'<td>'+fl+'</td>'
+      + '<td'+A+'>'+irr+'</td><td'+A+'>'+pb+'</td><td'+Z+'>'+debt+'</td>'+(isV()?ptCells(L).replace(/<td/g, '<td'+Z)+'<td'+Z+'>'+pct(o.strandedPeakPct)+'</td>':'')+'<td'+A+'>'+fl+'</td>'
       + '<td class="l"><span class="chip '+binClass(o)+'">'+o.bin+'</span></td></tr>';
   });
   h += '</tbody>';
@@ -476,7 +508,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote(); renderKpis(); renderHiddenState(); updateMarginCells(false);
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -825,7 +857,77 @@ function snapInit(){
   $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });
   $('snapImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; snapImportFile(f); e.target.value = ''; });
 }
+/* ---------- view modes, KPI tiles, hidden state ---------- */
+// Modes only change what is shown (CSS hides elements tagged data-min above the current mode). Every input stays in
+// the page, so switching modes never changes an input or a result.
+const MODE_KEY = 'load-bearing-mode';
+let mode = 'basic';
+function setMode(m, opts){
+  if(MODES.indexOf(m) < 0) m = 'basic';
+  mode = m;
+  document.body.setAttribute('data-mode', m);
+  document.querySelectorAll('[data-mode-btn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.modeBtn===m ? 'true' : 'false'));
+  if(!(opts && opts.noStore)){ try{ localStorage.setItem(MODE_KEY, m); }catch(e){} }
+  if(!(opts && opts.noHash) && location.hash !== '#'+m){ try{ history.replaceState(null, '', '#'+m); }catch(e){ location.hash = m; } }
+  renderHiddenState();
+}
+function initialMode(){
+  const fromHash = modeFromHash(location.hash);
+  if(fromHash) return fromHash;
+  try{ const st = localStorage.getItem(MODE_KEY); if(MODES.indexOf(st) >= 0) return st; }catch(e){}
+  return 'basic';
+}
+function tile(id, big, sub, label, info, chip){
+  const cls = chip==='Stable' ? 's-stable' : chip==='Watch' ? 's-watch' : chip==='Fragile' ? 's-fragile' : 's-none';
+  return '<div class="tile" id="'+id+'"><div class="big">'+big+(sub ? '<small>'+sub+'</small>' : '')+'</div>'
+    + '<div class="lab"><span>'+label+'</span><span class="tipwrap"><button class="info" aria-label="About: '+label+'" aria-expanded="false" aria-controls="'+id+'Tip">i</button><span class="tip" role="tooltip" id="'+id+'Tip">'+info+'</span></span></div>'
+    + '<span class="status '+cls+'">'+chip+'</span></div>';
+}
+function esc(t){ return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function renderKpis(){
+  const k = kpiTiles(layers, G);
+  const t = k.tight;
+  const tightBig = t ? (t.headroom>0?'+':'') + (t.unit==='x' ? mx(t.headroom) : pct(t.headroom)) : 'n/a';
+  let allocBig = 'n/a', allocLabel = 'Of my allocation in layers that do not earn their cost';
+  if(k.alloc.pct !== null) allocBig = pct(k.alloc.pct);
+  $('kpis').innerHTML =
+    tile('kEarn', k.earn.n+' of '+k.earn.N, null, 'Layers that earn their cost',
+      'Layers whose present value at your entry year is zero or more at your discount rate. Placeholder inputs; not a forecast.', k.earn.chip)
+    + tile('kTight', tightBig, t ? esc(t.name) : 'no meaningful headroom', 'Tightest layer (lowest headroom)',
+      'Headroom is the break-even '+(isB() ? 'multiple' : 'premium')+' minus what you pay. The lowest one is the layer closest to not earning its cost. The status uses the sign only: below zero is Fragile.', t ? t.chip : 'n/a')
+    + tile('kAlloc', allocBig, k.alloc.placeholder ? 'placeholder equal split' : null, allocLabel,
+      'Share of your allocation sitting in layers whose present value is below zero. '+(k.alloc.placeholder ? 'Your allocation is still the placeholder equal split; enter your own in the layer table.' : 'Allocation is your own split, kept in this browser.'), k.alloc.chip)
+    + tile('kFlips', k.flips.n+' of '+k.flips.N, null, 'Layers whose verdict flips under a tested shock',
+      'Layers where at least one of the verdict-fragility shocks (timing, build start, drift, scale, discount rate, asset life, and in Vintage mode pass-through and decline) changes the verdict. The shocks are a display choice.', k.flips.chip);
+}
+// Shown in Basic and Advanced when any Analyst-only setting differs from its default.
+function renderHiddenState(){
+  const el = $('hiddenState'); if(!el) return;
+  const diffs = analystDiffs(G, layers);
+  el.hidden = mode === 'analyst' || !diffs.length;
+  if(el.hidden) return;
+  $('hiddenText').textContent = diffs.length + ' advanced assumption' + (diffs.length===1 ? '' : 's') + ' active: ' + diffs.slice(0, 4).map(d => d.label).join('; ') + (diffs.length > 4 ? '; and ' + (diffs.length - 4) + ' more' : '') + '.';
+}
+function resetHidden(){
+  const r = resetAnalyst(G, layers);
+  G = r.G; layers = r.layers;
+  syncDriverInputs(); buildInputs(); update();
+}
+function bindModes(){
+  document.querySelectorAll('[data-mode-btn]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeBtn)));
+  window.addEventListener('hashchange', () => { const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
+  $('hiddenGo').addEventListener('click', () => setMode('analyst'));
+  $('hiddenReset').addEventListener('click', resetHidden);
+  // Info icons and the placeholder pill: hover and keyboard focus show the tip (CSS); a tap toggles it.
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.tipwrap > button');
+    document.querySelectorAll('.tipwrap > button[aria-expanded="true"]').forEach(x => { if(x !== b) x.setAttribute('aria-expanded', 'false'); });
+    if(b) b.setAttribute('aria-expanded', b.getAttribute('aria-expanded')==='true' ? 'false' : 'true');
+  });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.tipwrap > button[aria-expanded="true"]').forEach(x => x.setAttribute('aria-expanded', 'false')); });
+}
 function init(){
+  setMode(initialMode(), { noStore: false }); bindModes();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
 }
 init();

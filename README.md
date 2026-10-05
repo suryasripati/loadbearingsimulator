@@ -8,6 +8,16 @@ A scenario tool for one question: if a technology works the way you expect, whic
 
 ## What it does
 
+The page has three view modes, chosen in the header and remembered in your browser and in the address (`#basic`, `#advanced`, `#analyst`). Modes only change what is shown; every input is kept, and results are identical in every mode.
+
+- **Basic** (default on first visit): key figures, the technology scenario with entry premium and discount rate, the quadrant chart, a short layer table (demand evidence, share, cash margin, build capex, asset life, your allocation) and a short scorecard (present value, headroom, verdict).
+- **Advanced** adds the entry heatmap, cumulative cash, what moves the answer most, your allocation across scenarios, the scorecard's break-even, IRR, payback and flags columns, and "Show evidence +" notes.
+- **Analyst** adds every other assumption (drift, build years and start, debt, timing offset, steepness, unit-cost decline, pass-through), phases, the capex model, entry definition and year, debt interest, the terminal multiple, the verdict fragility panel, the example buttons and snapshots.
+
+Four key figures sit at the top of every mode, all read from existing model outputs: layers that earn their cost, the tightest layer (lowest headroom), the share of your allocation in layers that do not earn their cost (labelled when it is still the placeholder equal split), and layers whose verdict flips under a tested shock. Each has a text status (Stable, Watch, Fragile) and an info note. In Basic and Advanced, a line says when any Analyst-only setting differs from its default, links to Analyst, and offers "Reset to simple defaults", which resets only those settings (never your allocation or snapshots).
+
+Details by feature:
+
 - Scenario drivers: adoption speed, midpoint and value pool. One end-demand curve drives every layer.
 - Layer timing: each layer can lead or lag end demand (offset, in years) and be steeper or flatter. Defaults are neutral: every layer follows end demand, so the default page reproduces v0.1. The **Load lead/lag example** button sets placeholder offsets (infrastructure leads, applications and services lag) to show how much timing alone can move a verdict; it is an example, not data. When any offset is non-zero, the verdict fragility panel names the layers whose verdict depends on it.
 - Timing chart: a "Timing: layers against end demand" card beside the scenario controls draws the solid end-demand curve and one line per layer (each with its own dash pattern), with the selected layer highlighted. The legend says for each layer whether it leads, lags, is steeper or flatter, or is the same as end demand. Click a layer name in the legend to select it.
