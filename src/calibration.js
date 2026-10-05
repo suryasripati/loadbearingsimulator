@@ -3,31 +3,43 @@
 // file holds no episode data, and none may be invented. Sourced and derived inputs need cited sources; a judgement
 // needs a rationale and may be uncited, but an episode with any uncited input must stay out of the repository.
 // Pure functions, no DOM. CommonJS export for tests; the build strips the export line and inlines this file in
-// docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
+// docs/calibration.html after the model, the defaults, the snapshot code (whose strict-import helpers it reuses) and
+// the guidance (src/calibration-guide.js).
+//
+// Episode shape (schema 3). Episode-level fields are shared by every input version: id, name, version, previousHash,
+// asOfDate, asOfRule, outcomeHorizon, outcomeMeasure, scorer (statement plus checklist), layerNames, sources and
+// outcomes. Each input version ("variant", for example hype against measured adoption speed) has a label, settings,
+// layer inputs and its own lock.
+// Hash schemes: 1 = schema 1 lock (no counts); 2 = schema 2 lock (counts and acknowledgement); 3 = this schema
+// (per variant: shared fields, the variant's inputs, the sources it cites, counts, acknowledgement and the checklist).
+// Schema 1 and 2 files import as a single variant "Main" whose lock keeps its original formula, with
+// checklistCaptured false.
 
 const EP_FORMAT = 'load-bearing-simulator-episode';
-const EP_SCHEMA_VERSION = 2;
-// Schema 1 locks had no basis counts or acknowledgement; they still import and validate under hash scheme 1.
-const EP_SCHEMA_READABLE = [1, 2];
+const EP_SCHEMA_VERSION = 3;
+const EP_SCHEMA_READABLE = [1, 2, 3];
 const EP_MAX_LAYERS = 8;
+const EP_MAX_VARIANTS = 4;
 const EP_MAX_SOURCES = 100;
 const EP_MAX_IDS = 20;
-const EP_TEXT = { name: 120, citation: 1000, long: 2000, knew: 4000 };
+const EP_TEXT = { name: 120, label: 60, citation: 1000, long: 2000, knew: 4000 };
 const EP_SOURCE_KINDS = ['contemporary', 'compiled-from-period-data', 'retrospective'];
 const EP_BASIS = ['sourced', 'derived', 'judgement'];
 const EP_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
+const EP_CHECK_ANSWERS = ['', 'yes', 'no', 'partly'];
 const EP_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
 const EP_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline',
   'passThrough', 'life', 'debt'];
 const EP_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
 const EP_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration.';
 const EP_FEW_CASES = 'Too few cases for statistical conclusions.';
+const EP_LN81_LN2 = Math.log(81) / Math.log(2);
 
 function calDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') {
-    return Object.assign({}, require('./model.js'), require('./defaults.js'), require('./snapshots.js'));
+    return Object.assign({}, require('./model.js'), require('./defaults.js'), require('./snapshots.js'), require('./calibration-guide.js'));
   }
-  return { MODEL_VERSION, runLayer, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H, SNAP_MAX_BYTES,
+  return { MODEL_VERSION, runLayer, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H, SNAP_MAX_BYTES, SCORER_CHECKLIST,
     snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj };
 }
 
@@ -71,33 +83,87 @@ function calCanonical(v){
   if (v !== null && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + calCanonical(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-// The lock covers everything decided before the outcome is looked at: inputs, sources, rules and the scorer's
-// statement, and (hash scheme 2) the basis counts and the acknowledgement given at lock time. Outcomes are not
-// covered (they are entered after locking). Without lockMeta this is hash scheme 1, used by schema 1 locks.
-function episodeHash(ep, lockMeta){
-  const body = { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
-    asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer,
-    settings: ep.settings, layers: ep.layers, sources: ep.sources };
-  if (lockMeta) { body.counts = lockMeta.counts; body.acknowledged = lockMeta.acknowledged; }
-  return calSha256(calCanonical(body));
-}
 
-/* ---------- Template ---------- */
+/* ---------- Template and empty parts ---------- */
 function calEmptyRecord(){ return { value: null, basis: null, sourceIds: [], calculation: '', rationale: '' }; }
-function calEmptyLayer(){
+function calEmptyInputs(){
   const inputs = {};
   EP_LAYER_KEYS.forEach(k => { inputs[k] = calEmptyRecord(); });
   inputs.driftP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
   inputs.marginP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
-  return { name: '', inputs };
+  return inputs;
+}
+function calEmptySettings(){
+  const s = {};
+  EP_SETTING_KEYS.forEach(k => { s[k] = calEmptyRecord(); });
+  s.entryDef = null; s.capexModel = null;
+  return s;
+}
+function calEmptyChecklist(){ const c = {}; calDeps().SCORER_CHECKLIST.forEach(i => { c[i.key] = ''; }); return c; }
+function calEmptyVariant(label, nLayers){
+  return { label: label, settings: calEmptySettings(), layers: Array.from({ length: nLayers }, () => ({ inputs: calEmptyInputs() })), lock: null };
 }
 function templateEpisode(){
-  const settings = {};
-  EP_SETTING_KEYS.forEach(k => { settings[k] = calEmptyRecord(); });
-  settings.entryDef = null; settings.capexModel = null;
   return { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION, id: '', name: '', version: 1, previousHash: null,
-    asOfDate: null, asOfRule: '', outcomeHorizon: '', outcomeMeasure: '', scorer: { knewAboutOutcome: '' },
-    settings, layers: [calEmptyLayer()], sources: [], lock: null, outcomes: [] };
+    asOfDate: null, asOfRule: '', outcomeHorizon: '', outcomeMeasure: '',
+    scorer: { knewAboutOutcome: '', checklist: calEmptyChecklist() },
+    layerNames: [''], sources: [], variants: [calEmptyVariant('Main', 1)], outcomes: [] };
+}
+
+/* ---------- Migration of schema 1 and 2 files (raw, before validation) ---------- */
+// Old shape: settings, layers [{ name, inputs }] and lock at the top level; scorer { knewAboutOutcome }. Field sets are
+// checked strictly here; everything is then validated again in the schema 3 shape.
+function calMigrate(raw){
+  const d = calDeps(), w = 'Episode (schema ' + raw.schemaVersion + ')';
+  d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
+    'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], w);
+  d.snapKeys(raw.scorer, ['knewAboutOutcome'], [], w + ' scorer');
+  if (!Array.isArray(raw.layers)) d.snapErr(w + ' layers', 'expected a list');
+  raw.layers.forEach((L, i) => d.snapKeys(L, ['name', 'inputs'], [], w + ' layer ' + (i + 1)));
+  let lock = null;
+  if (raw.lock !== null) {
+    if (raw.schemaVersion === 1) {
+      d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], w + ' lock');
+      lock = { hash: raw.lock.hash, lockedAt: raw.lock.lockedAt, modelVersion: raw.lock.modelVersion, hashScheme: 1, counts: null, acknowledged: null, checklistCaptured: false };
+    } else {
+      d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged'], [], w + ' lock');
+      lock = { hash: raw.lock.hash, lockedAt: raw.lock.lockedAt, modelVersion: raw.lock.modelVersion, hashScheme: raw.lock.hashScheme,
+        counts: raw.lock.counts, acknowledged: raw.lock.acknowledged, checklistCaptured: false };
+    }
+  }
+  return { format: raw.format, schemaVersion: 3, id: raw.id, name: raw.name, version: raw.version, previousHash: raw.previousHash,
+    asOfDate: raw.asOfDate, asOfRule: raw.asOfRule, outcomeHorizon: raw.outcomeHorizon, outcomeMeasure: raw.outcomeMeasure,
+    scorer: { knewAboutOutcome: raw.scorer.knewAboutOutcome, checklist: calEmptyChecklist() },
+    layerNames: raw.layers.map(L => L.name), sources: raw.sources,
+    variants: [{ label: 'Main', settings: raw.settings, layers: raw.layers.map(L => ({ inputs: L.inputs })), lock }],
+    outcomes: raw.outcomes };
+}
+
+/* ---------- Hashes ---------- */
+// Scheme 1 and 2: the original formulas over the old shape (variant 0 only), so migrated locks stay valid.
+function legacyHash(ep, vi, scheme, meta){
+  const v = ep.variants[vi];
+  const body = { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
+    asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: { knewAboutOutcome: ep.scorer.knewAboutOutcome },
+    settings: v.settings, layers: ep.layerNames.map((n, i) => ({ name: n, inputs: v.layers[i].inputs })), sources: ep.sources };
+  if (scheme === 2) { body.counts = meta.counts; body.acknowledged = meta.acknowledged; }
+  return calSha256(calCanonical(body));
+}
+// Scheme 3: shared fields (including the scorer checklist and layer names), this variant's label and inputs, the
+// sources it cites, its counts and its acknowledgement. Changing a shared field after any lock breaks every lock.
+function variantHash(ep, vi, meta){
+  const v = ep.variants[vi], cited = citedSources(ep, vi);
+  return calSha256(calCanonical({
+    shared: { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate, asOfRule: ep.asOfRule,
+      outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer, layerNames: ep.layerNames },
+    variant: { label: v.label, settings: v.settings, layers: v.layers },
+    sources: ep.sources.filter(s => cited.has(s.id)),
+    counts: meta.counts, acknowledged: meta.acknowledged }));
+}
+function citedSources(ep, vi){
+  const ids = new Set();
+  allRecords(ep, vi).forEach(([, r]) => r.sourceIds.forEach(id => ids.add(id)));
+  return ids;
 }
 
 /* ---------- Validation (strict; returns a fresh object) ---------- */
@@ -153,15 +219,15 @@ function calRecord(r, where, range, integer, ctx){
   return out;
 }
 
-function validateEpisode(raw){
+function validateEpisode(raw0){
   const d = calDeps();
   const where = 'Episode';
-  if (!d.snapIsObj(raw)) d.snapErr(where, 'expected an object');
-  if (raw.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
-  if (EP_SCHEMA_READABLE.indexOf(raw.schemaVersion) < 0) d.snapErr(where, 'schema version ' + String(raw.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema versions ' + EP_SCHEMA_READABLE.join(' and ') + ')');
-  const schema = raw.schemaVersion;
+  if (!d.snapIsObj(raw0)) d.snapErr(where, 'expected an object');
+  if (raw0.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
+  if (EP_SCHEMA_READABLE.indexOf(raw0.schemaVersion) < 0) d.snapErr(where, 'schema version ' + String(raw0.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema versions ' + EP_SCHEMA_READABLE.join(', ') + ')');
+  const raw = raw0.schemaVersion < 3 ? calMigrate(raw0) : raw0;
   d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
-    'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], where);
+    'outcomeMeasure', 'scorer', 'layerNames', 'sources', 'variants', 'outcomes'], [], where);
   const ep = { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION };
   ep.id = d.snapStr(raw.id, 60, where + ' id');
   if (ep.id && !/^[a-z0-9][a-z0-9-]*$/.test(ep.id)) d.snapErr(where + ' id', 'use lower-case letters, digits and hyphens');
@@ -173,8 +239,13 @@ function validateEpisode(raw){
   ep.asOfRule = d.snapStr(raw.asOfRule, EP_TEXT.long, where + ' asOfRule');
   ep.outcomeHorizon = d.snapStr(raw.outcomeHorizon, EP_TEXT.long, where + ' outcomeHorizon');
   ep.outcomeMeasure = d.snapStr(raw.outcomeMeasure, EP_TEXT.long, where + ' outcomeMeasure');
-  d.snapKeys(raw.scorer, ['knewAboutOutcome'], [], where + ' scorer');
-  ep.scorer = { knewAboutOutcome: d.snapStr(raw.scorer.knewAboutOutcome, EP_TEXT.knew, where + ' scorer knewAboutOutcome') };
+  // Scorer: free text plus the checklist.
+  d.snapKeys(raw.scorer, ['knewAboutOutcome', 'checklist'], [], where + ' scorer');
+  const keys = d.SCORER_CHECKLIST.map(c => c.key);
+  d.snapKeys(raw.scorer.checklist, keys, [], where + ' scorer checklist');
+  const checklist = {};
+  keys.forEach(k => { checklist[k] = d.snapOneOf(raw.scorer.checklist[k], EP_CHECK_ANSWERS, where + ' scorer checklist ' + k); });
+  ep.scorer = { knewAboutOutcome: d.snapStr(raw.scorer.knewAboutOutcome, EP_TEXT.knew, where + ' scorer knewAboutOutcome'), checklist };
   // Sources first, so inputs and outcomes can be checked against them.
   if (!Array.isArray(raw.sources) || raw.sources.length > EP_MAX_SOURCES) d.snapErr(where + ' sources', 'expected a list of at most ' + EP_MAX_SOURCES);
   const byId = {};
@@ -193,62 +264,19 @@ function validateEpisode(raw){
     return src;
   });
   const ctx = { known: new Set(Object.keys(byId)), byId, asOfDate: ep.asOfDate };
-  // Settings
-  const S = raw.settings;
-  d.snapKeys(S, EP_SETTING_KEYS.concat(['entryDef', 'capexModel']), [], where + ' settings');
-  ep.settings = {};
-  EP_SETTING_KEYS.forEach(k => {
-    const range = k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k];
-    ep.settings[k] = calRecord(S[k], where + ' setting ' + k, range, EP_INT_KEYS.indexOf(k) >= 0, ctx);
-  });
-  ep.settings.entryDef = S.entryDef === null ? null : d.snapOneOf(S.entryDef, ['A', 'B'], where + ' setting entryDef');
-  ep.settings.capexModel = S.capexModel === null ? null : d.snapOneOf(S.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
-  const p2 = ep.settings.phase2Start.value, p3 = ep.settings.phase3Start.value;
-  if (p2 !== null && p3 !== null && p2 >= p3) d.snapErr(where + ' settings', 'phase 2 must start before phase 3');
-  // Layers (episode-specific; names are free text)
-  if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > EP_MAX_LAYERS) d.snapErr(where + ' layers', 'expected 1 to ' + EP_MAX_LAYERS + ' layers');
-  ep.layers = raw.layers.map((L, i) => {
-    const w = where + ' layer ' + (i + 1);
-    d.snapKeys(L, ['name', 'inputs'], [], w);
-    d.snapKeys(L.inputs, EP_LAYER_KEYS.concat(['driftP', 'marginP']), [], w + ' inputs');
-    const inputs = {};
-    EP_LAYER_KEYS.forEach(k => { inputs[k] = calRecord(L.inputs[k], w + ' ' + k, d.LAYER_RANGES[k], EP_INT_KEYS.indexOf(k) >= 0, ctx); });
-    ['driftP', 'marginP'].forEach(k => {
-      if (!Array.isArray(L.inputs[k]) || L.inputs[k].length !== 3) d.snapErr(w + ' ' + k, 'expected three phase records');
-      inputs[k] = L.inputs[k].map((r, j) => calRecord(r, w + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
-    });
-    return { name: d.snapStr(L.name, EP_TEXT.name, w + ' name'), inputs };
-  });
-  // Lock. Schema 2: { hash, lockedAt, modelVersion, hashScheme, counts, acknowledged }. A schema 1 lock (first three
-  // fields only) is carried over as hash scheme 1 with counts and acknowledgement not recorded (null).
-  if (raw.lock === null) ep.lock = null;
-  else {
-    const w = where + ' lock';
-    if (schema === 1) d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], w);
-    else d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged'], [], w);
-    ep.lock = { hash: d.snapStr(raw.lock.hash, 64, w + ' hash'), lockedAt: d.snapDate(raw.lock.lockedAt, w + ' lockedAt'),
-      modelVersion: d.snapNum(raw.lock.modelVersion, [1, 100000], w + ' modelVersion', true),
-      hashScheme: schema === 1 ? 1 : d.snapNum(raw.lock.hashScheme, [1, 2], w + ' hashScheme', true), counts: null, acknowledged: null };
-    const missing = lockProblems(ep);
-    if (missing.length) d.snapErr(w, 'locked episode is incomplete: ' + missing[0]);
-    if (ep.lock.hashScheme === 1) {
-      if (schema !== 1 && (raw.lock.counts !== null || raw.lock.acknowledged !== null)) d.snapErr(w, 'a scheme 1 lock has no counts or acknowledgement');
-      if (episodeHash(ep) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
-    } else {
-      d.snapKeys(raw.lock.counts, ['judgement', 'uncited', 'total'], [], w + ' counts');
-      const c = {}; ['judgement', 'uncited', 'total'].forEach(k => { c[k] = d.snapNum(raw.lock.counts[k], [0, 10000], w + ' counts ' + k, true); });
-      if (typeof raw.lock.acknowledged !== 'boolean') d.snapErr(w + ' acknowledged', 'expected true or false');
-      ep.lock.counts = c; ep.lock.acknowledged = raw.lock.acknowledged;
-      const need = lockAcknowledgement(ep);
-      if (c.judgement !== need.judgement || c.uncited !== need.uncited || c.total !== need.total) d.snapErr(w + ' counts', 'the recorded counts do not match the inputs');
-      if (need.needed && !ep.lock.acknowledged) d.snapErr(w, 'this episode needed an acknowledgement at lock time and has none');
-      if (!need.needed && ep.lock.acknowledged) d.snapErr(w, 'an acknowledgement is recorded but none was needed');
-      if (episodeHash(ep, { counts: c, acknowledged: ep.lock.acknowledged }) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
-    }
-  }
-  // Outcomes (only after locking)
+  // Layer names (shared by every variant)
+  if (!Array.isArray(raw.layerNames) || raw.layerNames.length < 1 || raw.layerNames.length > EP_MAX_LAYERS) d.snapErr(where + ' layerNames', 'expected 1 to ' + EP_MAX_LAYERS + ' layers');
+  ep.layerNames = raw.layerNames.map((n, i) => d.snapStr(n, EP_TEXT.name, where + ' layer ' + (i + 1) + ' name'));
+  // Variants (input versions)
+  if (!Array.isArray(raw.variants) || raw.variants.length < 1 || raw.variants.length > EP_MAX_VARIANTS) d.snapErr(where + ' variants', 'expected 1 to ' + EP_MAX_VARIANTS + ' input versions');
+  ep.variants = raw.variants.map((v, vi) => calVariant(v, where + ' input version ' + (vi + 1), ep, ctx));
+  const labels = ep.variants.map(v => v.label.trim()).filter(Boolean);
+  if (new Set(labels).size !== labels.length) d.snapErr(where + ' variants', 'two input versions have the same label');
+  // Locks, one per variant (needs the whole episode for the hashes)
+  raw.variants.forEach((v, vi) => { ep.variants[vi].lock = v.lock === null ? null : calCheckLock(v.lock, where + ' input version ' + (vi + 1) + ' (' + (ep.variants[vi].label || 'unlabelled') + ') lock', ep, vi); });
+  // Outcomes (only once every input version is locked)
   if (!Array.isArray(raw.outcomes)) d.snapErr(where + ' outcomes', 'expected a list');
-  if (raw.outcomes.length && !ep.lock) d.snapErr(where + ' outcomes', 'outcomes can only be entered after the episode is locked');
+  if (raw.outcomes.length && !allLocked(ep)) d.snapErr(where + ' outcomes', 'outcomes can only be entered after every input version is locked');
   const seen = new Set();
   ep.outcomes = raw.outcomes.map((o, i) => {
     const w = where + ' outcome ' + (i + 1);
@@ -259,10 +287,71 @@ function validateEpisode(raw){
   });
   return ep;
 }
+function calVariant(v, w, ep, ctx){
+  const d = calDeps();
+  d.snapKeys(v, ['label', 'settings', 'layers', 'lock'], [], w);
+  const out = { label: d.snapStr(v.label, EP_TEXT.label, w + ' label'), settings: {}, layers: [], lock: null };
+  const S = v.settings;
+  d.snapKeys(S, EP_SETTING_KEYS.concat(['entryDef', 'capexModel']), [], w + ' settings');
+  EP_SETTING_KEYS.forEach(k => {
+    const range = k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k];
+    out.settings[k] = calRecord(S[k], w + ' setting ' + k, range, EP_INT_KEYS.indexOf(k) >= 0, ctx);
+  });
+  out.settings.entryDef = S.entryDef === null ? null : d.snapOneOf(S.entryDef, ['A', 'B'], w + ' setting entryDef');
+  out.settings.capexModel = S.capexModel === null ? null : d.snapOneOf(S.capexModel, ['sustaining', 'vintage'], w + ' setting capexModel');
+  const p2 = out.settings.phase2Start.value, p3 = out.settings.phase3Start.value;
+  if (p2 !== null && p3 !== null && p2 >= p3) d.snapErr(w + ' settings', 'phase 2 must start before phase 3');
+  if (!Array.isArray(v.layers) || v.layers.length !== ep.layerNames.length) d.snapErr(w + ' layers', 'expected ' + ep.layerNames.length + ' layers, one per layer name');
+  out.layers = v.layers.map((L, i) => {
+    const lw = w + ' layer ' + (i + 1);
+    d.snapKeys(L, ['inputs'], [], lw);
+    d.snapKeys(L.inputs, EP_LAYER_KEYS.concat(['driftP', 'marginP']), [], lw + ' inputs');
+    const inputs = {};
+    EP_LAYER_KEYS.forEach(k => { inputs[k] = calRecord(L.inputs[k], lw + ' ' + k, d.LAYER_RANGES[k], EP_INT_KEYS.indexOf(k) >= 0, ctx); });
+    ['driftP', 'marginP'].forEach(k => {
+      if (!Array.isArray(L.inputs[k]) || L.inputs[k].length !== 3) d.snapErr(lw + ' ' + k, 'expected three phase records');
+      inputs[k] = L.inputs[k].map((r, j) => calRecord(r, lw + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
+    });
+    return { inputs };
+  });
+  return out;
+}
+// One variant's lock: { hash, lockedAt, modelVersion, hashScheme, counts, acknowledged, checklistCaptured }.
+function calCheckLock(L, w, ep, vi){
+  const d = calDeps();
+  d.snapKeys(L, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged', 'checklistCaptured'], [], w);
+  const lock = { hash: d.snapStr(L.hash, 64, w + ' hash'), lockedAt: d.snapDate(L.lockedAt, w + ' lockedAt'),
+    modelVersion: d.snapNum(L.modelVersion, [1, 100000], w + ' modelVersion', true),
+    hashScheme: d.snapNum(L.hashScheme, [1, 3], w + ' hashScheme', true), counts: null, acknowledged: null, checklistCaptured: false };
+  if (typeof L.checklistCaptured !== 'boolean') d.snapErr(w + ' checklistCaptured', 'expected true or false');
+  lock.checklistCaptured = L.checklistCaptured;
+  if (lock.hashScheme < 3 && vi !== 0) d.snapErr(w, 'only the first input version can carry a lock from an older schema');
+  if (lock.hashScheme < 3 && lock.checklistCaptured) d.snapErr(w, 'a lock from an older schema did not capture the checklist');
+  if (lock.hashScheme === 3 && !lock.checklistCaptured) d.snapErr(w, 'a scheme 3 lock always captures the checklist');
+  const missing = lockProblems(ep, vi, { requireChecklist: lock.hashScheme === 3 });
+  if (missing.length) d.snapErr(w, 'locked input version is incomplete: ' + missing[0]);
+  const broken = 'the inputs do not match the lock hash; locked inputs cannot change without making a new version (and shared fields cannot change without a new episode version)';
+  if (lock.hashScheme === 1) {
+    if (L.counts !== null || L.acknowledged !== null) d.snapErr(w, 'a scheme 1 lock has no counts or acknowledgement');
+    if (legacyHash(ep, vi, 1) !== lock.hash) d.snapErr(w, broken);
+    return lock;
+  }
+  d.snapKeys(L.counts, ['judgement', 'uncited', 'total'], [], w + ' counts');
+  const c = {}; ['judgement', 'uncited', 'total'].forEach(k => { c[k] = d.snapNum(L.counts[k], [0, 10000], w + ' counts ' + k, true); });
+  if (typeof L.acknowledged !== 'boolean') d.snapErr(w + ' acknowledged', 'expected true or false');
+  lock.counts = c; lock.acknowledged = L.acknowledged;
+  const need = lockAcknowledgement(ep, vi);
+  if (c.judgement !== need.judgement || c.uncited !== need.uncited || c.total !== need.total) d.snapErr(w + ' counts', 'the recorded counts do not match the inputs');
+  if (need.needed && !lock.acknowledged) d.snapErr(w, 'this input version needed an acknowledgement at lock time and has none');
+  if (!need.needed && lock.acknowledged) d.snapErr(w, 'an acknowledgement is recorded but none was needed');
+  const meta = { counts: c, acknowledged: lock.acknowledged };
+  if ((lock.hashScheme === 2 ? legacyHash(ep, vi, 2, meta) : variantHash(ep, vi, meta)) !== lock.hash) d.snapErr(w, broken);
+  return lock;
+}
 function calOutcome(o, w, ep, ctx){
   const d = calDeps();
   d.snapKeys(o, ['layer', 'result', 'sourceIds', 'note', 'contested'], [], w);
-  const out = { layer: d.snapNum(o.layer, [0, ep.layers.length - 1], w + ' layer', true),
+  const out = { layer: d.snapNum(o.layer, [0, ep.layerNames.length - 1], w + ' layer', true),
     result: d.snapOneOf(o.result, EP_OUTCOMES, w + ' result'),
     sourceIds: calIds(o.sourceIds, w + ' sources', ctx.known), note: d.snapStr(o.note, EP_TEXT.long, w + ' note'), contested: null };
   if (!out.note.trim()) d.snapErr(w, 'an outcome needs a note');
@@ -281,10 +370,13 @@ function calOutcome(o, w, ep, ctx){
   after(out.sourceIds, w + ' sources');
   return out;
 }
+function allLocked(ep){ return ep.variants.length > 0 && ep.variants.every(v => v.lock); }
+function anyLocked(ep){ return ep.variants.some(v => v.lock); }
 
-// What still has to be filled in before an episode can be locked (empty list when ready).
-function lockProblems(ep){
-  const p = [];
+// What still has to be filled in before an input version can be locked (empty list when ready). The checklist is
+// required for new locks; locks carried over from older schemas did not capture it.
+function lockProblems(ep, vi, opts){
+  const p = [], v = ep.variants[vi || 0], requireChecklist = !opts || opts.requireChecklist !== false;
   if (!ep.id) p.push('an id');
   if (!ep.name.trim()) p.push('a name');
   if (!ep.asOfDate) p.push('an as-of date');
@@ -292,12 +384,14 @@ function lockProblems(ep){
   if (!ep.outcomeHorizon.trim()) p.push('the outcome horizon');
   if (!ep.outcomeMeasure.trim()) p.push('the outcome measure');
   if (!ep.scorer.knewAboutOutcome.trim()) p.push('what the scorer already knew about the outcome');
-  if (!ep.settings.entryDef) p.push('settings entryDef');
-  if (!ep.settings.capexModel) p.push('settings capexModel');
-  EP_SETTING_KEYS.forEach(k => { if (ep.settings[k].value === null) p.push('settings ' + k); });
-  ep.layers.forEach((L, i) => {
-    if (!L.name.trim()) p.push('layer ' + (i + 1) + ' name');
-    calRecords(L.inputs).forEach(([k, r]) => { if (r.value === null) p.push('layer ' + (i + 1) + ' ' + k); });
+  if (requireChecklist) calDeps().SCORER_CHECKLIST.forEach(c => { if (!ep.scorer.checklist[c.key]) p.push('checklist: ' + c.text.toLowerCase()); });
+  if (!v.label.trim()) p.push('an input version label');
+  if (!v.settings.entryDef) p.push('settings entryDef');
+  if (!v.settings.capexModel) p.push('settings capexModel');
+  EP_SETTING_KEYS.forEach(k => { if (v.settings[k].value === null) p.push('settings ' + k); });
+  ep.layerNames.forEach((n, i) => {
+    if (!n.trim()) p.push('layer ' + (i + 1) + ' name');
+    calRecords(v.layers[i].inputs).forEach(([k, r]) => { if (r.value === null) p.push('layer ' + (i + 1) + ' ' + k); });
   });
   return p;
 }
@@ -307,9 +401,11 @@ function calRecords(inputs){
   ['driftP', 'marginP'].forEach(k => inputs[k].forEach((r, j) => out.push([k + '[' + j + ']', r])));
   return out;
 }
-function allRecords(ep){
-  const out = EP_SETTING_KEYS.map(k => ['settings ' + k, ep.settings[k]]);
-  ep.layers.forEach((L, i) => calRecords(L.inputs).forEach(([k, r]) => out.push(['layer ' + (i + 1) + ' ' + k, r])));
+// Records of one input version (default the first).
+function allRecords(ep, vi){
+  const v = ep.variants[vi || 0];
+  const out = EP_SETTING_KEYS.map(k => ['settings ' + k, v.settings[k]]);
+  v.layers.forEach((L, i) => calRecords(L.inputs).forEach(([k, r]) => out.push(['layer ' + (i + 1) + ' ' + k, r])));
   return out;
 }
 
@@ -325,8 +421,8 @@ function importEpisodeText(text){
   try { return { ok: true, episode: validateEpisode(data) }; } catch (e) { return fail(e.message); }
 }
 function exportEpisodeText(ep){ return JSON.stringify(validateEpisode(JSON.parse(JSON.stringify(ep))), null, 2); }
-// Export file: NAME.episode.json when every input is cited; NAME.private.json (gitignored) with a warning when any
-// input is uncited, because such a file must stay out of the public repository.
+// Export file: NAME.episode.json when every input of every version is cited; NAME.private.json (gitignored) with a
+// warning when any input is uncited, because such a file must stay out of the public repository.
 function exportEpisodeFile(ep){
   const text = exportEpisodeText(ep), uncited = unsourcedInputs(ep);
   const base = (ep.id || 'episode') + '-v' + ep.version;
@@ -334,96 +430,138 @@ function exportEpisodeFile(ep){
     warning: uncited.length ? uncited.length + ' input' + (uncited.length === 1 ? ' is' : 's are') + ' uncited, so this file is named .private.json. Keep it out of the repository (calibration/private/ and *.private.json are gitignored).' : '' };
 }
 
-/* ---------- Workflow: draft, locked, outcomes ---------- */
-// Lock-time acknowledgement: needed when more than half the filled inputs are judgement or any input is uncited.
-// The page asks "Lock anyway" or "Cancel"; locking is never blocked, but the answer and the counts are recorded in
-// the lock and covered by the hash.
-function lockAcknowledgement(ep){
-  const js = judgementShare(ep), uncited = unsourcedInputs(ep).length;
+/* ---------- Workflow: draft, lock each input version, outcomes ---------- */
+// Lock-time acknowledgement for one input version: needed when more than half its filled inputs are judgement or
+// any is uncited. The page asks "Lock anyway" or "Cancel"; locking is never blocked; the answer and counts are
+// recorded in the lock and covered by its hash.
+function lockAcknowledgement(ep, vi){
+  const js = judgementShare(ep, vi), uncited = allRecords(ep, vi).filter(([, r]) => r.value !== null && !r.sourceIds.length).length;
   const needed = js.heavy || uncited > 0;
   const parts = [];
   if (js.heavy) parts.push(js.judgement + ' of ' + js.total + ' filled inputs are judgement');
   if (uncited) parts.push(uncited + ' input' + (uncited === 1 ? ' is' : 's are') + ' uncited');
+  const label = ep.variants[vi || 0].label;
   return { needed, judgement: js.judgement, uncited, total: js.total,
-    message: needed ? 'Before locking: ' + parts.join(', and ') + '. Lock anyway, or cancel and add sources?' : '' };
+    message: needed ? 'Before locking' + (label ? ' “' + label + '”' : '') + ': ' + parts.join(', and ') + '. Lock anyway, or cancel and add sources?' : '' };
 }
-function lockEpisode(ep, now, opts){
-  if (ep.lock) throw new Error('This episode is already locked. Make a new version to change its inputs.');
-  const problems = lockProblems(ep);
+function lockVariant(ep, vi, now, opts){
+  if (!ep.variants[vi]) throw new Error('No such input version.');
+  if (ep.variants[vi].lock) throw new Error('This input version is already locked. Make a new episode version to change its inputs.');
+  const problems = lockProblems(ep, vi);
   if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
   const copy = validateEpisode(JSON.parse(JSON.stringify(ep)));
-  const ack = lockAcknowledgement(copy);
+  const ack = lockAcknowledgement(copy, vi);
   if (ack.needed && !(opts && opts.acknowledged)) throw new Error('Needs acknowledgement: ' + ack.message);
   const meta = { counts: { judgement: ack.judgement, uncited: ack.uncited, total: ack.total }, acknowledged: ack.needed };
-  copy.schemaVersion = EP_SCHEMA_VERSION;
-  copy.lock = { hash: episodeHash(copy, meta), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION,
-    hashScheme: 2, counts: meta.counts, acknowledged: meta.acknowledged };
+  copy.variants[vi].lock = { hash: variantHash(copy, vi, meta), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION,
+    hashScheme: 3, counts: meta.counts, acknowledged: meta.acknowledged, checklistCaptured: true };
   return validateEpisode(copy);
 }
-// A new version keeps the inputs as a starting point, links to the old lock and starts as an unlocked draft.
+// Convenience for single-version episodes.
+function lockEpisode(ep, now, opts){ return lockVariant(ep, 0, now, opts); }
+// Add an input version (for example "Measured" next to "Hype"), starting from a copy of another version's inputs.
+// Not allowed once outcomes are recorded: its inputs would then be entered with the outcome already in view.
+function addVariant(ep, label, fromIndex){
+  if (ep.outcomes.length) throw new Error('Outcomes are already recorded, so a new input version would be entered with the outcome in view. Make a new episode version instead.');
+  if (ep.variants.length >= EP_MAX_VARIANTS) throw new Error('An episode can have at most ' + EP_MAX_VARIANTS + ' input versions.');
+  const name = String(label || '').trim();
+  if (!name) throw new Error('Give the input version a label.');
+  if (ep.variants.some(v => v.label.trim() === name)) throw new Error('Another input version already has that label.');
+  const copy = JSON.parse(JSON.stringify(ep)), src = copy.variants[fromIndex || 0];
+  copy.variants.push({ label: name, settings: JSON.parse(JSON.stringify(src.settings)), layers: JSON.parse(JSON.stringify(src.layers)), lock: null });
+  return validateEpisode(copy);
+}
+// A new episode version keeps everything as a starting point, unlocks every input version and clears outcomes. It
+// links to the previous version through a hash of that version's lock hashes.
 function newEpisodeVersion(ep){
-  if (!ep.lock) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
+  if (!anyLocked(ep)) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
   const copy = JSON.parse(JSON.stringify(ep));
-  copy.schemaVersion = EP_SCHEMA_VERSION;
-  copy.version = ep.version + 1; copy.previousHash = ep.lock.hash; copy.lock = null; copy.outcomes = [];
+  copy.version = ep.version + 1;
+  copy.previousHash = calSha256(ep.variants.filter(v => v.lock).map(v => v.lock.hash).join(','));
+  copy.variants.forEach(v => { v.lock = null; });
+  copy.outcomes = [];
   return validateEpisode(copy);
 }
 function setOutcome(ep, outcome){
-  if (!ep.lock) throw new Error('Outcomes can only be entered after the episode is locked.');
+  if (!allLocked(ep)) throw new Error('Outcomes can only be entered after every input version is locked.');
   const copy = JSON.parse(JSON.stringify(ep));
   copy.outcomes = copy.outcomes.filter(o => o.layer !== outcome.layer).concat([outcome]).sort((a, b) => a.layer - b.layer);
   return validateEpisode(copy);
 }
 
+/* ---------- Derived-input helper ---------- */
+// Adoption speed (years from 10% to 90%) from an early-phase doubling time T: speed = ln(81) / ln(2) x T. Applies to
+// the early, near-exponential phase only; the midpoint is a separate input.
+function doublingTimeToSpeed(T){
+  const d = calDeps(), r = d.GLOBAL_RANGES.speed;
+  if (typeof T !== 'number' || !isFinite(T) || T <= 0) throw new Error('Enter a doubling time in years, greater than zero.');
+  const value = Math.round(EP_LN81_LN2 * T * 100) / 100;
+  if (value < r[0] || value > r[1]) throw new Error('A doubling time of ' + T + ' years gives a speed of ' + value + ' years, outside the model range ' + r[0] + ' to ' + r[1] + '.');
+  return { value, calculation: 'speed = ln(81) / ln(2) x doubling time = ' + EP_LN81_LN2.toFixed(4) + ' x ' + T + ' years = ' + value + ' years. Early-phase doubling time only; the midpoint is set separately.' };
+}
+
 /* ---------- Basis mix ---------- */
-// Judgement share of the filled inputs; uncited judgements count toward it like any other judgement.
-function judgementShare(ep){
-  const filled = allRecords(ep).filter(([, r]) => r.value !== null);
+// Judgement share of one input version's filled inputs; uncited judgements count toward it like any other judgement.
+function judgementShare(ep, vi){
+  const filled = allRecords(ep, vi).filter(([, r]) => r.value !== null);
   if (!filled.length) return { judgement: 0, uncited: 0, total: 0, share: 0, heavy: false };
   const j = filled.filter(([, r]) => r.basis === 'judgement').length;
   const u = filled.filter(([, r]) => isUncitedJudgement(r)).length;
   return { judgement: j, uncited: u, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
 }
 function isUncitedJudgement(r){ return r.value !== null && r.basis === 'judgement' && !r.sourceIds.length; }
-// Numeric inputs without a cited source (any basis). The repository test requires this to be empty for every
-// committed file under calibration/; export uses it to suggest a .private.json name.
-function unsourcedInputs(ep){ return allRecords(ep).filter(([, r]) => r.value !== null && !r.sourceIds.length).map(([k]) => k); }
+// Numeric inputs without a cited source, across every input version. The repository test requires this to be
+// empty for every committed file under calibration/; export uses it to suggest a .private.json name.
+function unsourcedInputs(ep){
+  const out = [];
+  ep.variants.forEach((v, vi) => allRecords(ep, vi).forEach(([k, r]) => {
+    if (r.value !== null && !r.sourceIds.length) out.push((ep.variants.length > 1 ? (v.label || 'version ' + (vi + 1)) + ': ' : '') + k);
+  }));
+  return out;
+}
 
 /* ---------- Comparison ---------- */
-function episodeModelInputs(ep){
-  const s = ep.settings, G = {};
+function episodeModelInputs(ep, vi){
+  const v = ep.variants[vi || 0], s = v.settings, G = {};
   ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult'].forEach(k => { G[k] = s[k].value; });
   G.entryDef = s.entryDef; G.capexModel = s.capexModel; G.phases = [s.phase2Start.value, s.phase3Start.value];
-  const layers = ep.layers.map((L, i) => {
-    const o = { id: 'layer' + (i + 1), name: L.name };
+  const layers = v.layers.map((L, i) => {
+    const o = { id: 'layer' + (i + 1), name: ep.layerNames[i] };
     EP_LAYER_KEYS.forEach(k => { o[k] = L.inputs[k].value; });
     o.driftP = L.inputs.driftP.map(r => r.value); o.marginP = L.inputs.marginP.map(r => r.value);
     return o;
   });
   return { G, layers };
 }
-// Judgement share and uncited count from the lock record. Scheme 1 locks did not record them; their inputs cannot
-// change after locking, so the counts are computed from the inputs and marked as such.
-function basisFromLock(ep){
-  const c = ep.lock.counts || (() => { const a = lockAcknowledgement(ep); return { judgement: a.judgement, uncited: a.uncited, total: a.total }; })();
+// Judgement share and uncited count from one version's lock record. Scheme 1 locks did not record them; locked
+// inputs cannot change, so the counts are computed from the inputs and marked as such.
+function basisFromLock(ep, vi){
+  const lock = ep.variants[vi || 0].lock;
+  const c = lock.counts || (() => { const a = lockAcknowledgement(ep, vi || 0); return { judgement: a.judgement, uncited: a.uncited, total: a.total }; })();
   return { judgement: c.judgement, uncited: c.uncited, total: c.total, share: c.total ? c.judgement / c.total : 0,
-    acknowledged: ep.lock.acknowledged, recorded: !!ep.lock.counts };
+    acknowledged: lock.acknowledged, recorded: !!lock.counts, checklistCaptured: lock.checklistCaptured };
 }
-// Model verdict (current model) against the recorded outcome, per layer of every locked episode. No hit rate.
+// For each layer of every episode with at least one locked input version: the model verdict for each locked version
+// (current model), side by side, against the recorded outcome. Counts and the caveat; never a hit rate.
 function compareEpisodes(episodes){
-  const d = calDeps(), rows = [];
-  episodes.filter(ep => ep.lock).forEach(ep => {
-    const m = episodeModelInputs(ep);
-    m.layers.forEach((L, i) => {
-      const o = d.runLayer(L, m.G), outcome = ep.outcomes.find(x => x.layer === i) || null;
-      rows.push({ episode: ep.name, episodeId: ep.id, version: ep.version, layer: L.name, verdict: o.bin, npv: o.npv,
-        basis: basisFromLock(ep),
-        modelSaysEarnsCost: o.npv >= 0, outcome: outcome ? outcome.result : null,
-        lockedModelVersion: ep.lock.modelVersion, versionDiffers: ep.lock.modelVersion !== d.MODEL_VERSION });
+  const d = calDeps(), groups = [];
+  episodes.filter(anyLocked).forEach(ep => {
+    const locked = ep.variants.map((v, vi) => vi).filter(vi => ep.variants[vi].lock);
+    const runs = locked.map(vi => {
+      const m = episodeModelInputs(ep, vi), lock = ep.variants[vi].lock;
+      return { label: ep.variants[vi].label, basis: basisFromLock(ep, vi), lockedModelVersion: lock.modelVersion,
+        versionDiffers: lock.modelVersion !== d.MODEL_VERSION, results: m.layers.map(L => d.runLayer(L, m.G)) };
     });
+    const rows = ep.layerNames.map((name, i) => {
+      const outcome = ep.outcomes.find(x => x.layer === i) || null;
+      return { layer: name, outcome: outcome ? outcome.result : null,
+        variants: runs.map(r => ({ label: r.label, verdict: r.results[i].bin, npv: r.results[i].npv, modelSaysEarnsCost: r.results[i].npv >= 0,
+          basis: r.basis, lockedModelVersion: r.lockedModelVersion, versionDiffers: r.versionDiffers })) };
+    });
+    groups.push({ episode: ep.name, episodeId: ep.id, version: ep.version, allLocked: allLocked(ep), rows });
   });
-  const lockedEps = episodes.filter(ep => ep.lock);
-  return { rows, episodes: lockedEps.length, layers: rows.length, caveat: EP_FEW_CASES, banner: EP_BANNER, currentModelVersion: d.MODEL_VERSION };
+  return { groups, episodes: groups.length, layers: groups.reduce((a, g) => a + g.rows.length, 0), caveat: EP_FEW_CASES, banner: EP_BANNER,
+    currentModelVersion: d.MODEL_VERSION };
 }
 
-if (typeof module !== 'undefined') module.exports = { EP_SCHEMA_READABLE, lockAcknowledgement, basisFromLock, EP_FORMAT, EP_SCHEMA_VERSION, EP_BANNER, EP_FEW_CASES, EP_SETTING_KEYS, EP_LAYER_KEYS, calSha256, calCanonical, episodeHash, calEmptyRecord, calEmptyLayer, templateEpisode, validateEpisode, lockProblems, allRecords, importEpisodeText, exportEpisodeText, exportEpisodeFile, isUncitedJudgement, lockEpisode, newEpisodeVersion, setOutcome, judgementShare, unsourcedInputs, sourceValidForInput, sourceValidForOutcome, episodeModelInputs, compareEpisodes };
+if (typeof module !== 'undefined') module.exports = { EP_FORMAT, EP_SCHEMA_VERSION, EP_SCHEMA_READABLE, EP_MAX_VARIANTS, EP_BANNER, EP_FEW_CASES, EP_SETTING_KEYS, EP_LAYER_KEYS, EP_LN81_LN2, calSha256, calCanonical, legacyHash, variantHash, calEmptyRecord, calEmptyInputs, calEmptyVariant, templateEpisode, validateEpisode, lockProblems, allRecords, importEpisodeText, exportEpisodeText, exportEpisodeFile, lockAcknowledgement, lockVariant, lockEpisode, addVariant, newEpisodeVersion, setOutcome, doublingTimeToSpeed, judgementShare, isUncitedJudgement, unsourcedInputs, sourceValidForInput, sourceValidForOutcome, episodeModelInputs, basisFromLock, compareEpisodes, allLocked, anyLocked };

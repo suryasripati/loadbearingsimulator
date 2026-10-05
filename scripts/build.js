@@ -27,7 +27,12 @@ for (const p of ['/*STYLE*/', '/*MODEL*/', '/*APP*/']) {
   if (!calTemplate.includes(p)) throw new Error('calibration.html must contain the ' + p + ' placeholder');
 }
 const style = template.slice(template.indexOf('<style>') + '<style>'.length, template.indexOf('</style>'));
-const calModel = [model, strip(read('src/defaults.js')), strip(read('src/snapshots.js')), strip(read('src/calibration.js'))].join('\n');
+const calModel = [model, strip(read('src/defaults.js')), strip(read('src/snapshots.js')), strip(read('src/calibration-guide.js')), strip(read('src/calibration.js'))].join('\n');
 const calOut = calTemplate.replace('/*STYLE*/', () => style).replace('/*MODEL*/', () => calModel).replace('/*APP*/', () => read('src/calibration-app.js'));
 fs.writeFileSync(path.join(root, 'docs', 'calibration.html'), calOut);
 console.log('Built docs/calibration.html (' + calOut.length + ' bytes)');
+
+// calibration/GUIDE.md is generated from the same guidance the page shows (src/calibration-guide.js).
+const { guideMarkdown } = require(path.join(root, 'src', 'calibration-guide.js'));
+fs.writeFileSync(path.join(root, 'calibration', 'GUIDE.md'), guideMarkdown());
+console.log('Built calibration/GUIDE.md');

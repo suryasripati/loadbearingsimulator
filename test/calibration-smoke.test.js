@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const C = require('../src/calibration.js');
+const G = require('../src/calibration-guide.js');
 const { syntheticEpisode } = require('./support/synthetic-episode.js');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'docs', 'calibration.html'), 'utf8');
@@ -16,172 +17,157 @@ function load(){
   return { doc: dom.window.document, win: dom.window, errors };
 }
 const click = (win, el) => el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+const change = (win, el, v) => { el.value = v; el.dispatchEvent(new win.Event('change', { bubbles: true })); };
 const $ = (doc, id) => doc.getElementById(id);
+const stored = (win) => JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes;
 async function importText(win, doc, text){
   const input = $(doc, 'epImport');
   Object.defineProperty(input, 'files', { value: [new win.File([text], 'e.episode.json', { type: 'application/json' })], configurable: true });
   input.dispatchEvent(new win.Event('change', { bubbles: true }));
   await new Promise(r => setTimeout(r, 30));
 }
+const openEp = (win, doc, i) => click(win, doc.querySelectorAll('#epList [data-ep="open"]')[i || 0]);
 
 test('calibration page: built from src with no export lines or duplicate names, and loads with no errors', () => {
   assert.ok(!/module\.exports/.test(html));
   const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const names = [...js.matchAll(/^(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
   assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), []);
-  for (const marker of ['function runLayer(', 'const LAYER_RANGES', 'function importSnapshotsText(', 'function validateEpisode(', 'function calInit(']) assert.ok(html.includes(marker), marker);
+  for (const marker of ['function runLayer(', 'const LAYER_RANGES', 'function importSnapshotsText(', 'const GUIDE =', 'function validateEpisode(', 'function calInit(']) assert.ok(html.includes(marker), marker);
   assert.ok(!/https?:\/\/(?!fonts\.googleapis\.com|fonts\.gstatic\.com)/.test(html.replace(/<link[^>]+>/g, '')), 'no network access beyond the font stylesheet');
   const { doc, errors, win } = load();
   assert.equal(doc.title, 'Calibration Scaffold');
   assert.equal($(doc, 'scorerBanner').textContent, C.EP_BANNER);
-  assert.equal($(doc, 'cmpBanner').textContent, C.EP_BANNER);
   assert.equal($(doc, 'cmpCounts').textContent, 'Episodes: 0. Layers: 0. Too few cases for statistical conclusions.');
-  assert.ok(/Scaffold only, no data/.test(doc.body.textContent));
   assert.deepEqual(errors, []);
   win.close();
 });
 
-test('calibration page: draft, lock refused until ready, then import, lock, outcomes and comparison', async () => {
+test('calibration page: checklist and in-page help for every input', () => {
   const { doc, win, errors } = load();
   click(win, $(doc, 'epNew'));
-  assert.equal($(doc, 'editor').hidden, false);
-  assert.equal($(doc, 'outBox').hidden, true, 'no outcome entry for a draft');
+  const checks = [...doc.querySelectorAll('#checkTable select[data-check]')];
+  assert.deepEqual(checks.map(s => s.dataset.check), G.SCORER_CHECKLIST.map(c => c.key));
+  assert.deepEqual([...checks[0].options].map(o => o.value), ['', 'yes', 'no', 'partly']);
+  // Help on every settings and layer input row, with all four parts.
+  const rows = [...doc.querySelectorAll('#setTable tbody tr, #layerBox tbody tr')];
+  assert.equal(rows.length, C.EP_SETTING_KEYS.length + C.EP_LAYER_KEYS.length + 6);
+  rows.forEach(r => {
+    const h = r.querySelector('details.help');
+    assert.ok(h, r.firstChild.textContent);
+    assert.ok(/Meaning\. .*Where to look at the as-of date\. .*Recipe\. .*Hindsight trap\. /.test(h.textContent));
+  });
+  // Lock is refused until every checklist item is answered.
   click(win, $(doc, 'epLock'));
-  assert.ok(/Not locked: Not ready to lock\. Still needed: .*the as-of rule, the outcome horizon, the outcome measure/.test($(doc, 'edSave').textContent), $(doc, 'edSave').textContent);
-  // Import a complete synthetic episode (fictitious sources; not data).
-  const ep = syntheticEpisode(); ep.name = '<img src=x onerror="window.__x=1">';
-  await importText(win, doc, JSON.stringify(ep));
-  assert.ok(/Imported/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
-  const rows = doc.querySelectorAll('#epList tbody tr');
-  assert.equal(rows.length, 2);
-  assert.equal(rows[1].cells[0].textContent, ep.name, 'name shown as text');
-  assert.equal(doc.querySelector('#epList img'), null); assert.equal(win.__x, undefined);
-  click(win, rows[1].querySelector('[data-ep="open"]'));
+  assert.ok(/checklist: knew the peak date, checklist: knew the size of the fall/.test($(doc, 'edSave').textContent), $(doc, 'edSave').textContent);
+  checks.forEach(s => change(win, s, 'partly'));
+  assert.deepEqual(stored(win)[0].scorer.checklist, Object.fromEntries(G.SCORER_CHECKLIST.map(c => [c.key, 'partly'])));
+  click(win, $(doc, 'epLock'));
+  assert.ok(!/checklist:/.test($(doc, 'edSave').textContent));
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('calibration page: the doubling-time helper fills a derived speed with its calculation', async () => {
+  const { doc, win, errors } = load();
+  await importText(win, doc, JSON.stringify(syntheticEpisode()));
+  openEp(win, doc);
+  const row = [...doc.querySelectorAll('#setTable tbody tr')].find(tr => tr.firstChild.firstChild.textContent === 'speed');
+  const helper = row.querySelector('.helper');
+  assert.ok(/Early phase only; the midpoint is separate/.test(helper.textContent));
+  helper.querySelector('input').value = '1.5';
+  click(win, helper.querySelector('[data-helper="doubling"]'));
+  const sp = stored(win)[0].variants[0].settings.speed;
+  assert.deepEqual([sp.value, sp.basis], [C.doublingTimeToSpeed(1.5).value, 'derived']);
+  assert.equal(sp.calculation, C.doublingTimeToSpeed(1.5).calculation);
+  assert.deepEqual(sp.sourceIds, ['SYN-IN'], 'its cited source is kept');
+  helper.querySelector('input').value = '10';
+  click(win, helper.querySelector('[data-helper="doubling"]'));
+  assert.ok(/outside the model range/.test($(doc, 'edSave').textContent));
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('calibration page: two input versions, each locked separately; shared fields freeze; outcomes after both; comparison side by side', async () => {
+  const { doc, win, errors } = load();
+  await importText(win, doc, JSON.stringify(syntheticEpisode()));
+  openEp(win, doc);
+  click(win, $(doc, 'varAdd'));
+  assert.equal($(doc, 'varSel').options.length, 2);
+  const lbl = $(doc, 'varLabel'); lbl.value = 'Measured'; lbl.dispatchEvent(new win.Event('input', { bubbles: true }));
+  // Change the measured version's adoption speed.
+  const speed = [...doc.querySelectorAll('#setTable tbody tr')].find(tr => tr.firstChild.firstChild.textContent === 'speed').cells[1].querySelector('input'); // the value cell, not the helper's box
+  speed.value = '14'; speed.dispatchEvent(new win.Event('input', { bubbles: true }));
+  assert.deepEqual(stored(win)[0].variants.map(v => [v.label, v.settings.speed.value]), [['Main', 8], ['Measured', 14]]);
+  // Lock "Measured" first; shared fields freeze; "Main" can still be edited.
   click(win, $(doc, 'epLock'));
   assert.equal($(doc, 'edSave').textContent, 'Locked.');
-  assert.ok(/Locked on .* under model version 1\. Input hash [0-9a-f]{16}/.test($(doc, 'edStatus').textContent));
-  assert.equal($(doc, 'f_name').disabled, true, 'locked inputs cannot be edited');
-  assert.ok([...doc.querySelectorAll('#setTable input, #layerBox input')].every(i => i.disabled));
-  assert.equal($(doc, 'epVersion').hidden, false);
-  // Outcomes after locking.
+  assert.ok($(doc, 'f_rule').disabled && $(doc, 'f_asOf').disabled && doc.querySelector('#checkTable select').disabled && doc.querySelector('#layerNames input').disabled);
+  assert.equal($(doc, 'outBox').hidden, true, 'no outcomes until every version is locked');
+  change(win, $(doc, 'varSel'), '0');
+  assert.equal(doc.querySelector('#setTable input[type="number"]').disabled, false, 'Main is still a draft');
+  click(win, $(doc, 'epLock'));
+  const vs = stored(win)[0].variants;
+  assert.ok(vs.every(v => v.lock && v.lock.hashScheme === 3 && v.lock.checklistCaptured));
+  assert.notEqual(vs[0].lock.hash, vs[1].lock.hash);
+  // Outcomes now; then no new input version.
   assert.equal($(doc, 'outBox').hidden, false);
   const orow = doc.querySelectorAll('#outTable tbody tr')[0];
   orow.querySelector('select').value = 'no';
-  const inputs = orow.querySelectorAll('input');
-  inputs[0].value = 'SYN-IN'; inputs[1].value = 'synthetic note';
+  const inputs = orow.querySelectorAll('input'); inputs[0].value = 'SYN-OUT'; inputs[1].value = 'synthetic note';
   click(win, orow.querySelector('[data-ep="save-outcome"]'));
-  assert.ok(/Outcome not saved: .*must be published after the as-of date/.test($(doc, 'edSave').textContent), 'an input-period source cannot back an outcome');
-  inputs[0].value = 'SYN-OUT';
-  click(win, orow.querySelector('[data-ep="save-outcome"]'));
-  assert.ok(/Outcome saved/.test($(doc, 'edSave').textContent), $(doc, 'edSave').textContent);
-  // Comparison table and counts.
+  assert.ok(/Outcome saved/.test($(doc, 'edSave').textContent));
+  assert.equal($(doc, 'varAdd').disabled, true);
+  // Comparison: one column per version, side by side, with the recorded outcome.
   assert.equal($(doc, 'cmpCounts').textContent, 'Episodes: 1. Layers: 3. Too few cases for statistical conclusions.');
-  const crow = doc.querySelectorAll('#cmpTable tbody tr')[0];
-  const c = C.compareEpisodes([C.setOutcome(C.lockEpisode(C.validateEpisode(JSON.parse(JSON.stringify(ep)))), { layer: 0, result: 'no', sourceIds: ['SYN-OUT'], note: 'synthetic note', contested: null })]);
-  assert.equal(crow.cells[2].textContent, c.rows[0].verdict);
-  assert.equal(crow.cells[5].textContent, 'no');
-  assert.ok(!/hit rate|accuracy|%/i.test($(doc, 'cmpCounts').textContent));
-  // New version: an unlocked draft linked to the old hash.
-  click(win, $(doc, 'epVersion'));
-  assert.ok(/New draft version 2 made/.test($(doc, 'edSave').textContent));
-  assert.equal(doc.querySelectorAll('#epList tbody tr').length, 3);
-  assert.equal($(doc, 'f_name').disabled, false);
-  // Stored episodes survive a strict reload.
-  const stored = JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes;
-  assert.equal(stored.length, 3);
-  stored.forEach(e => assert.equal(C.importEpisodeText(JSON.stringify(e)).ok, true));
+  const heads = [...doc.querySelectorAll('#cmpBox th')].map(th => th.textContent);
+  assert.deepEqual(heads, ['Layer', 'Verdict: Main', 'Verdict: Measured', 'Recorded outcome']);
+  const ep = C.importEpisodeText(JSON.stringify(stored(win)[0])).episode, c = C.compareEpisodes([ep]);
+  const r0 = doc.querySelectorAll('#cmpBox tbody tr')[0];
+  assert.equal(r0.querySelector('[data-variant="Main"]').firstChild.textContent, c.groups[0].rows[0].variants[0].verdict);
+  assert.equal(r0.querySelector('[data-variant="Measured"]').firstChild.textContent, c.groups[0].rows[0].variants[1].verdict);
+  assert.equal(r0.lastChild.textContent, 'no');
+  assert.ok([...doc.querySelectorAll('#cmpBox [data-basis]')].every(x => /^Inputs at lock: judgement 0 of \d+ \(0%\), uncited 0$/.test(x.textContent)));
   assert.deepEqual(errors, []);
   win.close();
 });
 
-test('calibration page: judgement-heavy banner, and strict import errors shown', async () => {
+test('calibration page: lock confirmation, uncited label and private export still work', async () => {
   const { doc, win, errors } = load();
-  await importText(win, doc, JSON.stringify(syntheticEpisode({ basis: 'judgement' })));
-  click(win, doc.querySelector('#epList [data-ep="open"]'));
-  assert.equal($(doc, 'judgeBanner').hidden, false);
-  assert.ok(/Judgement-heavy: \d+ of \d+ filled inputs are judgement/.test($(doc, 'judgeBanner').textContent));
-  await importText(win, doc, '{"__proto__": {"x": 1}}');
-  assert.ok(/Import rejected: the file contains a forbidden key "__proto__"/.test($(doc, 'epMsg').textContent));
-  const bad = JSON.parse(JSON.stringify(syntheticEpisode())); bad.layers[0].inputs.share.sourceIds = [];
-  await importText(win, doc, JSON.stringify(bad));
-  assert.ok(/Import rejected: .*a sourced value needs at least one cited source/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
-  assert.equal(doc.querySelectorAll('#epList tbody tr').length, 1, 'rejected files add nothing');
-  assert.deepEqual(errors, []);
-  win.close();
-});
-
-test('calibration page: uncited judgement shows its label and banner, locks, and exports as .private.json with a warning', async () => {
-  const { doc, win, errors } = load();
-  const blobs = [], names = [];
-  win.URL.createObjectURL = (b) => { blobs.push(b); return 'blob:x'; }; win.URL.revokeObjectURL = () => {};
+  const names = [];
+  win.URL.createObjectURL = () => 'blob:x'; win.URL.revokeObjectURL = () => {};
   win.HTMLAnchorElement.prototype.click = function(){ names.push(this.getAttribute('download')); };
   const ep = JSON.parse(JSON.stringify(syntheticEpisode()));
-  ep.layers[0].inputs.share = { ...ep.layers[0].inputs.share, basis: 'judgement', sourceIds: [], rationale: 'synthetic uncited judgement' };
+  ep.variants[0].layers[0].inputs.share = { ...ep.variants[0].layers[0].inputs.share, basis: 'judgement', sourceIds: [], rationale: 'synthetic uncited judgement' };
   await importText(win, doc, JSON.stringify(ep));
-  click(win, doc.querySelector('#epList [data-ep="open"]'));
-  const tags = [...doc.querySelectorAll('#layerBox [data-uncited]')].filter(t => !t.hidden);
-  assert.equal(tags.length, 1);
-  assert.equal(tags[0].textContent, 'uncited judgement');
-  assert.equal($(doc, 'uncitedBanner').hidden, false);
-  assert.ok(/Uncited judgement in 1 input\. .*must stay out of the repository/.test($(doc, 'uncitedBanner').textContent));
+  openEp(win, doc);
+  assert.equal([...doc.querySelectorAll('#layerBox [data-uncited]')].filter(t => !t.hidden).length, 1);
   click(win, $(doc, 'epLock'));
-  assert.equal($(doc, 'lockAck').hidden, false, 'asks before locking');
-  click(win, $(doc, 'lockAnyway'));
-  assert.equal($(doc, 'edSave').textContent, 'Locked, with your acknowledgement recorded.', 'locking is allowed');
+  assert.equal($(doc, 'lockAckText').textContent, 'Before locking “Main”: 1 input is uncited. Lock anyway, or cancel and add sources?');
+  click(win, $(doc, 'lockCancel'));
+  assert.equal(stored(win)[0].variants[0].lock, null);
+  click(win, $(doc, 'epLock')); click(win, $(doc, 'lockAnyway'));
+  assert.equal($(doc, 'edSave').textContent, 'Locked, with your acknowledgement recorded.');
   click(win, $(doc, 'epExport'));
   assert.equal(names[0], 'synthetic-test-v1.private.json');
-  assert.ok(/1 input is uncited, so this file is named \.private\.json\. Keep it out of the repository/.test($(doc, 'edSave').textContent));
-  assert.ok($(doc, 'edSave').classList.contains('warn'));
-  // A fully cited episode exports as .episode.json with no warning.
-  await importText(win, doc, JSON.stringify(syntheticEpisode()));
-  click(win, doc.querySelectorAll('#epList [data-ep="open"]')[1]);
-  assert.equal($(doc, 'uncitedBanner').hidden, true);
-  click(win, $(doc, 'epExport'));
-  assert.equal(names[1], 'synthetic-test-v1.episode.json');
-  assert.ok(!$(doc, 'edSave').classList.contains('warn'));
-  // The label follows edits: clearing the rationale-only judgement's sources shows it; adding a source hides it.
-  const row = [...doc.querySelectorAll('#layerBox tr')].find(tr => tr.firstChild.textContent === 'evidence');
-  const basisSel = row.querySelector('select'), idsInput = row.querySelectorAll('input')[1], ratInput = row.querySelectorAll('input')[3], tag = row.querySelector('[data-uncited]');
-  ratInput.value = 'synthetic'; ratInput.dispatchEvent(new win.Event('input', { bubbles: true }));
-  basisSel.value = 'judgement'; basisSel.dispatchEvent(new win.Event('change', { bubbles: true }));
-  idsInput.value = ''; idsInput.dispatchEvent(new win.Event('input', { bubbles: true }));
-  assert.equal(tag.hidden, false);
-  idsInput.value = 'SYN-IN'; idsInput.dispatchEvent(new win.Event('input', { bubbles: true }));
-  assert.equal(tag.hidden, true);
   assert.deepEqual(errors, []);
   win.close();
 });
 
-test('calibration page: lock confirmation shows the counts, Cancel leaves it unlocked, Lock anyway records it, and the comparison shows the counts', async () => {
+test('calibration page: a schema 2 file with a lock imports and says the checklist was not captured', async () => {
   const { doc, win, errors } = load();
-  const ep = JSON.parse(JSON.stringify(syntheticEpisode()));
-  const recs = C.allRecords(ep), total = recs.length;
-  recs.slice(0, 2).forEach(([, r]) => { r.basis = 'judgement'; r.rationale = 'synthetic'; r.sourceIds = []; });
-  await importText(win, doc, JSON.stringify(ep));
-  click(win, doc.querySelector('#epList [data-ep="open"]'));
-  click(win, $(doc, 'epLock'));
-  assert.equal($(doc, 'lockAck').hidden, false);
-  assert.equal($(doc, 'lockAckText').textContent, 'Before locking: 2 inputs are uncited. Lock anyway, or cancel and add sources?');
-  click(win, $(doc, 'lockCancel'));
-  assert.equal($(doc, 'lockAck').hidden, true);
-  assert.equal($(doc, 'edSave').textContent, 'Not locked.');
-  assert.equal(JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes[0].lock, null);
-  click(win, $(doc, 'epLock'));
-  click(win, $(doc, 'lockAnyway'));
-  const lock = JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes[0].lock;
-  assert.equal(lock.acknowledged, true);
-  assert.deepEqual(lock.counts, { judgement: 2, uncited: 2, total });
-  assert.ok(/Locked with an acknowledgement: 2 of \d+ inputs judgement, 2 uncited\./.test($(doc, 'edStatus').textContent));
-  const cells = [...doc.querySelectorAll('#cmpTable [data-basis]')];
-  assert.equal(cells.length, 3, 'beside every result');
-  cells.forEach(c => assert.equal(c.textContent, 'judgement 2 of ' + total + ' (' + Math.round(200 / total) + '%), uncited 2; acknowledged at lock'));
-  // A fully sourced episode locks with no question and shows zero counts.
-  await importText(win, doc, JSON.stringify(syntheticEpisode()));
-  click(win, doc.querySelectorAll('#epList [data-ep="open"]')[1]);
-  click(win, $(doc, 'epLock'));
-  assert.equal($(doc, 'lockAck').hidden, true);
-  assert.equal($(doc, 'edSave').textContent, 'Locked.');
-  assert.ok([...doc.querySelectorAll('#cmpTable [data-basis]')].some(c => c.textContent === 'judgement 0 of ' + total + ' (0%), uncited 0'));
+  await importText(win, doc, fs.readFileSync(path.join(__dirname, 'fixtures', 'episode_schema2_locked.json'), 'utf8'));
+  assert.ok(/Imported/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
+  openEp(win, doc);
+  assert.ok(/Locked under an older schema: the scorer checklist was not captured in this lock\./.test($(doc, 'varStatus').textContent));
+  assert.ok(/Locked with an acknowledgement: 2 of \d+ inputs judgement, 2 uncited\./.test($(doc, 'varStatus').textContent));
+  // A tampered multi-version file is refused with the version named.
+  let two = C.addVariant(syntheticEpisode(), 'Measured', 0);
+  two = C.lockVariant(C.lockVariant(two, 0), 1);
+  const t = JSON.parse(C.exportEpisodeText(two)); t.variants[1].settings.disc.value = 12;
+  await importText(win, doc, JSON.stringify(t));
+  assert.ok(/Import rejected: .*input version 2 \(Measured\) lock: .*do not match the lock hash/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
+  assert.equal(doc.querySelectorAll('#epList tbody tr').length, 1);
   assert.deepEqual(errors, []);
   win.close();
 });

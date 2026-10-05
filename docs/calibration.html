@@ -126,6 +126,12 @@ a{color:var(--copper)}
 .badge.uncited{background:var(--amber-bg);color:var(--amber);margin-left:4px}
 .badge[hidden]{display:none}
 #edSave.warn{color:var(--red);font-weight:700}
+details.help{font-weight:400;margin-top:2px}
+details.help summary{font-size:11px;color:var(--copper);font-weight:400}
+details.help p{margin:4px 0;font-size:12px;color:var(--body);white-space:normal;max-width:46ch}
+.helper{margin-top:4px;font-size:12px}
+.helper input{width:70px}
+.cmpEp{margin-top:14px}
 </style>
 </head>
 <body>
@@ -177,14 +183,31 @@ a{color:var(--copper)}
           <div class="ctl"><label for="f_measure">Outcome measure: what "capital earned its cost" means here</label><input id="f_measure" class="txt" maxlength="2000"></div>
         </div>
       </div>
-      <div class="ctl"><label for="f_knew">What I already knew about the outcome (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
+      <h3 style="margin-top:14px">What I already knew about the outcome</h3>
+      <p class="legend">Answer every item before locking. The answers and the statement below are part of each lock's hash. Each input below has a Help note; the same guidance is in calibration/GUIDE.md in the repository.</p>
+      <div class="scroll"><table id="checkTable" class="recs" aria-label="Scorer checklist"></table></div>
+      <div class="ctl" style="margin-top:8px"><label for="f_knew">In your own words (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
 
       <h3 style="margin-top:14px">Sources</h3>
       <p class="legend">Inputs may cite only sources published on or before the as-of date. A source compiled later from period data counts for inputs only if its series is truncated on or before the as-of date. Outcomes must cite sources published after it.</p>
       <div class="scroll"><table id="srcTable" class="recs" aria-label="Sources"></table></div>
       <div class="seg" style="margin-top:6px"><button id="srcAdd">Add source</button></div>
 
-      <h3 style="margin-top:14px">Settings</h3>
+      <h3 style="margin-top:14px">Layer names (shared by every input version)</h3>
+      <div id="layerNames"></div>
+      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
+    </fieldset>
+
+    <h3 style="margin-top:18px">Input versions</h3>
+    <p class="legend">Score the same episode with more than one set of inputs (for example a hype version and a measured version of adoption speed). Each version is locked separately. All versions share everything above; changing any of it after a version is locked needs a new episode version.</p>
+    <div class="seg" style="align-items:center">
+      <label class="muted" for="varSel" style="font-size:13px">Editing</label><select id="varSel" class="txt sel"></select>
+      <label class="muted" for="varLabel" style="font-size:13px">Label</label><input id="varLabel" class="txt" maxlength="60" style="width:160px">
+      <button id="varAdd">Add input version (copy of this one)</button>
+    </div>
+    <p class="status" id="varStatus"></p>
+    <fieldset id="varInputs">
+      <h3 style="margin-top:10px">Settings</h3>
       <p class="legend">Each number needs a basis. Sourced and derived values need at least one cited source (comma-separated source ids), and derived values show their calculation. A judgement needs a rationale; its sources are optional, but an uncited judgement is labelled and keeps the episode file out of the repository.</p>
       <div class="seg" style="align-items:center">
         <label class="muted" for="f_entryDef" style="font-size:13px">Entry price definition</label><select id="f_entryDef" class="txt sel"><option value="">not set</option><option value="A">A: premium over build cost</option><option value="B">B: multiple of forward cash</option></select>
@@ -192,15 +215,14 @@ a{color:var(--copper)}
       </div>
       <div class="scroll"><table id="setTable" class="recs" aria-label="Settings"></table></div>
 
-      <h3 style="margin-top:14px">Layers</h3>
+      <h3 style="margin-top:14px">Layer inputs</h3>
       <div id="layerBox"></div>
-      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
     </fieldset>
   </div>
 
   <div class="card" id="outBox" style="margin-top:20px" hidden>
     <h3>Outcomes</h3>
-    <p class="legend">Entered only after locking. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
+    <p class="legend">Entered only after every input version is locked. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
     <div class="scroll"><table id="outTable" class="recs" aria-label="Outcomes"></table></div>
   </div>
 </section>
@@ -210,8 +232,8 @@ a{color:var(--copper)}
   <div class="card">
     <div class="notice" id="cmpBanner"></div>
     <p class="status" id="cmpCounts"></p>
-    <div class="scroll"><table id="cmpTable" aria-label="Model verdict against outcome"></table></div>
-    <p class="legend">Verdicts are recomputed with the current model. Where an episode was locked under a different model version, the row says so.</p>
+    <div id="cmpBox"></div>
+    <p class="legend">Verdicts are recomputed with the current model, one column group per locked input version. Where a version was locked under a different model version, the cell says so.</p>
   </div>
 </section>
 
@@ -949,36 +971,208 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
 }
 
 
+// Guidance for every calibration input: what it means, where to look at the as-of date, a recipe, and the hindsight
+// trap. One source for the in-page help and calibration/GUIDE.md (the build writes the guide from this file).
+// Examples are symbolic (P, C, T and so on) or refer to the synthetic test fixture. No real episode numbers, ever.
+// CommonJS export for tests; stripped by the build.
+
+const GUIDE_INTRO = [
+  'Fill an episode as someone standing at the as-of date: use only what was published, or compiled from series that stop, on or before that date.',
+  'Every number needs a basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: your call, with a rationale; sources optional, but an uncited judgement keeps the file private.',
+  'Examples below are symbolic. They show the shape of a calculation, never a figure from a real episode.'
+];
+
+const GUIDE = {
+  pool: { label: 'Value pool at full adoption ($B a year)',
+    meaning: 'Yearly revenue all layers together would earn once the technology is fully adopted.',
+    where: 'Contemporary market-size estimates, trade press forecasts, prospectuses, government or industry statistics on the activity being replaced.',
+    recipe: 'Take the size of the activity being displaced (A) times the share the new technology was expected to take (s), at prices quoted at the time: pool = A x s. Show both terms as sourced or derived.',
+    trap: 'Using the eventual market size. The pool must be what could reasonably be estimated at the as-of date, not what the market became.' },
+  speed: { label: 'Adoption speed (years from 10% to 90%)',
+    meaning: 'How long adoption takes to go from 10% to 90% of its full level. Shorter is faster.',
+    where: 'Early growth figures for users, traffic, mileage or sales published by the as-of date; contemporary forecasts of rollout.',
+    recipe: 'From an early-phase doubling time T (years): speed = ln(81) / ln(2) x T, about 6.34 x T. Use the doubling-time helper; it fills the calculation for a derived value. This uses the early phase only; the midpoint is a separate input.',
+    trap: 'Reading speed off the full adoption curve you now know. At the as-of date only the early phase was visible, and early growth often looks faster or slower than the whole curve turned out.' },
+  mid: { label: 'Adoption midpoint (year of 50% adoption)',
+    meaning: 'The year, counted from year 0 of the model, in which adoption reaches half of its full level.',
+    where: 'Contemporary forecasts of when the technology would be "mainstream"; current adoption level against the expected full level.',
+    recipe: 'If adoption at the as-of date is a (as a share of full) and speed is S, the logistic curve gives midpoint = t0 + (S / ln(81)) x ln((1 - a) / a), where t0 is the as-of year counted from year 0.',
+    trap: 'Placing the midpoint where it actually fell. Use the adoption level and expectations visible at the as-of date.' },
+  disc: { label: 'Discount rate (%)',
+    meaning: 'The return investors needed to be paid for the risk.',
+    where: 'Contemporary yields on government debt and on comparable risky investments; required returns quoted by investors or regulators at the time.',
+    recipe: 'Risk-free yield at the as-of date (r) plus a risk premium (p) justified from period sources: disc = r + p.',
+    trap: 'Using the rate implied by what happened next (for example a crash in prices). The rate must be the one demanded at the time.' },
+  rd: { label: 'Interest on debt (%)',
+    meaning: 'The interest rate on borrowing used to fund the build.',
+    where: 'Bond prospectuses, loan terms, contemporary corporate bond yields for similar borrowers.',
+    recipe: 'Quoted coupon or yield on comparable debt at the as-of date.',
+    trap: 'Using rates after a default wave or a policy change that came later.' },
+  tv: { label: 'Value beyond year 15 (multiple of year-15 cash flow)',
+    meaning: 'How much value the layer keeps after the 15-year horizon, as a multiple of its year-15 cash flow.',
+    where: 'Contemporary valuations of mature, comparable businesses; dividend yields of established utilities or carriers at the time.',
+    recipe: 'If mature comparables traded at a cash yield y, a multiple of about 1 / y is a starting point; state y and its source.',
+    trap: 'Choosing a low multiple because you know the layer later struggled.' },
+  premium: { label: 'Entry premium over build cost (%)',
+    meaning: 'Under the replacement-cost definition, how much above build cost an investor paid at entry.',
+    where: 'Share prices against the book value of assets built; market-to-book ratios reported at the time.',
+    recipe: 'premium = (price paid / build cost spent) - 1, from period prices and accounts.',
+    trap: 'Using the bubble peak or the trough you know about instead of the price at the as-of date.' },
+  entry: { label: 'Entry year',
+    meaning: 'The model year in which the investor buys in. Cash flows from this year on are the investor\'s.',
+    where: 'Set by the as-of rule: usually the model year corresponding to the as-of date.',
+    recipe: 'entry = as-of year - year 0 of the model, as whole years.',
+    trap: 'Moving the entry to a convenient year after seeing how prices moved.' },
+  mult: { label: 'Entry multiple of next-year operating cash',
+    meaning: 'Under the forward-cash definition, the price paid as a multiple of next year\'s operating cash.',
+    where: 'Contemporary price-to-cash-flow or price-to-earnings figures; analysts\' forward estimates published by the as-of date.',
+    recipe: 'multiple = price paid / expected next-year operating cash, both from period sources.',
+    trap: 'Dividing by the cash flow that was actually realised rather than the one expected at the time.' },
+  phase2Start: { label: 'Phase 2 starts (year)',
+    meaning: 'The first model year of the second calendar phase for drift and margin.',
+    where: 'Contemporary expectations of when competition, regulation or capacity would change conditions.',
+    recipe: 'Pick the year a period source expected conditions to change; leave the default split only if no source says otherwise, and record that as a judgement.',
+    trap: 'Placing the phase break at the turning point you now know.' },
+  phase3Start: { label: 'Phase 3 starts (year)',
+    meaning: 'The first model year of the third calendar phase.',
+    where: 'As for phase 2.',
+    recipe: 'As for phase 2; it must come after phase 2.',
+    trap: 'As for phase 2.' },
+  evidence: { label: 'Demand evidence (1 to 5)',
+    meaning: 'How much observed, paid, growing usage existed at the as-of date. 1 is forecast only; 5 is observed, paid, growing usage.',
+    where: 'Traffic returns, paid usage, revenue reports and customer counts published by the as-of date.',
+    recipe: 'Score against what was observed, not forecast: no paying users = 1; small paid pilots = 2; paid usage growing in more than one market = 4 or 5. Record the reason as a judgement.',
+    trap: 'Scoring higher because demand later proved real, or lower because it later disappointed.' },
+  share: { label: 'Share of pool at the start (%)',
+    meaning: 'The share of the value pool this layer captures in year 0.',
+    where: 'Contemporary breakdowns of spending by segment; company revenues against the market total at the time.',
+    recipe: 'share = layer revenue R / pool revenue P, both at the as-of date.',
+    trap: 'Using the share the layer ended up with.' },
+  offset: { label: 'Timing offset (years; negative leads, positive lags)',
+    meaning: 'How far this layer\'s revenue runs ahead of (negative) or behind (positive) end demand.',
+    where: 'Order books, construction schedules and lead times reported at the time.',
+    recipe: 'If period sources show this layer\'s orders arriving L years before end use, offset = -L.',
+    trap: 'Fitting the offset to the revenue peaks you now know.' },
+  steepness: { label: 'Curve steepness (1 = same as demand)',
+    meaning: 'How much steeper (above 1) or flatter (below 1) this layer\'s adoption is than end demand.',
+    where: 'Contemporary evidence that this layer saturates faster or slower than end use.',
+    recipe: 'If the layer is expected to go from 10% to 90% in S_L years while demand takes S, steepness = S / S_L.',
+    trap: 'Matching the steepness to the realised shape.' },
+  capex: { label: 'Build capex ($B)',
+    meaning: 'Total capital spent to build the layer\'s capacity.',
+    where: 'Prospectuses, authorised capital, construction budgets and announced investment programmes published by the as-of date.',
+    recipe: 'Sum the announced or authorised budgets (B1 + B2 + ...) for the capacity in scope, in the model\'s currency units.',
+    trap: 'Using the final out-turn cost, including overruns that only became known later.' },
+  buildStart: { label: 'Build starts (year)',
+    meaning: 'The model year in which capital starts going in.',
+    where: 'Announced construction start dates.',
+    recipe: 'buildStart = announced start year - year 0 of the model.',
+    trap: 'Using actual start dates that slipped after the as-of date.' },
+  buildYears: { label: 'Build years',
+    meaning: 'How many years the initial build takes.',
+    where: 'Announced construction schedules.',
+    recipe: 'Planned completion year - planned start year.',
+    trap: 'Using the realised schedule, including delays not known at the time.' },
+  unitCostDecline: { label: 'Unit-cost decline (% a year, Vintage mode)',
+    meaning: 'How fast the cost of the same capacity was expected to fall each year.',
+    where: 'Contemporary engineering or trade estimates of cost per unit of capacity over time.',
+    recipe: 'If cost per unit was expected to fall from c0 to c1 over n years: decline = 1 - (c1 / c0)^(1 / n).',
+    trap: 'Using the realised cost curve, which may have fallen much faster or slower than expected.' },
+  passThrough: { label: 'Pass-through to prices (0 to 1, Vintage mode)',
+    meaning: 'The share of the unit-cost decline that competition was expected to hand to customers as lower prices.',
+    where: 'Contemporary pricing rules, regulation, tariff schedules and the degree of competition at the time.',
+    recipe: 'Regulated pass-through rules give it directly; otherwise record a judgement with a rationale about competition at the time.',
+    trap: 'Setting it from the price war that later happened.' },
+  life: { label: 'Asset life (years)',
+    meaning: 'How long the built asset lasts before it must be replaced.',
+    where: 'Depreciation policies, engineering life estimates and replacement schedules in period accounts.',
+    recipe: 'Use the depreciation life in period accounts, or the engineering life quoted at the time.',
+    trap: 'Shortening the life because you know the technology was superseded early.' },
+  debt: { label: 'Debt (% of build)',
+    meaning: 'The share of the build funded by borrowing.',
+    where: 'Capital structure in prospectuses and accounts at the time.',
+    recipe: 'debt = borrowing D / total build funding F.',
+    trap: 'Using the debt load after later refinancing or distress.' },
+  driftP: { label: 'Share drift (% a year, per phase)',
+    meaning: 'How the layer\'s share of the pool was expected to change each year in each phase; negative is commoditisation.',
+    where: 'Contemporary expectations of competition, new entrants and price pressure.',
+    recipe: 'If the share was expected to move from s0 to s1 over n years: drift = (s1 / s0)^(1 / n) - 1.',
+    trap: 'Matching drift to the share loss that actually happened.' },
+  marginP: { label: 'Cash margin (% per phase)',
+    meaning: 'Operating cash as a share of revenue, per phase.',
+    where: 'Period accounts of comparable operators; operating ratios published at the time.',
+    recipe: 'margin = operating cash C / revenue R, from period accounts.',
+    trap: 'Using margins from after the shake-out.' }
+};
+
+// Scorer checklist: what the scorer already knew. Every item must be answered (yes, no or partly) before locking.
+const SCORER_CHECKLIST = [
+  { key: 'peakDate', text: 'Knew the peak date' },
+  { key: 'fallSize', text: 'Knew the size of the fall' },
+  { key: 'failures', text: 'Knew which companies failed or survived' },
+  { key: 'finalFigures', text: 'Knew final revenue or traffic figures' },
+  { key: 'laterSources', text: 'Have read sources published after the as-of date' },
+  { key: 'outcomesFirst', text: 'Looked at outcomes before entering inputs' }
+];
+
+function guideMarkdown(){
+  const out = ['# Calibration guide', '', '<!-- Generated from src/calibration-guide.js by npm run build. Edit that file, not this one. -->', ''];
+  GUIDE_INTRO.forEach(p => { out.push(p, ''); });
+  out.push('## Before you start: what you already know', '', 'Answer each item yes, no or partly before locking. The answers are part of the lock hash.', '');
+  SCORER_CHECKLIST.forEach(c => out.push('- ' + c.text));
+  out.push('', '## Inputs', '');
+  Object.keys(GUIDE).forEach(k => {
+    const g = GUIDE[k];
+    out.push('### ' + g.label + ' (`' + k + '`)', '', '- **Meaning.** ' + g.meaning, '- **Where to look at the as-of date.** ' + g.where,
+      '- **Recipe.** ' + g.recipe, '- **Hindsight trap.** ' + g.trap, '');
+  });
+  out.push('## Input versions', '', 'An episode can be scored with more than one input version (for example a hype version and a measured version of adoption speed). Each version is locked separately with its own hash and acknowledgement. All versions share the as-of date, as-of rule, outcome horizon, outcome measure, scorer checklist and layer names; changing any of those after a version is locked means starting a new episode version.', '');
+  return out.join('\n');
+}
+
+
 // Calibration scaffold: a structure for scoring past episodes (for example British railways in the 1840s, telecom and
 // fibre 1996-2001, dot-com applications, electricity) using only what was knowable at the time. SCAFFOLD ONLY: this
 // file holds no episode data, and none may be invented. Sourced and derived inputs need cited sources; a judgement
 // needs a rationale and may be uncited, but an episode with any uncited input must stay out of the repository.
 // Pure functions, no DOM. CommonJS export for tests; the build strips the export line and inlines this file in
-// docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
+// docs/calibration.html after the model, the defaults, the snapshot code (whose strict-import helpers it reuses) and
+// the guidance (src/calibration-guide.js).
+//
+// Episode shape (schema 3). Episode-level fields are shared by every input version: id, name, version, previousHash,
+// asOfDate, asOfRule, outcomeHorizon, outcomeMeasure, scorer (statement plus checklist), layerNames, sources and
+// outcomes. Each input version ("variant", for example hype against measured adoption speed) has a label, settings,
+// layer inputs and its own lock.
+// Hash schemes: 1 = schema 1 lock (no counts); 2 = schema 2 lock (counts and acknowledgement); 3 = this schema
+// (per variant: shared fields, the variant's inputs, the sources it cites, counts, acknowledgement and the checklist).
+// Schema 1 and 2 files import as a single variant "Main" whose lock keeps its original formula, with
+// checklistCaptured false.
 
 const EP_FORMAT = 'load-bearing-simulator-episode';
-const EP_SCHEMA_VERSION = 2;
-// Schema 1 locks had no basis counts or acknowledgement; they still import and validate under hash scheme 1.
-const EP_SCHEMA_READABLE = [1, 2];
+const EP_SCHEMA_VERSION = 3;
+const EP_SCHEMA_READABLE = [1, 2, 3];
 const EP_MAX_LAYERS = 8;
+const EP_MAX_VARIANTS = 4;
 const EP_MAX_SOURCES = 100;
 const EP_MAX_IDS = 20;
-const EP_TEXT = { name: 120, citation: 1000, long: 2000, knew: 4000 };
+const EP_TEXT = { name: 120, label: 60, citation: 1000, long: 2000, knew: 4000 };
 const EP_SOURCE_KINDS = ['contemporary', 'compiled-from-period-data', 'retrospective'];
 const EP_BASIS = ['sourced', 'derived', 'judgement'];
 const EP_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
+const EP_CHECK_ANSWERS = ['', 'yes', 'no', 'partly'];
 const EP_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
 const EP_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline',
   'passThrough', 'life', 'debt'];
 const EP_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
 const EP_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration.';
 const EP_FEW_CASES = 'Too few cases for statistical conclusions.';
+const EP_LN81_LN2 = Math.log(81) / Math.log(2);
 
 function calDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') {
-    return Object.assign({}, require('./model.js'), require('./defaults.js'), require('./snapshots.js'));
+    return Object.assign({}, require('./model.js'), require('./defaults.js'), require('./snapshots.js'), require('./calibration-guide.js'));
   }
-  return { MODEL_VERSION, runLayer, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H, SNAP_MAX_BYTES,
+  return { MODEL_VERSION, runLayer, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H, SNAP_MAX_BYTES, SCORER_CHECKLIST,
     snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj };
 }
 
@@ -1022,33 +1216,87 @@ function calCanonical(v){
   if (v !== null && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + calCanonical(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-// The lock covers everything decided before the outcome is looked at: inputs, sources, rules and the scorer's
-// statement, and (hash scheme 2) the basis counts and the acknowledgement given at lock time. Outcomes are not
-// covered (they are entered after locking). Without lockMeta this is hash scheme 1, used by schema 1 locks.
-function episodeHash(ep, lockMeta){
-  const body = { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
-    asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer,
-    settings: ep.settings, layers: ep.layers, sources: ep.sources };
-  if (lockMeta) { body.counts = lockMeta.counts; body.acknowledged = lockMeta.acknowledged; }
-  return calSha256(calCanonical(body));
-}
 
-/* ---------- Template ---------- */
+/* ---------- Template and empty parts ---------- */
 function calEmptyRecord(){ return { value: null, basis: null, sourceIds: [], calculation: '', rationale: '' }; }
-function calEmptyLayer(){
+function calEmptyInputs(){
   const inputs = {};
   EP_LAYER_KEYS.forEach(k => { inputs[k] = calEmptyRecord(); });
   inputs.driftP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
   inputs.marginP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
-  return { name: '', inputs };
+  return inputs;
+}
+function calEmptySettings(){
+  const s = {};
+  EP_SETTING_KEYS.forEach(k => { s[k] = calEmptyRecord(); });
+  s.entryDef = null; s.capexModel = null;
+  return s;
+}
+function calEmptyChecklist(){ const c = {}; calDeps().SCORER_CHECKLIST.forEach(i => { c[i.key] = ''; }); return c; }
+function calEmptyVariant(label, nLayers){
+  return { label: label, settings: calEmptySettings(), layers: Array.from({ length: nLayers }, () => ({ inputs: calEmptyInputs() })), lock: null };
 }
 function templateEpisode(){
-  const settings = {};
-  EP_SETTING_KEYS.forEach(k => { settings[k] = calEmptyRecord(); });
-  settings.entryDef = null; settings.capexModel = null;
   return { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION, id: '', name: '', version: 1, previousHash: null,
-    asOfDate: null, asOfRule: '', outcomeHorizon: '', outcomeMeasure: '', scorer: { knewAboutOutcome: '' },
-    settings, layers: [calEmptyLayer()], sources: [], lock: null, outcomes: [] };
+    asOfDate: null, asOfRule: '', outcomeHorizon: '', outcomeMeasure: '',
+    scorer: { knewAboutOutcome: '', checklist: calEmptyChecklist() },
+    layerNames: [''], sources: [], variants: [calEmptyVariant('Main', 1)], outcomes: [] };
+}
+
+/* ---------- Migration of schema 1 and 2 files (raw, before validation) ---------- */
+// Old shape: settings, layers [{ name, inputs }] and lock at the top level; scorer { knewAboutOutcome }. Field sets are
+// checked strictly here; everything is then validated again in the schema 3 shape.
+function calMigrate(raw){
+  const d = calDeps(), w = 'Episode (schema ' + raw.schemaVersion + ')';
+  d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
+    'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], w);
+  d.snapKeys(raw.scorer, ['knewAboutOutcome'], [], w + ' scorer');
+  if (!Array.isArray(raw.layers)) d.snapErr(w + ' layers', 'expected a list');
+  raw.layers.forEach((L, i) => d.snapKeys(L, ['name', 'inputs'], [], w + ' layer ' + (i + 1)));
+  let lock = null;
+  if (raw.lock !== null) {
+    if (raw.schemaVersion === 1) {
+      d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], w + ' lock');
+      lock = { hash: raw.lock.hash, lockedAt: raw.lock.lockedAt, modelVersion: raw.lock.modelVersion, hashScheme: 1, counts: null, acknowledged: null, checklistCaptured: false };
+    } else {
+      d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged'], [], w + ' lock');
+      lock = { hash: raw.lock.hash, lockedAt: raw.lock.lockedAt, modelVersion: raw.lock.modelVersion, hashScheme: raw.lock.hashScheme,
+        counts: raw.lock.counts, acknowledged: raw.lock.acknowledged, checklistCaptured: false };
+    }
+  }
+  return { format: raw.format, schemaVersion: 3, id: raw.id, name: raw.name, version: raw.version, previousHash: raw.previousHash,
+    asOfDate: raw.asOfDate, asOfRule: raw.asOfRule, outcomeHorizon: raw.outcomeHorizon, outcomeMeasure: raw.outcomeMeasure,
+    scorer: { knewAboutOutcome: raw.scorer.knewAboutOutcome, checklist: calEmptyChecklist() },
+    layerNames: raw.layers.map(L => L.name), sources: raw.sources,
+    variants: [{ label: 'Main', settings: raw.settings, layers: raw.layers.map(L => ({ inputs: L.inputs })), lock }],
+    outcomes: raw.outcomes };
+}
+
+/* ---------- Hashes ---------- */
+// Scheme 1 and 2: the original formulas over the old shape (variant 0 only), so migrated locks stay valid.
+function legacyHash(ep, vi, scheme, meta){
+  const v = ep.variants[vi];
+  const body = { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
+    asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: { knewAboutOutcome: ep.scorer.knewAboutOutcome },
+    settings: v.settings, layers: ep.layerNames.map((n, i) => ({ name: n, inputs: v.layers[i].inputs })), sources: ep.sources };
+  if (scheme === 2) { body.counts = meta.counts; body.acknowledged = meta.acknowledged; }
+  return calSha256(calCanonical(body));
+}
+// Scheme 3: shared fields (including the scorer checklist and layer names), this variant's label and inputs, the
+// sources it cites, its counts and its acknowledgement. Changing a shared field after any lock breaks every lock.
+function variantHash(ep, vi, meta){
+  const v = ep.variants[vi], cited = citedSources(ep, vi);
+  return calSha256(calCanonical({
+    shared: { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate, asOfRule: ep.asOfRule,
+      outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer, layerNames: ep.layerNames },
+    variant: { label: v.label, settings: v.settings, layers: v.layers },
+    sources: ep.sources.filter(s => cited.has(s.id)),
+    counts: meta.counts, acknowledged: meta.acknowledged }));
+}
+function citedSources(ep, vi){
+  const ids = new Set();
+  allRecords(ep, vi).forEach(([, r]) => r.sourceIds.forEach(id => ids.add(id)));
+  return ids;
 }
 
 /* ---------- Validation (strict; returns a fresh object) ---------- */
@@ -1104,15 +1352,15 @@ function calRecord(r, where, range, integer, ctx){
   return out;
 }
 
-function validateEpisode(raw){
+function validateEpisode(raw0){
   const d = calDeps();
   const where = 'Episode';
-  if (!d.snapIsObj(raw)) d.snapErr(where, 'expected an object');
-  if (raw.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
-  if (EP_SCHEMA_READABLE.indexOf(raw.schemaVersion) < 0) d.snapErr(where, 'schema version ' + String(raw.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema versions ' + EP_SCHEMA_READABLE.join(' and ') + ')');
-  const schema = raw.schemaVersion;
+  if (!d.snapIsObj(raw0)) d.snapErr(where, 'expected an object');
+  if (raw0.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
+  if (EP_SCHEMA_READABLE.indexOf(raw0.schemaVersion) < 0) d.snapErr(where, 'schema version ' + String(raw0.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema versions ' + EP_SCHEMA_READABLE.join(', ') + ')');
+  const raw = raw0.schemaVersion < 3 ? calMigrate(raw0) : raw0;
   d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
-    'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], where);
+    'outcomeMeasure', 'scorer', 'layerNames', 'sources', 'variants', 'outcomes'], [], where);
   const ep = { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION };
   ep.id = d.snapStr(raw.id, 60, where + ' id');
   if (ep.id && !/^[a-z0-9][a-z0-9-]*$/.test(ep.id)) d.snapErr(where + ' id', 'use lower-case letters, digits and hyphens');
@@ -1124,8 +1372,13 @@ function validateEpisode(raw){
   ep.asOfRule = d.snapStr(raw.asOfRule, EP_TEXT.long, where + ' asOfRule');
   ep.outcomeHorizon = d.snapStr(raw.outcomeHorizon, EP_TEXT.long, where + ' outcomeHorizon');
   ep.outcomeMeasure = d.snapStr(raw.outcomeMeasure, EP_TEXT.long, where + ' outcomeMeasure');
-  d.snapKeys(raw.scorer, ['knewAboutOutcome'], [], where + ' scorer');
-  ep.scorer = { knewAboutOutcome: d.snapStr(raw.scorer.knewAboutOutcome, EP_TEXT.knew, where + ' scorer knewAboutOutcome') };
+  // Scorer: free text plus the checklist.
+  d.snapKeys(raw.scorer, ['knewAboutOutcome', 'checklist'], [], where + ' scorer');
+  const keys = d.SCORER_CHECKLIST.map(c => c.key);
+  d.snapKeys(raw.scorer.checklist, keys, [], where + ' scorer checklist');
+  const checklist = {};
+  keys.forEach(k => { checklist[k] = d.snapOneOf(raw.scorer.checklist[k], EP_CHECK_ANSWERS, where + ' scorer checklist ' + k); });
+  ep.scorer = { knewAboutOutcome: d.snapStr(raw.scorer.knewAboutOutcome, EP_TEXT.knew, where + ' scorer knewAboutOutcome'), checklist };
   // Sources first, so inputs and outcomes can be checked against them.
   if (!Array.isArray(raw.sources) || raw.sources.length > EP_MAX_SOURCES) d.snapErr(where + ' sources', 'expected a list of at most ' + EP_MAX_SOURCES);
   const byId = {};
@@ -1144,62 +1397,19 @@ function validateEpisode(raw){
     return src;
   });
   const ctx = { known: new Set(Object.keys(byId)), byId, asOfDate: ep.asOfDate };
-  // Settings
-  const S = raw.settings;
-  d.snapKeys(S, EP_SETTING_KEYS.concat(['entryDef', 'capexModel']), [], where + ' settings');
-  ep.settings = {};
-  EP_SETTING_KEYS.forEach(k => {
-    const range = k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k];
-    ep.settings[k] = calRecord(S[k], where + ' setting ' + k, range, EP_INT_KEYS.indexOf(k) >= 0, ctx);
-  });
-  ep.settings.entryDef = S.entryDef === null ? null : d.snapOneOf(S.entryDef, ['A', 'B'], where + ' setting entryDef');
-  ep.settings.capexModel = S.capexModel === null ? null : d.snapOneOf(S.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
-  const p2 = ep.settings.phase2Start.value, p3 = ep.settings.phase3Start.value;
-  if (p2 !== null && p3 !== null && p2 >= p3) d.snapErr(where + ' settings', 'phase 2 must start before phase 3');
-  // Layers (episode-specific; names are free text)
-  if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > EP_MAX_LAYERS) d.snapErr(where + ' layers', 'expected 1 to ' + EP_MAX_LAYERS + ' layers');
-  ep.layers = raw.layers.map((L, i) => {
-    const w = where + ' layer ' + (i + 1);
-    d.snapKeys(L, ['name', 'inputs'], [], w);
-    d.snapKeys(L.inputs, EP_LAYER_KEYS.concat(['driftP', 'marginP']), [], w + ' inputs');
-    const inputs = {};
-    EP_LAYER_KEYS.forEach(k => { inputs[k] = calRecord(L.inputs[k], w + ' ' + k, d.LAYER_RANGES[k], EP_INT_KEYS.indexOf(k) >= 0, ctx); });
-    ['driftP', 'marginP'].forEach(k => {
-      if (!Array.isArray(L.inputs[k]) || L.inputs[k].length !== 3) d.snapErr(w + ' ' + k, 'expected three phase records');
-      inputs[k] = L.inputs[k].map((r, j) => calRecord(r, w + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
-    });
-    return { name: d.snapStr(L.name, EP_TEXT.name, w + ' name'), inputs };
-  });
-  // Lock. Schema 2: { hash, lockedAt, modelVersion, hashScheme, counts, acknowledged }. A schema 1 lock (first three
-  // fields only) is carried over as hash scheme 1 with counts and acknowledgement not recorded (null).
-  if (raw.lock === null) ep.lock = null;
-  else {
-    const w = where + ' lock';
-    if (schema === 1) d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], w);
-    else d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged'], [], w);
-    ep.lock = { hash: d.snapStr(raw.lock.hash, 64, w + ' hash'), lockedAt: d.snapDate(raw.lock.lockedAt, w + ' lockedAt'),
-      modelVersion: d.snapNum(raw.lock.modelVersion, [1, 100000], w + ' modelVersion', true),
-      hashScheme: schema === 1 ? 1 : d.snapNum(raw.lock.hashScheme, [1, 2], w + ' hashScheme', true), counts: null, acknowledged: null };
-    const missing = lockProblems(ep);
-    if (missing.length) d.snapErr(w, 'locked episode is incomplete: ' + missing[0]);
-    if (ep.lock.hashScheme === 1) {
-      if (schema !== 1 && (raw.lock.counts !== null || raw.lock.acknowledged !== null)) d.snapErr(w, 'a scheme 1 lock has no counts or acknowledgement');
-      if (episodeHash(ep) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
-    } else {
-      d.snapKeys(raw.lock.counts, ['judgement', 'uncited', 'total'], [], w + ' counts');
-      const c = {}; ['judgement', 'uncited', 'total'].forEach(k => { c[k] = d.snapNum(raw.lock.counts[k], [0, 10000], w + ' counts ' + k, true); });
-      if (typeof raw.lock.acknowledged !== 'boolean') d.snapErr(w + ' acknowledged', 'expected true or false');
-      ep.lock.counts = c; ep.lock.acknowledged = raw.lock.acknowledged;
-      const need = lockAcknowledgement(ep);
-      if (c.judgement !== need.judgement || c.uncited !== need.uncited || c.total !== need.total) d.snapErr(w + ' counts', 'the recorded counts do not match the inputs');
-      if (need.needed && !ep.lock.acknowledged) d.snapErr(w, 'this episode needed an acknowledgement at lock time and has none');
-      if (!need.needed && ep.lock.acknowledged) d.snapErr(w, 'an acknowledgement is recorded but none was needed');
-      if (episodeHash(ep, { counts: c, acknowledged: ep.lock.acknowledged }) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
-    }
-  }
-  // Outcomes (only after locking)
+  // Layer names (shared by every variant)
+  if (!Array.isArray(raw.layerNames) || raw.layerNames.length < 1 || raw.layerNames.length > EP_MAX_LAYERS) d.snapErr(where + ' layerNames', 'expected 1 to ' + EP_MAX_LAYERS + ' layers');
+  ep.layerNames = raw.layerNames.map((n, i) => d.snapStr(n, EP_TEXT.name, where + ' layer ' + (i + 1) + ' name'));
+  // Variants (input versions)
+  if (!Array.isArray(raw.variants) || raw.variants.length < 1 || raw.variants.length > EP_MAX_VARIANTS) d.snapErr(where + ' variants', 'expected 1 to ' + EP_MAX_VARIANTS + ' input versions');
+  ep.variants = raw.variants.map((v, vi) => calVariant(v, where + ' input version ' + (vi + 1), ep, ctx));
+  const labels = ep.variants.map(v => v.label.trim()).filter(Boolean);
+  if (new Set(labels).size !== labels.length) d.snapErr(where + ' variants', 'two input versions have the same label');
+  // Locks, one per variant (needs the whole episode for the hashes)
+  raw.variants.forEach((v, vi) => { ep.variants[vi].lock = v.lock === null ? null : calCheckLock(v.lock, where + ' input version ' + (vi + 1) + ' (' + (ep.variants[vi].label || 'unlabelled') + ') lock', ep, vi); });
+  // Outcomes (only once every input version is locked)
   if (!Array.isArray(raw.outcomes)) d.snapErr(where + ' outcomes', 'expected a list');
-  if (raw.outcomes.length && !ep.lock) d.snapErr(where + ' outcomes', 'outcomes can only be entered after the episode is locked');
+  if (raw.outcomes.length && !allLocked(ep)) d.snapErr(where + ' outcomes', 'outcomes can only be entered after every input version is locked');
   const seen = new Set();
   ep.outcomes = raw.outcomes.map((o, i) => {
     const w = where + ' outcome ' + (i + 1);
@@ -1210,10 +1420,71 @@ function validateEpisode(raw){
   });
   return ep;
 }
+function calVariant(v, w, ep, ctx){
+  const d = calDeps();
+  d.snapKeys(v, ['label', 'settings', 'layers', 'lock'], [], w);
+  const out = { label: d.snapStr(v.label, EP_TEXT.label, w + ' label'), settings: {}, layers: [], lock: null };
+  const S = v.settings;
+  d.snapKeys(S, EP_SETTING_KEYS.concat(['entryDef', 'capexModel']), [], w + ' settings');
+  EP_SETTING_KEYS.forEach(k => {
+    const range = k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k];
+    out.settings[k] = calRecord(S[k], w + ' setting ' + k, range, EP_INT_KEYS.indexOf(k) >= 0, ctx);
+  });
+  out.settings.entryDef = S.entryDef === null ? null : d.snapOneOf(S.entryDef, ['A', 'B'], w + ' setting entryDef');
+  out.settings.capexModel = S.capexModel === null ? null : d.snapOneOf(S.capexModel, ['sustaining', 'vintage'], w + ' setting capexModel');
+  const p2 = out.settings.phase2Start.value, p3 = out.settings.phase3Start.value;
+  if (p2 !== null && p3 !== null && p2 >= p3) d.snapErr(w + ' settings', 'phase 2 must start before phase 3');
+  if (!Array.isArray(v.layers) || v.layers.length !== ep.layerNames.length) d.snapErr(w + ' layers', 'expected ' + ep.layerNames.length + ' layers, one per layer name');
+  out.layers = v.layers.map((L, i) => {
+    const lw = w + ' layer ' + (i + 1);
+    d.snapKeys(L, ['inputs'], [], lw);
+    d.snapKeys(L.inputs, EP_LAYER_KEYS.concat(['driftP', 'marginP']), [], lw + ' inputs');
+    const inputs = {};
+    EP_LAYER_KEYS.forEach(k => { inputs[k] = calRecord(L.inputs[k], lw + ' ' + k, d.LAYER_RANGES[k], EP_INT_KEYS.indexOf(k) >= 0, ctx); });
+    ['driftP', 'marginP'].forEach(k => {
+      if (!Array.isArray(L.inputs[k]) || L.inputs[k].length !== 3) d.snapErr(lw + ' ' + k, 'expected three phase records');
+      inputs[k] = L.inputs[k].map((r, j) => calRecord(r, lw + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
+    });
+    return { inputs };
+  });
+  return out;
+}
+// One variant's lock: { hash, lockedAt, modelVersion, hashScheme, counts, acknowledged, checklistCaptured }.
+function calCheckLock(L, w, ep, vi){
+  const d = calDeps();
+  d.snapKeys(L, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged', 'checklistCaptured'], [], w);
+  const lock = { hash: d.snapStr(L.hash, 64, w + ' hash'), lockedAt: d.snapDate(L.lockedAt, w + ' lockedAt'),
+    modelVersion: d.snapNum(L.modelVersion, [1, 100000], w + ' modelVersion', true),
+    hashScheme: d.snapNum(L.hashScheme, [1, 3], w + ' hashScheme', true), counts: null, acknowledged: null, checklistCaptured: false };
+  if (typeof L.checklistCaptured !== 'boolean') d.snapErr(w + ' checklistCaptured', 'expected true or false');
+  lock.checklistCaptured = L.checklistCaptured;
+  if (lock.hashScheme < 3 && vi !== 0) d.snapErr(w, 'only the first input version can carry a lock from an older schema');
+  if (lock.hashScheme < 3 && lock.checklistCaptured) d.snapErr(w, 'a lock from an older schema did not capture the checklist');
+  if (lock.hashScheme === 3 && !lock.checklistCaptured) d.snapErr(w, 'a scheme 3 lock always captures the checklist');
+  const missing = lockProblems(ep, vi, { requireChecklist: lock.hashScheme === 3 });
+  if (missing.length) d.snapErr(w, 'locked input version is incomplete: ' + missing[0]);
+  const broken = 'the inputs do not match the lock hash; locked inputs cannot change without making a new version (and shared fields cannot change without a new episode version)';
+  if (lock.hashScheme === 1) {
+    if (L.counts !== null || L.acknowledged !== null) d.snapErr(w, 'a scheme 1 lock has no counts or acknowledgement');
+    if (legacyHash(ep, vi, 1) !== lock.hash) d.snapErr(w, broken);
+    return lock;
+  }
+  d.snapKeys(L.counts, ['judgement', 'uncited', 'total'], [], w + ' counts');
+  const c = {}; ['judgement', 'uncited', 'total'].forEach(k => { c[k] = d.snapNum(L.counts[k], [0, 10000], w + ' counts ' + k, true); });
+  if (typeof L.acknowledged !== 'boolean') d.snapErr(w + ' acknowledged', 'expected true or false');
+  lock.counts = c; lock.acknowledged = L.acknowledged;
+  const need = lockAcknowledgement(ep, vi);
+  if (c.judgement !== need.judgement || c.uncited !== need.uncited || c.total !== need.total) d.snapErr(w + ' counts', 'the recorded counts do not match the inputs');
+  if (need.needed && !lock.acknowledged) d.snapErr(w, 'this input version needed an acknowledgement at lock time and has none');
+  if (!need.needed && lock.acknowledged) d.snapErr(w, 'an acknowledgement is recorded but none was needed');
+  const meta = { counts: c, acknowledged: lock.acknowledged };
+  if ((lock.hashScheme === 2 ? legacyHash(ep, vi, 2, meta) : variantHash(ep, vi, meta)) !== lock.hash) d.snapErr(w, broken);
+  return lock;
+}
 function calOutcome(o, w, ep, ctx){
   const d = calDeps();
   d.snapKeys(o, ['layer', 'result', 'sourceIds', 'note', 'contested'], [], w);
-  const out = { layer: d.snapNum(o.layer, [0, ep.layers.length - 1], w + ' layer', true),
+  const out = { layer: d.snapNum(o.layer, [0, ep.layerNames.length - 1], w + ' layer', true),
     result: d.snapOneOf(o.result, EP_OUTCOMES, w + ' result'),
     sourceIds: calIds(o.sourceIds, w + ' sources', ctx.known), note: d.snapStr(o.note, EP_TEXT.long, w + ' note'), contested: null };
   if (!out.note.trim()) d.snapErr(w, 'an outcome needs a note');
@@ -1232,10 +1503,13 @@ function calOutcome(o, w, ep, ctx){
   after(out.sourceIds, w + ' sources');
   return out;
 }
+function allLocked(ep){ return ep.variants.length > 0 && ep.variants.every(v => v.lock); }
+function anyLocked(ep){ return ep.variants.some(v => v.lock); }
 
-// What still has to be filled in before an episode can be locked (empty list when ready).
-function lockProblems(ep){
-  const p = [];
+// What still has to be filled in before an input version can be locked (empty list when ready). The checklist is
+// required for new locks; locks carried over from older schemas did not capture it.
+function lockProblems(ep, vi, opts){
+  const p = [], v = ep.variants[vi || 0], requireChecklist = !opts || opts.requireChecklist !== false;
   if (!ep.id) p.push('an id');
   if (!ep.name.trim()) p.push('a name');
   if (!ep.asOfDate) p.push('an as-of date');
@@ -1243,12 +1517,14 @@ function lockProblems(ep){
   if (!ep.outcomeHorizon.trim()) p.push('the outcome horizon');
   if (!ep.outcomeMeasure.trim()) p.push('the outcome measure');
   if (!ep.scorer.knewAboutOutcome.trim()) p.push('what the scorer already knew about the outcome');
-  if (!ep.settings.entryDef) p.push('settings entryDef');
-  if (!ep.settings.capexModel) p.push('settings capexModel');
-  EP_SETTING_KEYS.forEach(k => { if (ep.settings[k].value === null) p.push('settings ' + k); });
-  ep.layers.forEach((L, i) => {
-    if (!L.name.trim()) p.push('layer ' + (i + 1) + ' name');
-    calRecords(L.inputs).forEach(([k, r]) => { if (r.value === null) p.push('layer ' + (i + 1) + ' ' + k); });
+  if (requireChecklist) calDeps().SCORER_CHECKLIST.forEach(c => { if (!ep.scorer.checklist[c.key]) p.push('checklist: ' + c.text.toLowerCase()); });
+  if (!v.label.trim()) p.push('an input version label');
+  if (!v.settings.entryDef) p.push('settings entryDef');
+  if (!v.settings.capexModel) p.push('settings capexModel');
+  EP_SETTING_KEYS.forEach(k => { if (v.settings[k].value === null) p.push('settings ' + k); });
+  ep.layerNames.forEach((n, i) => {
+    if (!n.trim()) p.push('layer ' + (i + 1) + ' name');
+    calRecords(v.layers[i].inputs).forEach(([k, r]) => { if (r.value === null) p.push('layer ' + (i + 1) + ' ' + k); });
   });
   return p;
 }
@@ -1258,9 +1534,11 @@ function calRecords(inputs){
   ['driftP', 'marginP'].forEach(k => inputs[k].forEach((r, j) => out.push([k + '[' + j + ']', r])));
   return out;
 }
-function allRecords(ep){
-  const out = EP_SETTING_KEYS.map(k => ['settings ' + k, ep.settings[k]]);
-  ep.layers.forEach((L, i) => calRecords(L.inputs).forEach(([k, r]) => out.push(['layer ' + (i + 1) + ' ' + k, r])));
+// Records of one input version (default the first).
+function allRecords(ep, vi){
+  const v = ep.variants[vi || 0];
+  const out = EP_SETTING_KEYS.map(k => ['settings ' + k, v.settings[k]]);
+  v.layers.forEach((L, i) => calRecords(L.inputs).forEach(([k, r]) => out.push(['layer ' + (i + 1) + ' ' + k, r])));
   return out;
 }
 
@@ -1276,8 +1554,8 @@ function importEpisodeText(text){
   try { return { ok: true, episode: validateEpisode(data) }; } catch (e) { return fail(e.message); }
 }
 function exportEpisodeText(ep){ return JSON.stringify(validateEpisode(JSON.parse(JSON.stringify(ep))), null, 2); }
-// Export file: NAME.episode.json when every input is cited; NAME.private.json (gitignored) with a warning when any
-// input is uncited, because such a file must stay out of the public repository.
+// Export file: NAME.episode.json when every input of every version is cited; NAME.private.json (gitignored) with a
+// warning when any input is uncited, because such a file must stay out of the public repository.
 function exportEpisodeFile(ep){
   const text = exportEpisodeText(ep), uncited = unsourcedInputs(ep);
   const base = (ep.id || 'episode') + '-v' + ep.version;
@@ -1285,96 +1563,138 @@ function exportEpisodeFile(ep){
     warning: uncited.length ? uncited.length + ' input' + (uncited.length === 1 ? ' is' : 's are') + ' uncited, so this file is named .private.json. Keep it out of the repository (calibration/private/ and *.private.json are gitignored).' : '' };
 }
 
-/* ---------- Workflow: draft, locked, outcomes ---------- */
-// Lock-time acknowledgement: needed when more than half the filled inputs are judgement or any input is uncited.
-// The page asks "Lock anyway" or "Cancel"; locking is never blocked, but the answer and the counts are recorded in
-// the lock and covered by the hash.
-function lockAcknowledgement(ep){
-  const js = judgementShare(ep), uncited = unsourcedInputs(ep).length;
+/* ---------- Workflow: draft, lock each input version, outcomes ---------- */
+// Lock-time acknowledgement for one input version: needed when more than half its filled inputs are judgement or
+// any is uncited. The page asks "Lock anyway" or "Cancel"; locking is never blocked; the answer and counts are
+// recorded in the lock and covered by its hash.
+function lockAcknowledgement(ep, vi){
+  const js = judgementShare(ep, vi), uncited = allRecords(ep, vi).filter(([, r]) => r.value !== null && !r.sourceIds.length).length;
   const needed = js.heavy || uncited > 0;
   const parts = [];
   if (js.heavy) parts.push(js.judgement + ' of ' + js.total + ' filled inputs are judgement');
   if (uncited) parts.push(uncited + ' input' + (uncited === 1 ? ' is' : 's are') + ' uncited');
+  const label = ep.variants[vi || 0].label;
   return { needed, judgement: js.judgement, uncited, total: js.total,
-    message: needed ? 'Before locking: ' + parts.join(', and ') + '. Lock anyway, or cancel and add sources?' : '' };
+    message: needed ? 'Before locking' + (label ? ' “' + label + '”' : '') + ': ' + parts.join(', and ') + '. Lock anyway, or cancel and add sources?' : '' };
 }
-function lockEpisode(ep, now, opts){
-  if (ep.lock) throw new Error('This episode is already locked. Make a new version to change its inputs.');
-  const problems = lockProblems(ep);
+function lockVariant(ep, vi, now, opts){
+  if (!ep.variants[vi]) throw new Error('No such input version.');
+  if (ep.variants[vi].lock) throw new Error('This input version is already locked. Make a new episode version to change its inputs.');
+  const problems = lockProblems(ep, vi);
   if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
   const copy = validateEpisode(JSON.parse(JSON.stringify(ep)));
-  const ack = lockAcknowledgement(copy);
+  const ack = lockAcknowledgement(copy, vi);
   if (ack.needed && !(opts && opts.acknowledged)) throw new Error('Needs acknowledgement: ' + ack.message);
   const meta = { counts: { judgement: ack.judgement, uncited: ack.uncited, total: ack.total }, acknowledged: ack.needed };
-  copy.schemaVersion = EP_SCHEMA_VERSION;
-  copy.lock = { hash: episodeHash(copy, meta), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION,
-    hashScheme: 2, counts: meta.counts, acknowledged: meta.acknowledged };
+  copy.variants[vi].lock = { hash: variantHash(copy, vi, meta), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION,
+    hashScheme: 3, counts: meta.counts, acknowledged: meta.acknowledged, checklistCaptured: true };
   return validateEpisode(copy);
 }
-// A new version keeps the inputs as a starting point, links to the old lock and starts as an unlocked draft.
+// Convenience for single-version episodes.
+function lockEpisode(ep, now, opts){ return lockVariant(ep, 0, now, opts); }
+// Add an input version (for example "Measured" next to "Hype"), starting from a copy of another version's inputs.
+// Not allowed once outcomes are recorded: its inputs would then be entered with the outcome already in view.
+function addVariant(ep, label, fromIndex){
+  if (ep.outcomes.length) throw new Error('Outcomes are already recorded, so a new input version would be entered with the outcome in view. Make a new episode version instead.');
+  if (ep.variants.length >= EP_MAX_VARIANTS) throw new Error('An episode can have at most ' + EP_MAX_VARIANTS + ' input versions.');
+  const name = String(label || '').trim();
+  if (!name) throw new Error('Give the input version a label.');
+  if (ep.variants.some(v => v.label.trim() === name)) throw new Error('Another input version already has that label.');
+  const copy = JSON.parse(JSON.stringify(ep)), src = copy.variants[fromIndex || 0];
+  copy.variants.push({ label: name, settings: JSON.parse(JSON.stringify(src.settings)), layers: JSON.parse(JSON.stringify(src.layers)), lock: null });
+  return validateEpisode(copy);
+}
+// A new episode version keeps everything as a starting point, unlocks every input version and clears outcomes. It
+// links to the previous version through a hash of that version's lock hashes.
 function newEpisodeVersion(ep){
-  if (!ep.lock) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
+  if (!anyLocked(ep)) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
   const copy = JSON.parse(JSON.stringify(ep));
-  copy.schemaVersion = EP_SCHEMA_VERSION;
-  copy.version = ep.version + 1; copy.previousHash = ep.lock.hash; copy.lock = null; copy.outcomes = [];
+  copy.version = ep.version + 1;
+  copy.previousHash = calSha256(ep.variants.filter(v => v.lock).map(v => v.lock.hash).join(','));
+  copy.variants.forEach(v => { v.lock = null; });
+  copy.outcomes = [];
   return validateEpisode(copy);
 }
 function setOutcome(ep, outcome){
-  if (!ep.lock) throw new Error('Outcomes can only be entered after the episode is locked.');
+  if (!allLocked(ep)) throw new Error('Outcomes can only be entered after every input version is locked.');
   const copy = JSON.parse(JSON.stringify(ep));
   copy.outcomes = copy.outcomes.filter(o => o.layer !== outcome.layer).concat([outcome]).sort((a, b) => a.layer - b.layer);
   return validateEpisode(copy);
 }
 
+/* ---------- Derived-input helper ---------- */
+// Adoption speed (years from 10% to 90%) from an early-phase doubling time T: speed = ln(81) / ln(2) x T. Applies to
+// the early, near-exponential phase only; the midpoint is a separate input.
+function doublingTimeToSpeed(T){
+  const d = calDeps(), r = d.GLOBAL_RANGES.speed;
+  if (typeof T !== 'number' || !isFinite(T) || T <= 0) throw new Error('Enter a doubling time in years, greater than zero.');
+  const value = Math.round(EP_LN81_LN2 * T * 100) / 100;
+  if (value < r[0] || value > r[1]) throw new Error('A doubling time of ' + T + ' years gives a speed of ' + value + ' years, outside the model range ' + r[0] + ' to ' + r[1] + '.');
+  return { value, calculation: 'speed = ln(81) / ln(2) x doubling time = ' + EP_LN81_LN2.toFixed(4) + ' x ' + T + ' years = ' + value + ' years. Early-phase doubling time only; the midpoint is set separately.' };
+}
+
 /* ---------- Basis mix ---------- */
-// Judgement share of the filled inputs; uncited judgements count toward it like any other judgement.
-function judgementShare(ep){
-  const filled = allRecords(ep).filter(([, r]) => r.value !== null);
+// Judgement share of one input version's filled inputs; uncited judgements count toward it like any other judgement.
+function judgementShare(ep, vi){
+  const filled = allRecords(ep, vi).filter(([, r]) => r.value !== null);
   if (!filled.length) return { judgement: 0, uncited: 0, total: 0, share: 0, heavy: false };
   const j = filled.filter(([, r]) => r.basis === 'judgement').length;
   const u = filled.filter(([, r]) => isUncitedJudgement(r)).length;
   return { judgement: j, uncited: u, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
 }
 function isUncitedJudgement(r){ return r.value !== null && r.basis === 'judgement' && !r.sourceIds.length; }
-// Numeric inputs without a cited source (any basis). The repository test requires this to be empty for every
-// committed file under calibration/; export uses it to suggest a .private.json name.
-function unsourcedInputs(ep){ return allRecords(ep).filter(([, r]) => r.value !== null && !r.sourceIds.length).map(([k]) => k); }
+// Numeric inputs without a cited source, across every input version. The repository test requires this to be
+// empty for every committed file under calibration/; export uses it to suggest a .private.json name.
+function unsourcedInputs(ep){
+  const out = [];
+  ep.variants.forEach((v, vi) => allRecords(ep, vi).forEach(([k, r]) => {
+    if (r.value !== null && !r.sourceIds.length) out.push((ep.variants.length > 1 ? (v.label || 'version ' + (vi + 1)) + ': ' : '') + k);
+  }));
+  return out;
+}
 
 /* ---------- Comparison ---------- */
-function episodeModelInputs(ep){
-  const s = ep.settings, G = {};
+function episodeModelInputs(ep, vi){
+  const v = ep.variants[vi || 0], s = v.settings, G = {};
   ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult'].forEach(k => { G[k] = s[k].value; });
   G.entryDef = s.entryDef; G.capexModel = s.capexModel; G.phases = [s.phase2Start.value, s.phase3Start.value];
-  const layers = ep.layers.map((L, i) => {
-    const o = { id: 'layer' + (i + 1), name: L.name };
+  const layers = v.layers.map((L, i) => {
+    const o = { id: 'layer' + (i + 1), name: ep.layerNames[i] };
     EP_LAYER_KEYS.forEach(k => { o[k] = L.inputs[k].value; });
     o.driftP = L.inputs.driftP.map(r => r.value); o.marginP = L.inputs.marginP.map(r => r.value);
     return o;
   });
   return { G, layers };
 }
-// Judgement share and uncited count from the lock record. Scheme 1 locks did not record them; their inputs cannot
-// change after locking, so the counts are computed from the inputs and marked as such.
-function basisFromLock(ep){
-  const c = ep.lock.counts || (() => { const a = lockAcknowledgement(ep); return { judgement: a.judgement, uncited: a.uncited, total: a.total }; })();
+// Judgement share and uncited count from one version's lock record. Scheme 1 locks did not record them; locked
+// inputs cannot change, so the counts are computed from the inputs and marked as such.
+function basisFromLock(ep, vi){
+  const lock = ep.variants[vi || 0].lock;
+  const c = lock.counts || (() => { const a = lockAcknowledgement(ep, vi || 0); return { judgement: a.judgement, uncited: a.uncited, total: a.total }; })();
   return { judgement: c.judgement, uncited: c.uncited, total: c.total, share: c.total ? c.judgement / c.total : 0,
-    acknowledged: ep.lock.acknowledged, recorded: !!ep.lock.counts };
+    acknowledged: lock.acknowledged, recorded: !!lock.counts, checklistCaptured: lock.checklistCaptured };
 }
-// Model verdict (current model) against the recorded outcome, per layer of every locked episode. No hit rate.
+// For each layer of every episode with at least one locked input version: the model verdict for each locked version
+// (current model), side by side, against the recorded outcome. Counts and the caveat; never a hit rate.
 function compareEpisodes(episodes){
-  const d = calDeps(), rows = [];
-  episodes.filter(ep => ep.lock).forEach(ep => {
-    const m = episodeModelInputs(ep);
-    m.layers.forEach((L, i) => {
-      const o = d.runLayer(L, m.G), outcome = ep.outcomes.find(x => x.layer === i) || null;
-      rows.push({ episode: ep.name, episodeId: ep.id, version: ep.version, layer: L.name, verdict: o.bin, npv: o.npv,
-        basis: basisFromLock(ep),
-        modelSaysEarnsCost: o.npv >= 0, outcome: outcome ? outcome.result : null,
-        lockedModelVersion: ep.lock.modelVersion, versionDiffers: ep.lock.modelVersion !== d.MODEL_VERSION });
+  const d = calDeps(), groups = [];
+  episodes.filter(anyLocked).forEach(ep => {
+    const locked = ep.variants.map((v, vi) => vi).filter(vi => ep.variants[vi].lock);
+    const runs = locked.map(vi => {
+      const m = episodeModelInputs(ep, vi), lock = ep.variants[vi].lock;
+      return { label: ep.variants[vi].label, basis: basisFromLock(ep, vi), lockedModelVersion: lock.modelVersion,
+        versionDiffers: lock.modelVersion !== d.MODEL_VERSION, results: m.layers.map(L => d.runLayer(L, m.G)) };
     });
+    const rows = ep.layerNames.map((name, i) => {
+      const outcome = ep.outcomes.find(x => x.layer === i) || null;
+      return { layer: name, outcome: outcome ? outcome.result : null,
+        variants: runs.map(r => ({ label: r.label, verdict: r.results[i].bin, npv: r.results[i].npv, modelSaysEarnsCost: r.results[i].npv >= 0,
+          basis: r.basis, lockedModelVersion: r.lockedModelVersion, versionDiffers: r.versionDiffers })) };
+    });
+    groups.push({ episode: ep.name, episodeId: ep.id, version: ep.version, allLocked: allLocked(ep), rows });
   });
-  const lockedEps = episodes.filter(ep => ep.lock);
-  return { rows, episodes: lockedEps.length, layers: rows.length, caveat: EP_FEW_CASES, banner: EP_BANNER, currentModelVersion: d.MODEL_VERSION };
+  return { groups, episodes: groups.length, layers: groups.reduce((a, g) => a + g.rows.length, 0), caveat: EP_FEW_CASES, banner: EP_BANNER,
+    currentModelVersion: d.MODEL_VERSION };
 }
 
 
@@ -1384,7 +1704,8 @@ const CAL_KEY = 'load-bearing-calibration-v1';
 const CAL_MAX = 20;
 const $c = (id) => document.getElementById(id);
 let calStore = { episodes: [] };
-let calSel = -1;
+let calSel = -1;   // selected episode
+let calVar = 0;    // selected input version within it
 let calWork = null; // working copy of the selected episode (may be mid-edit and not yet valid)
 
 function cel(tag, props, kids){
@@ -1409,7 +1730,12 @@ function calPersist(){
   try { localStorage.setItem(CAL_KEY, JSON.stringify(calStore)); return true; }
   catch (e) { $c('edSave').textContent = 'Not saved: the browser refused to store this (storage full or blocked). Export to keep a copy.'; return false; }
 }
-function calState(ep){ return !ep.lock ? 'draft' : ep.outcomes.length ? 'locked, outcomes recorded' : 'locked'; }
+function calState(ep){
+  const n = ep.variants.length, locked = ep.variants.filter(v => v.lock).length;
+  const lk = locked === 0 ? 'draft' : locked === n ? 'locked' : locked + ' of ' + n + ' versions locked';
+  return lk + (n > 1 ? ' (' + n + ' input versions)' : '') + (ep.outcomes.length ? ', outcomes recorded' : '');
+}
+const calAnyLocked = (w) => w.variants.some(v => v.lock);
 
 /* ---------- List ---------- */
 function calRenderList(){
@@ -1442,7 +1768,7 @@ function calDelete(i){
   if (calSel === i) { calSel = -1; calWork = null; $c('editor').hidden = true; } else if (calSel > i) calSel--;
   calRenderAll();
 }
-function calOpen(i){ $c('lockAck').hidden = true; calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
+function calOpen(i, vi){ $c('lockAck').hidden = true; calSel = i; calVar = vi || 0; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
 
 /* ---------- Editing ---------- */
 // Every edit updates the working copy, then validates it strictly. A valid copy is saved; an invalid one is kept on
@@ -1451,13 +1777,23 @@ function calCommit(){
   try {
     const ep = validateEpisode(JSON.parse(JSON.stringify(calWork)));
     calStore.episodes[calSel] = ep;
-    if (calPersist()) $c('edSave').textContent = 'Saved. ' + (ep.lock ? '' : (lockProblems(ep).length ? 'Draft: ' + lockProblems(ep).length + ' item(s) still needed before locking.' : 'Ready to lock.'));
+    const v = ep.variants[calVar];
+    if (calPersist()) $c('edSave').textContent = 'Saved. ' + (v.lock ? '' : (lockProblems(ep, calVar).length ? 'Draft: ' + lockProblems(ep, calVar).length + ' item(s) still needed before this version can be locked.' : 'This version is ready to lock.'));
   } catch (e) { $c('edSave').textContent = 'Not saved yet: ' + e.message; }
+  $c('edSave').classList.remove('warn');
   calRenderList(); calRenderBanners(); calRenderCompare(); calRenderStatus();
 }
 const calIdsText = (ids) => ids.join(', ');
 const calIdsParse = (t) => String(t).split(',').map(x => x.trim()).filter(Boolean);
-function calRecordRow(label, rec, range, locked){
+// In-page help: meaning, where to look at the as-of date, recipe and hindsight trap (from src/calibration-guide.js).
+function calHelp(key){
+  const g = GUIDE[key.replace(/\[\d\]$/, '')];
+  if (!g) return null;
+  return cel('details', { cls: 'help' }, [cel('summary', { text: 'Help' }),
+    cel('p', null, [cel('b', { text: 'Meaning. ' }), g.meaning]), cel('p', null, [cel('b', { text: 'Where to look at the as-of date. ' }), g.where]),
+    cel('p', null, [cel('b', { text: 'Recipe. ' }), g.recipe]), cel('p', null, [cel('b', { text: 'Hindsight trap. ' }), g.trap])]);
+}
+function calRecordRow(label, rec, range, locked, extra){
   const num = cel('input', { type: 'number', cls: 'txt', step: 'any', min: String(range[0]), max: String(range[1]), 'aria-label': label + ' value' });
   num.value = rec.value === null ? '' : rec.value;
   num.addEventListener('input', () => { const v = parseFloat(num.value); rec.value = num.value === '' || !isFinite(v) ? null : v; calCommit(); });
@@ -1470,119 +1806,184 @@ function calRecordRow(label, rec, range, locked){
     e.addEventListener('input', () => { rec[field] = parse ? calIdsParse(e.value) : e.value; calCommit(); });
     return e;
   };
-  [num, basis].forEach(e => { e.disabled = locked; });
   const ids = txt('sourceIds', 'source ids', true), calc = txt('calculation', 'calculation'), rat = txt('rationale', 'rationale');
-  [ids, calc, rat].forEach(e => { e.disabled = locked; });
+  [num, basis, ids, calc, rat].forEach(e => { e.disabled = locked; });
   // Distinct label for a judgement with no cited source.
   const tag = cel('span', { cls: 'badge uncited', 'data-uncited': '' }, ['uncited judgement']);
   const refreshTag = () => { tag.hidden = !isUncitedJudgement(rec); };
   refreshTag();
   [num, basis, ids].forEach(e => { e.addEventListener('input', refreshTag); e.addEventListener('change', refreshTag); });
-  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis, tag]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
+  const labelCell = cel('td', { cls: 'k l' }, [label, calHelp(label)]);
+  if (extra) labelCell.appendChild(extra({ num, basis, calc, refreshTag }));
+  return cel('tr', null, [labelCell, cel('td', null, [num]), cel('td', null, [basis, tag]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
 }
 const calRecHead = () => cel('thead', null, [cel('tr', null, ['Input', 'Value', 'Basis', 'Sources (ids)', 'Calculation (derived)', 'Rationale (judgement)'].map((h, i) => cel('th', { cls: i === 0 ? 'l' : '', text: h })))]);
 function calRangeOf(k){ return k === 'phase2Start' ? PHASE_RANGES[0] : k === 'phase3Start' ? PHASE_RANGES[1] : GLOBAL_RANGES[k] || LAYER_RANGES[k.replace(/\[\d\]$/, '')]; }
 
+// Doubling-time helper for the adoption-speed record: fills a derived value and its calculation text.
+function calSpeedHelper(rec, locked){
+  return (ctl) => {
+    const box = cel('div', { cls: 'helper' });
+    const t = cel('input', { type: 'number', cls: 'txt', step: 'any', min: '0', 'aria-label': 'Early-phase doubling time in years', placeholder: 'T years' });
+    const go = cel('button', { 'data-helper': 'doubling' }, ['Fill from doubling time']);
+    const note = cel('div', { cls: 'muted', text: 'speed ≈ ln(81) / ln(2) × T. Early phase only; the midpoint is separate. Cite the source of T.' });
+    [t, go].forEach(e => { e.disabled = locked; });
+    go.addEventListener('click', () => {
+      try {
+        const r = doublingTimeToSpeed(parseFloat(t.value));
+        rec.value = r.value; rec.basis = 'derived'; rec.calculation = r.calculation;
+        ctl.num.value = r.value; ctl.basis.value = 'derived'; ctl.calc.value = r.calculation; ctl.refreshTag();
+        calCommit();
+      } catch (e) { $c('edSave').textContent = 'Doubling-time helper: ' + e.message; }
+    });
+    box.appendChild(t); box.appendChild(document.createTextNode(' ')); box.appendChild(go); box.appendChild(note);
+    return box;
+  };
+}
+
 function calRenderEditor(){
   if (!calWork) return;
-  const w = calWork, locked = !!w.lock;
-  $c('edTitle').textContent = (w.name || 'Unnamed episode') + ' (version ' + w.version + ')';
-  const bind = (id, get, set) => { const e = $c(id); e.value = get(); e.oninput = () => { set(e.value); calCommit(); }; e.onchange = e.oninput; e.disabled = locked; };
-  bind('f_name', () => w.name, v => { w.name = v; });
-  bind('f_id', () => w.id, v => { w.id = v.trim(); });
-  bind('f_asOf', () => w.asOfDate || '', v => { w.asOfDate = v || null; });
-  bind('f_rule', () => w.asOfRule, v => { w.asOfRule = v; });
-  bind('f_horizon', () => w.outcomeHorizon, v => { w.outcomeHorizon = v; });
-  bind('f_measure', () => w.outcomeMeasure, v => { w.outcomeMeasure = v; });
-  bind('f_knew', () => w.scorer.knewAboutOutcome, v => { w.scorer.knewAboutOutcome = v; });
-  bind('f_entryDef', () => w.settings.entryDef || '', v => { w.settings.entryDef = v || null; });
-  bind('f_capex', () => w.settings.capexModel || '', v => { w.settings.capexModel = v || null; });
-  // Sources
+  const w = calWork, shared = calAnyLocked(w);
+  if (calVar >= w.variants.length) calVar = 0;
+  const v = w.variants[calVar], locked = !!v.lock;
+  $c('edTitle').textContent = (w.name || 'Unnamed episode') + ' (episode version ' + w.version + ')';
+  const bind = (id, get, set, dis) => { const e = $c(id); e.value = get(); e.oninput = () => { set(e.value); calCommit(); }; e.onchange = e.oninput; e.disabled = dis; };
+  // Shared fields are fixed once any input version is locked.
+  bind('f_name', () => w.name, x => { w.name = x; }, shared);
+  bind('f_id', () => w.id, x => { w.id = x.trim(); }, shared);
+  bind('f_asOf', () => w.asOfDate || '', x => { w.asOfDate = x || null; }, shared);
+  bind('f_rule', () => w.asOfRule, x => { w.asOfRule = x; }, shared);
+  bind('f_horizon', () => w.outcomeHorizon, x => { w.outcomeHorizon = x; }, shared);
+  bind('f_measure', () => w.outcomeMeasure, x => { w.outcomeMeasure = x; }, shared);
+  bind('f_knew', () => w.scorer.knewAboutOutcome, x => { w.scorer.knewAboutOutcome = x; }, shared);
+  // Scorer checklist
+  const ct = $c('checkTable'); ct.textContent = '';
+  const cb = cel('tbody');
+  SCORER_CHECKLIST.forEach(c => {
+    const sel = cel('select', { cls: 'txt', 'aria-label': c.text, 'data-check': c.key }, [['', 'not answered'], ['yes', 'yes'], ['no', 'no'], ['partly', 'partly']].map(o => cel('option', { value: o[0] }, [o[1]])));
+    sel.value = w.scorer.checklist[c.key]; sel.disabled = shared;
+    sel.onchange = () => { w.scorer.checklist[c.key] = sel.value; calCommit(); };
+    cb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: c.text }), cel('td', null, [sel])]));
+  });
+  ct.appendChild(cb);
+  // Sources (shared; a cited source cannot change once a version that cites it is locked)
   const st = $c('srcTable'); st.textContent = '';
   st.appendChild(cel('thead', null, [cel('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series truncated at (compiled only)', ''].map((h, i) => cel('th', { cls: i < 2 ? 'l' : '', text: h })))]));
   const sb = cel('tbody');
   w.sources.forEach((s, i) => {
-    const inp = (field, type, aria) => { const e = cel('input', { type: type || 'text', cls: 'txt', 'aria-label': 'Source ' + (i + 1) + ' ' + aria, maxlength: field === 'citation' ? '1000' : '40' }); e.value = s[field] || ''; e.oninput = () => { s[field] = type === 'date' ? (e.value || (field === 'truncatedAt' ? null : '')) : e.value; calCommit(); }; e.onchange = e.oninput; e.disabled = locked; return e; };
+    const inp = (field, type, aria) => { const e = cel('input', { type: type || 'text', cls: 'txt', 'aria-label': 'Source ' + (i + 1) + ' ' + aria, maxlength: field === 'citation' ? '1000' : '40' }); e.value = s[field] || ''; e.oninput = () => { s[field] = type === 'date' ? (e.value || (field === 'truncatedAt' ? null : '')) : e.value; calCommit(); }; e.onchange = e.oninput; return e; };
     const kind = cel('select', { cls: 'txt', 'aria-label': 'Source ' + (i + 1) + ' kind' }, [['contemporary', 'contemporary'], ['compiled-from-period-data', 'compiled from period data'], ['retrospective', 'retrospective']].map(o => cel('option', { value: o[0] }, [o[1]])));
-    kind.value = s.kind; kind.disabled = locked;
+    kind.value = s.kind;
     kind.onchange = () => { s.kind = kind.value; if (s.kind !== 'compiled-from-period-data') s.truncatedAt = null; calCommit(); calRenderEditor(); };
-    const rm = cel('button', { cls: 'reset' }, ['Remove']); rm.disabled = locked;
+    const rm = cel('button', { cls: 'reset' }, ['Remove']);
     rm.onclick = () => { w.sources.splice(i, 1); calCommit(); calRenderEditor(); };
-    const trunc = inp('truncatedAt', 'date', 'truncated at'); trunc.disabled = locked || s.kind !== 'compiled-from-period-data';
+    const trunc = inp('truncatedAt', 'date', 'truncated at'); trunc.disabled = s.kind !== 'compiled-from-period-data';
     sb.appendChild(cel('tr', null, [cel('td', null, [inp('id', 'text', 'id')]), cel('td', null, [inp('citation', 'text', 'citation')]), cel('td', null, [inp('publicationDate', 'date', 'published')]), cel('td', null, [kind]), cel('td', null, [trunc]), cel('td', null, [rm])]));
   });
   st.appendChild(sb);
-  $c('srcAdd').disabled = locked;
-  // Settings
+  // Layer names (shared)
+  const ln = $c('layerNames'); ln.textContent = '';
+  w.layerNames.forEach((n, i) => {
+    const name = cel('input', { cls: 'txt', maxlength: '120', 'aria-label': 'Layer ' + (i + 1) + ' name', placeholder: 'Layer name (free text)', style: 'max-width:320px' });
+    name.value = n; name.disabled = shared; name.oninput = () => { w.layerNames[i] = name.value; calCommit(); };
+    const rm = cel('button', { cls: 'reset' }, ['Remove layer']); rm.disabled = shared || w.layerNames.length < 2;
+    rm.onclick = () => { w.layerNames.splice(i, 1); w.variants.forEach(x => x.layers.splice(i, 1)); calCommit(); calRenderEditor(); };
+    ln.appendChild(cel('div', { cls: 'seg' }, [cel('b', { text: 'Layer ' + (i + 1) }), name, rm]));
+  });
+  $c('layerAdd').disabled = shared || w.layerNames.length >= 8;
+  // Input version selector and label
+  const vs = $c('varSel'); vs.textContent = '';
+  w.variants.forEach((x, i) => vs.appendChild(cel('option', { value: String(i) }, [(x.label || '(unlabelled)') + (x.lock ? ' (locked)' : '')])));
+  vs.value = String(calVar);
+  vs.onchange = () => { calVar = +vs.value; $c('lockAck').hidden = true; calRenderEditor(); };
+  const vl = $c('varLabel'); vl.value = v.label; vl.disabled = locked; vl.oninput = () => { v.label = vl.value; calCommit(); };
+  $c('varAdd').disabled = w.outcomes.length > 0 || w.variants.length >= EP_MAX_VARIANTS;
+  // Settings and layer inputs of the selected version
+  $c('f_entryDef').value = v.settings.entryDef || ''; $c('f_entryDef').disabled = locked;
+  $c('f_entryDef').onchange = () => { v.settings.entryDef = $c('f_entryDef').value || null; calCommit(); };
+  $c('f_capex').value = v.settings.capexModel || ''; $c('f_capex').disabled = locked;
+  $c('f_capex').onchange = () => { v.settings.capexModel = $c('f_capex').value || null; calCommit(); };
   const set = $c('setTable'); set.textContent = ''; set.appendChild(calRecHead());
   const setBody = cel('tbody');
-  EP_SETTING_KEYS.forEach(k => setBody.appendChild(calRecordRow(k, w.settings[k], calRangeOf(k), locked)));
+  EP_SETTING_KEYS.forEach(k => setBody.appendChild(calRecordRow(k, v.settings[k], calRangeOf(k), locked, k === 'speed' ? calSpeedHelper(v.settings[k], locked) : null)));
   set.appendChild(setBody);
-  // Layers
   const lb = $c('layerBox'); lb.textContent = '';
-  w.layers.forEach((L, i) => {
-    const name = cel('input', { cls: 'txt', maxlength: '120', 'aria-label': 'Layer ' + (i + 1) + ' name', placeholder: 'Layer name (free text)' });
-    name.value = L.name; name.disabled = locked; name.oninput = () => { L.name = name.value; calCommit(); };
-    const rm = cel('button', { cls: 'reset' }, ['Remove layer']); rm.disabled = locked || w.layers.length < 2;
-    rm.onclick = () => { w.layers.splice(i, 1); calCommit(); calRenderEditor(); };
+  v.layers.forEach((L, i) => {
     const t = cel('table', { cls: 'recs', 'aria-label': 'Layer ' + (i + 1) + ' inputs' }); t.appendChild(calRecHead());
     const tb = cel('tbody');
     EP_LAYER_KEYS.forEach(k => tb.appendChild(calRecordRow(k, L.inputs[k], LAYER_RANGES[k], locked)));
     ['driftP', 'marginP'].forEach(k => L.inputs[k].forEach((r, j) => tb.appendChild(calRecordRow(k + '[' + j + ']', r, LAYER_RANGES[k], locked))));
     t.appendChild(tb);
-    lb.appendChild(cel('div', { cls: 'layercard' }, [cel('div', { cls: 'seg' }, [cel('b', { text: 'Layer ' + (i + 1) }), name, rm]), cel('div', { cls: 'scroll' }, [t])]));
+    lb.appendChild(cel('div', { cls: 'layercard' }, [cel('b', { text: 'Layer ' + (i + 1) + ': ' + (w.layerNames[i] || '(unnamed)') }), cel('div', { cls: 'scroll' }, [t])]));
   });
-  $c('layerAdd').disabled = locked || w.layers.length >= 8;
-  $c('epLock').hidden = locked; $c('epVersion').hidden = !locked;
+  $c('epLock').hidden = locked; $c('epLock').textContent = 'Lock this input version';
+  $c('epVersion').hidden = !shared;
   calRenderOutcomes(); calRenderStatus(); calRenderBanners();
 }
 function calRenderStatus(){
   if (!calWork) return;
-  const w = calWork;
-  $c('edStatus').textContent = !w.lock
-    ? 'Draft, version ' + w.version + (w.previousHash ? ' (replaces a locked version with hash ' + w.previousHash.slice(0, 12) + '…)' : '') + '. Inputs can still change.'
-    : 'Locked on ' + new Date(w.lock.lockedAt).toLocaleString() + ' under model version ' + w.lock.modelVersion + '. Input hash ' + w.lock.hash.slice(0, 16) + '…. Inputs cannot change; make a new version to revise them.'
-      + (w.lock.acknowledged ? ' Locked with an acknowledgement: ' + w.lock.counts.judgement + ' of ' + w.lock.counts.total + ' inputs judgement, ' + w.lock.counts.uncited + ' uncited.' : '')
-      + (w.lock.modelVersion !== MODEL_VERSION ? ' This page uses model version ' + MODEL_VERSION + ', so verdicts are recomputed under it.' : '');
+  const w = calWork, v = w.variants[calVar];
+  $c('edStatus').textContent = 'Episode version ' + w.version + (w.previousHash ? ' (replaces a locked version, link ' + w.previousHash.slice(0, 12) + '…)' : '') + '. '
+    + (calAnyLocked(w) ? 'At least one input version is locked, so the shared fields above are fixed.' : 'Nothing locked yet.');
+  $c('varStatus').textContent = !v.lock
+    ? '“' + (v.label || 'unlabelled') + '” is a draft. Its inputs can still change.'
+    : '“' + v.label + '” was locked on ' + new Date(v.lock.lockedAt).toLocaleString() + ' under model version ' + v.lock.modelVersion + '. Input hash ' + v.lock.hash.slice(0, 16) + '….'
+      + (v.lock.acknowledged ? ' Locked with an acknowledgement: ' + v.lock.counts.judgement + ' of ' + v.lock.counts.total + ' inputs judgement, ' + v.lock.counts.uncited + ' uncited.' : '')
+      + (v.lock.checklistCaptured ? '' : ' Locked under an older schema: the scorer checklist was not captured in this lock.')
+      + (v.lock.modelVersion !== MODEL_VERSION ? ' This page uses model version ' + MODEL_VERSION + ', so verdicts are recomputed under it.' : '');
 }
 function calRenderBanners(){
   $c('scorerBanner').textContent = EP_BANNER;
   $c('cmpBanner').textContent = EP_BANNER;
-  const jb = $c('judgeBanner');
-  if (!calWork) { jb.hidden = true; return; }
-  const js = judgementShare(calWork);
+  const jb = $c('judgeBanner'), ub = $c('uncitedBanner');
+  if (!calWork) { jb.hidden = true; ub.hidden = true; return; }
+  const js = judgementShare(calWork, calVar), label = calWork.variants[calVar].label || 'this input version';
   jb.hidden = !js.heavy;
-  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values'
+  if (js.heavy) jb.textContent = 'Judgement-heavy (' + label + '): ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values'
     + (js.uncited ? ', including ' + js.uncited + ' uncited judgement' + (js.uncited === 1 ? '' : 's') : '') + '.';
-  const ub = $c('uncitedBanner'), un = unsourcedInputs(calWork);
+  const un = unsourcedInputs(calWork);
   ub.hidden = !un.length;
   if (un.length) ub.textContent = 'Uncited judgement in ' + un.length + ' input' + (un.length === 1 ? '' : 's') + '. This episode can be locked and scored, but its file must stay out of the repository: export names it .private.json.';
 }
 
-/* ---------- Lock, version, outcomes ---------- */
-// Lock: if the episode is judgement-heavy or has uncited inputs, ask first ("Lock anyway" or "Cancel").
+/* ---------- Lock, versions, outcomes ---------- */
+// Lock the selected input version. If it is judgement-heavy or has uncited inputs, ask first ("Lock anyway" or "Cancel").
 function calLock(){
   let ep;
   try {
     ep = validateEpisode(JSON.parse(JSON.stringify(calWork)));
-    const problems = lockProblems(ep);
+    const problems = lockProblems(ep, calVar);
     if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
   } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; return; }
-  const ack = lockAcknowledgement(ep);
+  const ack = lockAcknowledgement(ep, calVar);
   if (ack.needed) { $c('lockAckText').textContent = ack.message; $c('lockAck').hidden = false; $c('lockAnyway').focus(); return; }
   calDoLock(false);
 }
 function calDoLock(acknowledged){
   $c('lockAck').hidden = true;
   try {
-    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))), undefined, { acknowledged: acknowledged });
+    const ep = lockVariant(validateEpisode(JSON.parse(JSON.stringify(calWork))), calVar, undefined, { acknowledged: acknowledged });
     const before = calStore.episodes[calSel];
     calStore.episodes[calSel] = ep;
     if (!calPersist()) { calStore.episodes[calSel] = before; return; }
     calWork = JSON.parse(JSON.stringify(ep));
-    $c('edSave').textContent = ep.lock.acknowledged ? 'Locked, with your acknowledgement recorded.' : 'Locked.';
+    const lock = ep.variants[calVar].lock;
+    $c('edSave').textContent = lock.acknowledged ? 'Locked, with your acknowledgement recorded.' : 'Locked.';
   } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; }
   calRenderAll();
+}
+function calAddVariant(){
+  const base = calWork.variants[calVar].label || 'Version';
+  let label = base + ' (copy)', n = 2;
+  while (calWork.variants.some(x => x.label === label)) label = base + ' (copy ' + (n++) + ')';
+  try {
+    const ep = addVariant(calStore.episodes[calSel], label, calVar);
+    const before = calStore.episodes[calSel];
+    calStore.episodes[calSel] = ep;
+    if (!calPersist()) { calStore.episodes[calSel] = before; return; }
+    calOpen(calSel, ep.variants.length - 1);
+    $c('edSave').textContent = 'Added input version “' + label + '” as a copy. Rename it, change its inputs, then lock it.';
+  } catch (e) { $c('edSave').textContent = e.message; }
 }
 function calNewVersion(){
   if (calStore.episodes.length >= CAL_MAX) { $c('edSave').textContent = 'This browser holds at most ' + CAL_MAX + ' episodes.'; return; }
@@ -1591,26 +1992,26 @@ function calNewVersion(){
     calStore.episodes.push(ep);
     if (!calPersist()) { calStore.episodes.pop(); return; }
     calOpen(calStore.episodes.length - 1);
-    $c('edSave').textContent = 'New draft version ' + ep.version + ' made; the locked version is kept unchanged.';
+    $c('edSave').textContent = 'New draft episode version ' + ep.version + ' made; the locked version is kept unchanged.';
   } catch (e) { $c('edSave').textContent = e.message; }
 }
 function calRenderOutcomes(){
   const box = $c('outBox'), w = calWork;
-  box.hidden = !w || !w.lock;
+  box.hidden = !w || !w.variants.every(v => v.lock);
   if (box.hidden) return;
   const t = $c('outTable'); t.textContent = '';
   t.appendChild(cel('thead', null, [cel('tr', null, ['Layer', 'Capital earned its cost?', 'Sources (ids)', 'Note', 'Contested: for (ids)', 'Contested: against (ids)', ''].map((h, i) => cel('th', { cls: i === 0 || i === 3 ? 'l' : '', text: h })))]));
   const tb = cel('tbody');
-  w.layers.forEach((L, i) => {
-    const cur = w.outcomes.find(o => o.layer === i);
-    const res = cel('select', { cls: 'txt', 'aria-label': (L.name || 'Layer ' + (i + 1)) + ' outcome' }, [['', 'not recorded'], ['yes', 'yes'], ['no', 'no'], ['unknown', 'unknown'], ['contested', 'contested']].map(o => cel('option', { value: o[0] }, [o[1]])));
+  w.layerNames.forEach((name, i) => {
+    const nm = name || 'Layer ' + (i + 1), cur = w.outcomes.find(o => o.layer === i);
+    const res = cel('select', { cls: 'txt', 'aria-label': nm + ' outcome' }, [['', 'not recorded'], ['yes', 'yes'], ['no', 'no'], ['unknown', 'unknown'], ['contested', 'contested']].map(o => cel('option', { value: o[0] }, [o[1]])));
     res.value = cur ? cur.result : '';
-    const inp = (v, aria) => { const e = cel('input', { cls: 'txt', maxlength: '2000', 'aria-label': (L.name || 'Layer ' + (i + 1)) + ' ' + aria }); e.value = v; return e; };
+    const inp = (val, aria) => { const e = cel('input', { cls: 'txt', maxlength: '2000', 'aria-label': nm + ' ' + aria }); e.value = val; return e; };
     const ids = inp(cur ? calIdsText(cur.sourceIds) : '', 'outcome sources'), note = inp(cur ? cur.note : '', 'outcome note');
     const forI = inp(cur && cur.contested ? calIdsText(cur.contested.forSourceIds) : '', 'contested for'), agI = inp(cur && cur.contested ? calIdsText(cur.contested.againstSourceIds) : '', 'contested against');
     const save = cel('button', { 'data-ep': 'save-outcome' }, ['Save outcome']);
     save.onclick = () => {
-      if (!res.value) { $c('edSave').textContent = 'Choose an outcome for ' + (L.name || 'layer ' + (i + 1)) + ' first.'; return; }
+      if (!res.value) { $c('edSave').textContent = 'Choose an outcome for ' + nm + ' first.'; return; }
       const o = { layer: i, result: res.value, sourceIds: calIdsParse(ids.value), note: note.value,
         contested: res.value === 'contested' ? { forSourceIds: calIdsParse(forI.value), againstSourceIds: calIdsParse(agI.value) } : null };
       try {
@@ -1619,11 +2020,11 @@ function calRenderOutcomes(){
         calStore.episodes[calSel] = ep;
         if (!calPersist()) { calStore.episodes[calSel] = before; return; }
         calWork = JSON.parse(JSON.stringify(ep));
-        $c('edSave').textContent = 'Outcome saved for ' + (L.name || 'layer ' + (i + 1)) + '.';
+        $c('edSave').textContent = 'Outcome saved for ' + nm + '.';
         calRenderAll();
       } catch (e) { $c('edSave').textContent = 'Outcome not saved: ' + e.message; }
     };
-    tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: L.name || 'Layer ' + (i + 1) }), cel('td', null, [res]), cel('td', null, [ids]), cel('td', { cls: 'l' }, [note]), cel('td', null, [forI]), cel('td', null, [agI]), cel('td', null, [save])]));
+    tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: nm }), cel('td', null, [res]), cel('td', null, [ids]), cel('td', { cls: 'l' }, [note]), cel('td', null, [forI]), cel('td', null, [agI]), cel('td', null, [save])]));
   });
   t.appendChild(tb);
 }
@@ -1636,16 +2037,25 @@ function calBasisText(b){
 function calRenderCompare(){
   const c = compareEpisodes(calStore.episodes);
   $c('cmpCounts').textContent = 'Episodes: ' + c.episodes + '. Layers: ' + c.layers + '. ' + c.caveat;
-  const t = $c('cmpTable'); t.textContent = '';
-  if (!c.rows.length) { t.appendChild(cel('tbody', null, [cel('tr', null, [cel('td', { cls: 'l muted', text: 'No locked episodes yet.' })])])); return; }
-  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Inputs at lock: judgement share, uncited', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 || i === 6 ? 'l' : '', text: h })))]));
-  const tb = cel('tbody');
-  c.rows.forEach(r => tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: r.episode + ' (v' + r.version + ')' }), cel('td', { cls: 'l', text: r.layer }),
-    cel('td', { cls: 'l', text: r.verdict }), cel('td', { text: (r.npv < 0 ? '−' : '') + '$' + Math.abs(r.npv).toFixed(0) + 'B' }),
-    cel('td', { text: r.modelSaysEarnsCost ? 'yes' : 'no' }), cel('td', { cls: 'l', text: r.outcome || 'not recorded' }),
-    cel('td', { cls: 'l', 'data-basis': '', text: calBasisText(r.basis) }),
-    cel('td', { text: r.versionDiffers ? 'locked under v' + r.lockedModelVersion + ', recomputed under v' + c.currentModelVersion : 'v' + r.lockedModelVersion })])));
-  t.appendChild(tb);
+  const box = $c('cmpBox'); box.textContent = '';
+  if (!c.groups.length) { box.appendChild(cel('p', { cls: 'muted', text: 'No locked episodes yet.' })); return; }
+  c.groups.forEach(g => {
+    const labels = g.rows[0].variants.map(x => x.label);
+    const t = cel('table', { 'aria-label': 'Verdicts for ' + (g.episode || 'unnamed episode') });
+    t.appendChild(cel('thead', null, [cel('tr', null, [cel('th', { cls: 'l', text: 'Layer' })]
+      .concat(labels.map(l => cel('th', { cls: 'l', text: 'Verdict: ' + l })))
+      .concat([cel('th', { cls: 'l', text: 'Recorded outcome' })]))]));
+    const tb = cel('tbody');
+    g.rows.forEach(r => tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: r.layer })]
+      .concat(r.variants.map(x => cel('td', { cls: 'l', 'data-variant': x.label }, [
+        cel('div', { text: x.verdict }),
+        cel('div', { cls: 'muted', text: (x.npv < 0 ? '−' : '') + '$' + Math.abs(x.npv).toFixed(0) + 'B; capital earns its cost: ' + (x.modelSaysEarnsCost ? 'yes' : 'no') }),
+        cel('div', { cls: 'muted', 'data-basis': '', text: 'Inputs at lock: ' + calBasisText(x.basis) }),
+        x.versionDiffers ? cel('div', { cls: 'muted', text: 'Locked under model v' + x.lockedModelVersion + ', recomputed under v' + c.currentModelVersion }) : null])))
+      .concat([cel('td', { cls: 'l', text: r.outcome || 'not recorded' })]))));
+    t.appendChild(tb);
+    box.appendChild(cel('div', { cls: 'cmpEp' }, [cel('h3', { text: (g.episode || '(unnamed)') + ' (episode version ' + g.version + ')' + (g.allLocked ? '' : ': some input versions not yet locked') }), cel('div', { cls: 'scroll' }, [t])]));
+  });
 }
 
 /* ---------- Import and export ---------- */
@@ -1684,8 +2094,9 @@ function calInit(){
   $c('lockCancel').addEventListener('click', () => { $c('lockAck').hidden = true; $c('edSave').textContent = 'Not locked.'; });
   $c('epVersion').addEventListener('click', calNewVersion);
   $c('epExport').addEventListener('click', calExport);
+  $c('varAdd').addEventListener('click', calAddVariant);
   $c('srcAdd').addEventListener('click', () => { calWork.sources.push({ id: 'S' + (calWork.sources.length + 1), citation: '', publicationDate: '', kind: 'contemporary', truncatedAt: null }); calCommit(); calRenderEditor(); });
-  $c('layerAdd').addEventListener('click', () => { calWork.layers.push(calEmptyLayer()); calCommit(); calRenderEditor(); });
+  $c('layerAdd').addEventListener('click', () => { calWork.layerNames.push(''); calWork.variants.forEach(x => x.layers.push({ inputs: calEmptyInputs() })); calCommit(); calRenderEditor(); });
   calRenderAll();
 }
 calInit();

@@ -19,6 +19,12 @@ a{color:var(--copper)}
 .badge.uncited{background:var(--amber-bg);color:var(--amber);margin-left:4px}
 .badge[hidden]{display:none}
 #edSave.warn{color:var(--red);font-weight:700}
+details.help{font-weight:400;margin-top:2px}
+details.help summary{font-size:11px;color:var(--copper);font-weight:400}
+details.help p{margin:4px 0;font-size:12px;color:var(--body);white-space:normal;max-width:46ch}
+.helper{margin-top:4px;font-size:12px}
+.helper input{width:70px}
+.cmpEp{margin-top:14px}
 </style>
 </head>
 <body>
@@ -70,14 +76,31 @@ a{color:var(--copper)}
           <div class="ctl"><label for="f_measure">Outcome measure: what "capital earned its cost" means here</label><input id="f_measure" class="txt" maxlength="2000"></div>
         </div>
       </div>
-      <div class="ctl"><label for="f_knew">What I already knew about the outcome (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
+      <h3 style="margin-top:14px">What I already knew about the outcome</h3>
+      <p class="legend">Answer every item before locking. The answers and the statement below are part of each lock's hash. Each input below has a Help note; the same guidance is in calibration/GUIDE.md in the repository.</p>
+      <div class="scroll"><table id="checkTable" class="recs" aria-label="Scorer checklist"></table></div>
+      <div class="ctl" style="margin-top:8px"><label for="f_knew">In your own words (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
 
       <h3 style="margin-top:14px">Sources</h3>
       <p class="legend">Inputs may cite only sources published on or before the as-of date. A source compiled later from period data counts for inputs only if its series is truncated on or before the as-of date. Outcomes must cite sources published after it.</p>
       <div class="scroll"><table id="srcTable" class="recs" aria-label="Sources"></table></div>
       <div class="seg" style="margin-top:6px"><button id="srcAdd">Add source</button></div>
 
-      <h3 style="margin-top:14px">Settings</h3>
+      <h3 style="margin-top:14px">Layer names (shared by every input version)</h3>
+      <div id="layerNames"></div>
+      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
+    </fieldset>
+
+    <h3 style="margin-top:18px">Input versions</h3>
+    <p class="legend">Score the same episode with more than one set of inputs (for example a hype version and a measured version of adoption speed). Each version is locked separately. All versions share everything above; changing any of it after a version is locked needs a new episode version.</p>
+    <div class="seg" style="align-items:center">
+      <label class="muted" for="varSel" style="font-size:13px">Editing</label><select id="varSel" class="txt sel"></select>
+      <label class="muted" for="varLabel" style="font-size:13px">Label</label><input id="varLabel" class="txt" maxlength="60" style="width:160px">
+      <button id="varAdd">Add input version (copy of this one)</button>
+    </div>
+    <p class="status" id="varStatus"></p>
+    <fieldset id="varInputs">
+      <h3 style="margin-top:10px">Settings</h3>
       <p class="legend">Each number needs a basis. Sourced and derived values need at least one cited source (comma-separated source ids), and derived values show their calculation. A judgement needs a rationale; its sources are optional, but an uncited judgement is labelled and keeps the episode file out of the repository.</p>
       <div class="seg" style="align-items:center">
         <label class="muted" for="f_entryDef" style="font-size:13px">Entry price definition</label><select id="f_entryDef" class="txt sel"><option value="">not set</option><option value="A">A: premium over build cost</option><option value="B">B: multiple of forward cash</option></select>
@@ -85,15 +108,14 @@ a{color:var(--copper)}
       </div>
       <div class="scroll"><table id="setTable" class="recs" aria-label="Settings"></table></div>
 
-      <h3 style="margin-top:14px">Layers</h3>
+      <h3 style="margin-top:14px">Layer inputs</h3>
       <div id="layerBox"></div>
-      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
     </fieldset>
   </div>
 
   <div class="card" id="outBox" style="margin-top:20px" hidden>
     <h3>Outcomes</h3>
-    <p class="legend">Entered only after locking. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
+    <p class="legend">Entered only after every input version is locked. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
     <div class="scroll"><table id="outTable" class="recs" aria-label="Outcomes"></table></div>
   </div>
 </section>
@@ -103,8 +125,8 @@ a{color:var(--copper)}
   <div class="card">
     <div class="notice" id="cmpBanner"></div>
     <p class="status" id="cmpCounts"></p>
-    <div class="scroll"><table id="cmpTable" aria-label="Model verdict against outcome"></table></div>
-    <p class="legend">Verdicts are recomputed with the current model. Where an episode was locked under a different model version, the row says so.</p>
+    <div id="cmpBox"></div>
+    <p class="legend">Verdicts are recomputed with the current model, one column group per locked input version. Where a version was locked under a different model version, the cell says so.</p>
   </div>
 </section>
 

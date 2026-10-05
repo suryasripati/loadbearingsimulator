@@ -1,0 +1,655 @@
+{
+ "format": "load-bearing-simulator-episode",
+ "schemaVersion": 2,
+ "id": "synthetic-test",
+ "name": "Synthetic test episode (not data)",
+ "version": 1,
+ "previousHash": null,
+ "asOfDate": "1845-06-30",
+ "asOfRule": "Synthetic: only material dated on or before the as-of date.",
+ "outcomeHorizon": "Synthetic: ten years.",
+ "outcomeMeasure": "Synthetic: capital earned its cost if returns covered the discount rate.",
+ "scorer": {
+  "knewAboutOutcome": "Synthetic: the scorer knew the broad outcome."
+ },
+ "sources": [
+  {
+   "id": "SYN-IN",
+   "citation": "Synthetic input source (fictitious)",
+   "publicationDate": "1845-01-15",
+   "kind": "contemporary",
+   "truncatedAt": null
+  },
+  {
+   "id": "SYN-COMP",
+   "citation": "Synthetic compiled series (fictitious)",
+   "publicationDate": "1990-05-01",
+   "kind": "compiled-from-period-data",
+   "truncatedAt": "1845-06-30"
+  },
+  {
+   "id": "SYN-OUT",
+   "citation": "Synthetic outcome source (fictitious)",
+   "publicationDate": "1856-01-01",
+   "kind": "retrospective",
+   "truncatedAt": null
+  },
+  {
+   "id": "SYN-OUT2",
+   "citation": "Second synthetic outcome source (fictitious)",
+   "publicationDate": "1860-01-01",
+   "kind": "retrospective",
+   "truncatedAt": null
+  }
+ ],
+ "settings": {
+  "pool": {
+   "value": 1200,
+   "basis": "judgement",
+   "sourceIds": [],
+   "calculation": "",
+   "rationale": "synthetic"
+  },
+  "speed": {
+   "value": 8,
+   "basis": "judgement",
+   "sourceIds": [],
+   "calculation": "",
+   "rationale": "synthetic"
+  },
+  "mid": {
+   "value": 8,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "disc": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "rd": {
+   "value": 7,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "tv": {
+   "value": 5,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "premium": {
+   "value": 0,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "entry": {
+   "value": 0,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "mult": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "phase2Start": {
+   "value": 5,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "phase3Start": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-IN"
+   ],
+   "calculation": "",
+   "rationale": ""
+  },
+  "entryDef": "A",
+  "capexModel": "sustaining"
+ },
+ "layers": [
+  {
+   "name": "Synthetic Chips and accelerators",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "share": {
+     "value": 25,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "capex": {
+     "value": 120,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildYears": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "life": {
+     "value": 8,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "debt": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "driftP": [
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ]
+   }
+  },
+  {
+   "name": "Synthetic Data centres and power",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "share": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "capex": {
+     "value": 220,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildYears": {
+     "value": 5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "life": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "debt": {
+     "value": 50,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "driftP": [
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ]
+   }
+  },
+  {
+   "name": "Synthetic Models",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "share": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "capex": {
+     "value": 100,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "buildYears": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "life": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "debt": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-IN"
+     ],
+     "calculation": "",
+     "rationale": ""
+    },
+    "driftP": [
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     },
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-IN"
+      ],
+      "calculation": "",
+      "rationale": ""
+     }
+    ]
+   }
+  }
+ ],
+ "lock": {
+  "hash": "9fee16a7dbf86293afff08f693b9682e6509d276bfe0027970a692a4ecd7a19c",
+  "lockedAt": "2026-10-05T12:00:00.000Z",
+  "modelVersion": 1,
+  "hashScheme": 2,
+  "counts": {
+   "judgement": 2,
+   "uncited": 2,
+   "total": 62
+  },
+  "acknowledged": true
+ },
+ "outcomes": [
+  {
+   "layer": 0,
+   "result": "no",
+   "sourceIds": [
+    "SYN-OUT"
+   ],
+   "note": "synthetic",
+   "contested": null
+  }
+ ]
+}

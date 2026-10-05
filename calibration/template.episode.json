@@ -1,6 +1,6 @@
 {
   "format": "load-bearing-simulator-episode",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "",
   "name": "",
   "version": 1,
@@ -10,220 +10,235 @@
   "outcomeHorizon": "",
   "outcomeMeasure": "",
   "scorer": {
-    "knewAboutOutcome": ""
-  },
-  "settings": {
-    "pool": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "speed": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "mid": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "disc": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "rd": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "tv": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "premium": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "entry": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "mult": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "phase2Start": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "phase3Start": {
-      "value": null,
-      "basis": null,
-      "sourceIds": [],
-      "calculation": "",
-      "rationale": ""
-    },
-    "entryDef": null,
-    "capexModel": null
-  },
-  "layers": [
-    {
-      "name": "",
-      "inputs": {
-        "evidence": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "share": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "offset": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "steepness": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "capex": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "buildStart": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "buildYears": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "unitCostDecline": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "passThrough": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "life": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "debt": {
-          "value": null,
-          "basis": null,
-          "sourceIds": [],
-          "calculation": "",
-          "rationale": ""
-        },
-        "driftP": [
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          },
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          },
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          }
-        ],
-        "marginP": [
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          },
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          },
-          {
-            "value": null,
-            "basis": null,
-            "sourceIds": [],
-            "calculation": "",
-            "rationale": ""
-          }
-        ]
-      }
+    "knewAboutOutcome": "",
+    "checklist": {
+      "peakDate": "",
+      "fallSize": "",
+      "failures": "",
+      "finalFigures": "",
+      "laterSources": "",
+      "outcomesFirst": ""
     }
+  },
+  "layerNames": [
+    ""
   ],
   "sources": [],
-  "lock": null,
+  "variants": [
+    {
+      "label": "Main",
+      "settings": {
+        "pool": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "speed": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "mid": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "disc": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "rd": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "tv": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "premium": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "entry": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "mult": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "phase2Start": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "phase3Start": {
+          "value": null,
+          "basis": null,
+          "sourceIds": [],
+          "calculation": "",
+          "rationale": ""
+        },
+        "entryDef": null,
+        "capexModel": null
+      },
+      "layers": [
+        {
+          "inputs": {
+            "evidence": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "share": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "offset": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "steepness": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "capex": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "buildStart": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "buildYears": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "unitCostDecline": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "passThrough": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "life": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "debt": {
+              "value": null,
+              "basis": null,
+              "sourceIds": [],
+              "calculation": "",
+              "rationale": ""
+            },
+            "driftP": [
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              },
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              },
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              }
+            ],
+            "marginP": [
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              },
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              },
+              {
+                "value": null,
+                "basis": null,
+                "sourceIds": [],
+                "calculation": "",
+                "rationale": ""
+              }
+            ]
+          }
+        }
+      ],
+      "lock": null
+    }
+  ],
   "outcomes": []
 }
