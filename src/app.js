@@ -79,18 +79,41 @@ function syncDriverInputs(){
   $('g_disc').value = G.disc; $('g_rd').value = G.rd; $('g_tv').value = G.tv;
   $('ph1').value = G.phases[0]; $('ph2').value = G.phases[1];
 }
+// One dash pattern per layer (in DEFAULT_LAYERS order) so no layer line can be mistaken for the solid demand line.
+const LAYER_DASH = ['8 3', '2 2', '8 3 2 3', '4 4', '12 2 2 2 2 2'];
+function timingText(L){
+  const off = L.offset, st = L.steepness;
+  if(off===0 && st===1) return 'same as end demand';
+  const parts = [];
+  if(off<0) parts.push('leads by '+(-off)+' year'+(off===-1?'':'s'));
+  if(off>0) parts.push('lags by '+off+' year'+(off===1?'':'s'));
+  if(st>1) parts.push('steeper (×'+st+')');
+  if(st<1) parts.push('flatter (×'+st+')');
+  return parts.join(', ');
+}
 function adoptChart(){
-  const W=300, Hh=96, m={l:26,r:8,t:8,b:20};
+  const W=320, Hh=150, m={l:30,r:8,t:8,b:22};
   const iw=W-m.l-m.r, ih=Hh-m.t-m.b;
   const x = (t) => m.l + iw*t/H, y = (v) => m.t + ih*(1-v);
   const path = (f) => { let d=''; for(let t=0;t<=H;t+=0.25){ d += (t===0?'M':'L') + x(t).toFixed(1) + ' ' + y(f(t)).toFixed(1); } return d; };
-  const L = layers[sel];
-  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="presentation">';
+  const desc = layers.map(L => L.name+': '+timingText(L)).join('; ');
+  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="img" aria-label="Share of full adoption by year for end demand and each layer. '+desc+'.">';
   [0,0.5,1].forEach(v => { s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(m.l-4)+'" y="'+(y(v)+3)+'" font-size="9" fill="var(--cap)" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
-  [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-5)+'" font-size="9" fill="var(--cap)" text-anchor="middle">'+t+'</text>'; });
-  s += '<path d="'+path(t => adoption(t,G))+'" fill="none" stroke="var(--copper)" stroke-width="2.2"/>';
-  s += '<path d="'+path(t => layerAdoption(t,L,G))+'" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="4 3"/>';
-  s += '</svg><div class="muted" style="font-size:12px;margin-top:2px">Share of full adoption by year. Solid: end demand. Dashed: '+L.name+' (offset '+(L.offset>0?'+':'')+L.offset+' years, steepness '+L.steepness+').</div>';
+  [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-6)+'" font-size="9" fill="var(--cap)" text-anchor="'+(t===0?'start':t===H?'end':'middle')+'">year '+t+'</text>'; });
+  // Selected layer: a wide translucent band underneath, so it stays visible even when it coincides with demand.
+  s += '<path class="halo" d="'+path(t => layerAdoption(t,layers[sel],G))+'" fill="none" stroke="var(--copper)" stroke-opacity="0.28" stroke-width="7" stroke-linecap="round"/>';
+  layers.forEach((L,i) => {
+    s += '<path class="layer" data-layer="'+L.id+'" d="'+path(t => layerAdoption(t,L,G))+'" fill="none" stroke="var(--ink)" stroke-width="'+(i===sel?2:1.1)+'" stroke-dasharray="'+LAYER_DASH[i % LAYER_DASH.length]+'"/>';
+  });
+  // End demand last, so a dashed layer line never hides it.
+  s += '<path class="demand" d="'+path(t => adoption(t,G))+'" fill="none" stroke="var(--copper)" stroke-width="2.2"/>';
+  s += '</svg>';
+  const sw = (dash, col, w) => '<svg width="30" height="8" aria-hidden="true"><line x1="1" x2="29" y1="4" y2="4" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/></svg>';
+  s += '<ul class="tlegend"><li>'+sw('', 'var(--copper)', 2.2)+'<span><b>End demand</b></span></li>';
+  layers.forEach((L,i) => {
+    s += '<li>'+sw(LAYER_DASH[i % LAYER_DASH.length], 'var(--ink)', i===sel?2:1.2)+'<span><button data-sel="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button> <span class="muted">— '+timingText(L)+'</span></span></li>';
+  });
+  s += '</ul><div class="muted" style="font-size:12px;margin-top:4px">Share of full adoption by year. The highlighted band is the selected layer. A layer that is the same as end demand sits under the copper line.</div>';
   $('adoptChart').innerHTML = s;
 }
 

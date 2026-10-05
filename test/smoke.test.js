@@ -122,3 +122,24 @@ test('build start column and the build-later line render', () => {
   assert.ok(doc.getElementById('tornado').textContent.includes('Build start (two years later only; cannot start before year 0)'));
   win.close();
 });
+
+test('timing chart: one path per layer plus the end-demand line, with neutral layers captioned', () => {
+  const { doc, win } = load();
+  const chart = doc.getElementById('adoptChart');
+  assert.ok(doc.getElementById('timing').contains(chart), 'chart lives in the Timing card');
+  assert.ok(!doc.getElementById('drivers').contains(chart), 'chart is no longer in the Technology scenario card');
+  assert.equal(chart.querySelectorAll('path.layer').length, D.DEFAULT_LAYERS.length);
+  assert.equal(chart.querySelectorAll('path.demand').length, 1);
+  const paths = [...chart.querySelectorAll('svg path')];
+  assert.equal(paths[paths.length - 1].getAttribute('class'), 'demand', 'demand line is drawn last, on top');
+  const dashes = [...chart.querySelectorAll('path.layer')].map(p => p.getAttribute('stroke-dasharray'));
+  assert.ok(dashes.every(d => d && d !== 'none'), 'every layer line is dashed, so none looks like the solid demand line');
+  assert.equal(new Set(dashes).size, dashes.length, 'each layer has its own line style');
+  const items = [...chart.querySelectorAll('.tlegend li')].map(li => li.textContent);
+  D.DEFAULT_LAYERS.forEach(L => assert.ok(items.some(t => t.includes(L.name) && t.includes('same as end demand')), L.name));
+  click(win, doc.getElementById('leadlag'));
+  const after = [...chart.querySelectorAll('.tlegend li')].map(li => li.textContent).join(' | ');
+  assert.ok(/Data centres and power — leads by 2 years/.test(after), after);
+  assert.ok(/Services and integration — lags by 2 years/.test(after), after);
+  win.close();
+});

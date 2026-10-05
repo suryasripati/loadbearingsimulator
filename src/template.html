@@ -44,6 +44,13 @@ p{margin:0 0 10px}
 section{margin-top:34px}
 .hero{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:20px;align-items:start;margin-top:22px}
 @media (max-width:900px){.hero{grid-template-columns:1fr}}
+.stack{display:grid;gap:20px;align-content:start}
+.tlegend{list-style:none;margin:6px 0 0;padding:0;font-size:12px;line-height:1.35}
+.tlegend li{display:flex;align-items:center;gap:6px;margin:3px 0}
+.tlegend svg{flex:none}
+.tlegend button{font-size:12px;padding:0;border:none;background:none;color:var(--ink);text-align:left;border-radius:0}
+.tlegend button[aria-pressed="true"]{font-weight:700;background:none;color:var(--ink)}
+.tlegend .muted{font-size:12px}
 .ctl{margin-bottom:14px}
 .ctl label{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--ink);font-weight:700;margin-bottom:2px}
 .ctl label output{font-weight:400;color:var(--body)}
@@ -100,6 +107,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 </header>
 
 <div class="hero">
+  <div class="stack">
   <div class="card" id="drivers">
     <h2>Technology scenario</h2>
     <p class="muted" style="font-size:13px">Applies to every layer at once.</p>
@@ -114,7 +122,12 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <input type="range" id="g_mid" min="2" max="14" step="0.5"><small>Year in which adoption reaches half of its full level.</small></div>
     <div class="ctl"><label for="g_pool">Value pool at full adoption <output id="o_pool"></output></label>
       <input type="range" id="g_pool" min="200" max="3000" step="50"><small>Yearly revenue, all layers combined. Scale of applications lives here.</small></div>
-    <div id="adoptChart" role="img" aria-label="Adoption curve over 15 years"></div>
+  </div>
+  <div class="card" id="timing">
+    <h2>Timing: layers against end demand</h2>
+    <p class="muted" style="font-size:13px">Each layer's revenue follows the end-demand curve, shifted earlier (leads) or later (lags) by its timing offset and made steeper or flatter. Set offsets and steepness in the layer table.</p>
+    <div id="adoptChart"></div>
+  </div>
   </div>
 
   <div class="card">
