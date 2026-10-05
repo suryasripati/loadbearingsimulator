@@ -255,3 +255,34 @@ test('hidden state: counts analyst-only settings (now including the Analyst laye
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('quadrant: drawn at pixel size; axis, quadrant and layer labels at least 11px when 380px wide or more, 10.5px on phones', () => {
+  const { doc, win } = load();
+  assert.equal(win.quadFontFor(436), 11.5, 'quadrant width at 1440');
+  assert.equal(win.quadFontFor(400), 11.5, 'quadrant width at 1280');
+  assert.equal(win.quadFontFor(380), 11.5);
+  assert.equal(win.quadFontFor(350), 10.5, 'phone width');
+  assert.equal(win.quadFontFor(300), 10);
+  // jsdom has no layout, so the chart falls back to 640 by 400; every label uses the font for that width.
+  const svg = doc.querySelector('#quad svg');
+  assert.equal(svg.getAttribute('width'), '640');
+  const groups = { axis: '.qa', quadrants: '.qq', layers: '.qlab' };
+  for (const [name, sel] of Object.entries(groups)) {
+    const ts = [...svg.querySelectorAll('text' + sel)];
+    assert.ok(ts.length > 0, name);
+    ts.forEach(t => assert.ok(+t.getAttribute('font-size') >= 11, name + ' ' + t.getAttribute('font-size')));
+  }
+  win.close();
+});
+
+test('timing card: chart drawn at pixel size with 11px axis text; legend has End demand plus one entry per layer', () => {
+  const { doc, win } = load();
+  setMode(win, doc, 'analyst');
+  const svg = doc.querySelector('#adoptChart > svg');
+  assert.ok(svg.getAttribute('width') && svg.getAttribute('height'));
+  [...svg.querySelectorAll('text')].forEach(t => assert.equal(t.getAttribute('font-size'), '11'));
+  const items = [...doc.querySelectorAll('#adoptChart .tlegend li')];
+  assert.equal(items.length, D.DEFAULT_LAYERS.length + 1);
+  assert.ok(items.slice(1).every(li => li.querySelector('.tshort').textContent === '= demand'));
+  win.close();
+});

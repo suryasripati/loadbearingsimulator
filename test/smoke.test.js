@@ -137,11 +137,20 @@ test('timing chart: one path per layer plus the end-demand line, with neutral la
   assert.ok(dashes.every(d => d && d !== 'none'), 'every layer line is dashed, so none looks like the solid demand line');
   assert.equal(new Set(dashes).size, dashes.length, 'each layer has its own line style');
   const items = [...chart.querySelectorAll('.tlegend li')].map(li => li.textContent);
-  D.DEFAULT_LAYERS.forEach(L => assert.ok(items.some(t => t.includes(L.name) && t.includes('same as end demand')), L.name));
+  D.DEFAULT_LAYERS.forEach(L => assert.ok(items.some(t => t.includes(L.name) && t.includes('= demand')), L.name));
+  // Two columns, three rows: End demand plus five layers.
+  assert.equal(items.length, 6);
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  assert.ok(/#adoptChart \.tlegend\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(css));
+  assert.ok(/white-space:nowrap/.test(css));
+  // The full wording lives in the card's info note.
+  const cap = doc.getElementById('adoptCaption').textContent;
+  D.DEFAULT_LAYERS.forEach(L => assert.ok(cap.includes(L.name + ': same as end demand'), L.name));
   click(win, doc.getElementById('leadlag'));
   const after = [...chart.querySelectorAll('.tlegend li')].map(li => li.textContent).join(' | ');
-  assert.ok(/Data centres and power — leads by 2 years/.test(after), after);
-  assert.ok(/Services and integration — lags by 2 years/.test(after), after);
+  assert.ok(/Data centres and powerleads 2y/.test(after), after);
+  assert.ok(/Services and integrationlags 2y/.test(after), after);
+  assert.ok(/Data centres and power: leads by 2 years/.test(doc.getElementById('adoptCaption').textContent));
   win.close();
 });
 

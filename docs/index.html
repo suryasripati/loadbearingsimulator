@@ -185,7 +185,7 @@ section{margin-top:18px}
 .tile .lab > span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notice.slim{margin:8px 0 0;padding:6px 10px;font-size:13px}
 /* First screen: three cards */
-.first{display:grid;grid-template-columns:minmax(240px,270px) minmax(0,1fr) minmax(0,1.2fr);gap:12px;margin-top:10px;align-items:start}
+.first{display:grid;grid-template-columns:minmax(240px,270px) minmax(0,1fr) minmax(0,1.2fr);gap:12px;margin-top:10px;align-items:stretch}
 .first .card,.row2 .card{padding:12px 14px}
 .first > *,.row2 > *,.twocol > *{min-width:0}
 @media (max-width:980px){.first{grid-template-columns:1fr 1fr}.first #liteCard{grid-column:1 / -1}}
@@ -196,7 +196,7 @@ section{margin-top:18px}
 .cctl-h{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink);font-weight:700}
 .cctl-h output{margin-left:auto;font-weight:400;color:var(--body)}
 .cctl input[type=range]{display:block;margin:0;height:18px}
-#quad svg{max-height:min(330px,46vh);width:100%}
+#quad svg,#adoptChart > svg{display:block;max-width:100%;height:auto}
 table.lite{font-size:12.5px}
 table.lite th,table.lite td{padding:5px 6px}
 table.lite td.v{white-space:normal;min-width:96px}
@@ -221,6 +221,12 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 .modal ul.note{margin:0;padding-left:18px;font-size:13.5px}
 .modal ul.note li{margin-bottom:6px}
 .foot{max-width:1360px}
+/* Timing legend: two columns, three rows, one line per entry */
+#adoptChart .tlegend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 14px;margin:6px 0 0;padding:0;font-size:12px}
+#adoptChart .tlegend li{display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap;min-width:0;overflow:hidden}
+#adoptChart .tlegend button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#adoptChart .tshort{font-size:11.5px;white-space:nowrap}
+.row2{align-items:start}
 @media (max-width:600px){
   .tb-in{flex-wrap:wrap;row-gap:6px}
   .tb-title{flex-wrap:wrap;row-gap:0}
@@ -1364,15 +1370,29 @@ function timingText(L){
   if(st<1) parts.push('flatter (×'+st+')');
   return parts.join(', ');
 }
+// Short legend tag for a layer (the full wording goes in the card's info note).
+function timingShort(L){
+  if(L.offset===0 && L.steepness===1) return '= demand';
+  const p = [];
+  if(L.offset<0) p.push('leads '+(-L.offset)+'y');
+  if(L.offset>0) p.push('lags '+L.offset+'y');
+  if(L.steepness>1) p.push('×'+L.steepness+' steeper');
+  if(L.steepness<1) p.push('×'+L.steepness+' flatter');
+  return p.join(', ');
+}
+// The Timing chart is drawn at its real pixel size. Its height is chosen so the Timing card ends level with the
+// Money assumptions card beside it (two columns, wide screens); otherwise a fixed height.
+let adoptHeight = 170;
 function adoptChart(){
-  const W=320, Hh=150, m={l:30,r:8,t:8,b:22};
+  const box = $('adoptChart');
+  const W = Math.max(260, Math.round(box.clientWidth) || 560), Hh = adoptHeight, m={l:36,r:10,t:8,b:22}, fs = 11;
   const iw=W-m.l-m.r, ih=Hh-m.t-m.b;
   const x = (t) => m.l + iw*t/H, y = (v) => m.t + ih*(1-v);
   const path = (f) => { let d=''; for(let t=0;t<=H;t+=0.25){ d += (t===0?'M':'L') + x(t).toFixed(1) + ' ' + y(f(t)).toFixed(1); } return d; };
   const desc = layers.map(L => L.name+': '+timingText(L)).join('; ');
-  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="img" aria-label="Share of full adoption by year for end demand and each layer. '+desc+'.">';
-  [0,0.5,1].forEach(v => { s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(m.l-4)+'" y="'+(y(v)+3)+'" font-size="9" fill="var(--cap)" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
-  [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-6)+'" font-size="9" fill="var(--cap)" text-anchor="'+(t===0?'start':t===H?'end':'middle')+'">year '+t+'</text>'; });
+  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="'+W+'" height="'+Hh+'" role="img" aria-label="Share of full adoption by year for end demand and each layer. '+desc+'.">';
+  [0,0.5,1].forEach(v => { s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(m.l-4)+'" y="'+(y(v)+4)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
+  [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-6)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="'+(t===0?'start':t===H?'end':'middle')+'">year '+t+'</text>'; });
   // Selected layer: a wide translucent band underneath, so it stays visible even when it coincides with demand.
   s += '<path class="halo" d="'+path(t => layerAdoption(t,layers[sel],G))+'" fill="none" stroke="var(--copper)" stroke-opacity="0.28" stroke-width="7" stroke-linecap="round"/>';
   layers.forEach((L,i) => {
@@ -1381,14 +1401,25 @@ function adoptChart(){
   // End demand last, so a dashed layer line never hides it.
   s += '<path class="demand" d="'+path(t => adoption(t,G))+'" fill="none" stroke="var(--copper)" stroke-width="2.2"/>';
   s += '</svg>';
-  const sw = (dash, col, w) => '<svg width="30" height="8" aria-hidden="true"><line x1="1" x2="29" y1="4" y2="4" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/></svg>';
-  s += '<ul class="tlegend"><li>'+sw('', 'var(--copper)', 2.2)+'<span><b>End demand</b></span></li>';
+  const sw = (dash, col, w) => '<svg width="26" height="8" aria-hidden="true"><line x1="1" x2="25" y1="4" y2="4" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/></svg>';
+  // Two columns, three rows: End demand and the five layers, each on one line.
+  s += '<ul class="tlegend"><li>'+sw('', 'var(--copper)', 2.2)+'<b>End demand</b></li>';
   layers.forEach((L,i) => {
-    s += '<li>'+sw(LAYER_DASH[i % LAYER_DASH.length], 'var(--ink)', i===sel?2:1.2)+'<span><button data-sel="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button> <span class="muted">— '+timingText(L)+'</span></span></li>';
+    s += '<li>'+sw(LAYER_DASH[i % LAYER_DASH.length], 'var(--ink)', i===sel?2:1.2)+'<button data-sel="'+i+'" aria-pressed="'+(i===sel)+'">'+L.name+'</button><span class="muted tshort">'+timingShort(L)+'</span></li>';
   });
   s += '</ul>';
-  $('adoptChart').innerHTML = s;
-  const cap = $('adoptCaption'); if(cap) cap.textContent = 'Share of full adoption by year. The highlighted band is the selected layer. A layer that is the same as end demand sits under the copper line.';
+  box.innerHTML = s;
+  const cap = $('adoptCaption');
+  if(cap) cap.textContent = 'Share of full adoption by year. The highlighted band is the selected layer. A layer that is the same as end demand (“= demand”) sits under the copper line. ' + layers.map(L => L.name + ': ' + timingText(L)).join('; ') + '.';
+  matchTimingHeight();
+}
+function matchTimingHeight(){
+  const t = $('timing'), mc = $('moneyCard');
+  if(!t || !mc || t.offsetParent === null || window.innerWidth <= 860) return;
+  const svg = t.querySelector('#adoptChart > svg'); if(!svg) return;
+  const other = t.offsetHeight - svg.getBoundingClientRect().height;
+  const want = Math.max(110, Math.min(380, Math.round(mc.offsetHeight - other)));
+  if(Math.abs(want - adoptHeight) > 1){ adoptHeight = want; adoptChart(); }
 }
 
 /* ---------- inputs tables ---------- */
@@ -1546,28 +1577,46 @@ function onPhaseBounds(){
 
 /* ---------- quadrant ---------- */
 function sq(x){ return Math.sign(x)*Math.sqrt(Math.abs(x)); }
+// Quadrant drawn at its real pixel size, so font sizes are pixels: 11.5px when the chart is at least 380px wide
+// (true at 1440 and 1280), 10.5px down to 320px (phones), 10px below. On wide screens its height fills the first-screen row
+// down to the bottom of the viewport; on narrow screens it keeps a 0.72 aspect ratio.
+function quadFontFor(W){ return W >= 380 ? 11.5 : W >= 320 ? 10.5 : 10; }
+let quadFs = 11.5;
+function quadSize(){
+  const box = $('quad'), W = Math.round(box.clientWidth) || 640;
+  if(!box.clientWidth) return { W: 640, Hh: 400 };
+  if(window.innerWidth <= 700) return { W, Hh: Math.round(Math.max(240, Math.min(420, W * 0.72))) };
+  const top = box.getBoundingClientRect().top + window.scrollY;
+  // Leave room for the card's bottom padding, the page's bottom padding and the footer, so Basic never scrolls.
+  const foot = document.querySelector('.foot'), wrap = document.querySelector('main.wrap');
+  const below = 14 + (wrap ? parseFloat(getComputedStyle(wrap).paddingBottom) || 0 : 0) + (foot ? foot.offsetHeight : 0) + 2;
+  const extra = $('lowShare') && !$('lowShare').hidden ? $('lowShare').offsetHeight + 8 : 0;
+  return { W, Hh: Math.round(Math.max(260, Math.min(620, window.innerHeight - top - below - extra))) };
+}
 function quadChart(res){
-  const W=640, Hh=400, m={l:46,r:16,t:16,b:50};
+  const sz = quadSize(), W = sz.W, Hh = sz.Hh, fs = quadFontFor(W);
+  quadFs = fs;
+  const m={l:Math.round(fs*4), r:16, t:16, b:Math.round(fs*4.2)};
   const iw=W-m.l-m.r, ih=Hh-m.t-m.b;
   const XMIN = isB() ? -20 : -200, XMAX = isB() ? 60 : 800;
   const sx = (v) => m.l + iw*(sq(clamp(v,XMIN,XMAX))-sq(XMIN))/(sq(XMAX)-sq(XMIN));
   const sy = (e) => m.t + ih*(1-(e-0.6)/(5.4-0.6));
   const x0 = sx(0), yg = sy(2.5);
-  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="img" aria-label="Quadrant chart: demand evidence against headroom for each layer">';
+  let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="'+W+'" height="'+Hh+'" role="img" aria-label="Quadrant chart: demand evidence against headroom for each layer">';
   s += '<rect x="'+m.l+'" y="'+m.t+'" width="'+(x0-m.l)+'" height="'+(yg-m.t)+'" fill="var(--amber-bg)"/>';
   s += '<rect x="'+x0+'" y="'+m.t+'" width="'+(W-m.r-x0)+'" height="'+(yg-m.t)+'" fill="var(--green-bg)"/>';
   s += '<rect x="'+m.l+'" y="'+yg+'" width="'+(x0-m.l)+'" height="'+(m.t+ih-yg)+'" fill="var(--red-bg)"/>';
   s += '<rect x="'+x0+'" y="'+yg+'" width="'+(W-m.r-x0)+'" height="'+(m.t+ih-yg)+'" fill="var(--amber-bg)" opacity="0.6"/>';
-  s += '<text x="'+(m.l+8)+'" y="'+(m.t+16)+'" font-size="12" fill="var(--amber)">Useful, capital does not earn its cost</text>';
-  s += '<text x="'+(W-m.r-8)+'" y="'+(m.t+16)+'" font-size="12" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
-  s += '<text x="'+(m.l+8)+'" y="'+(m.t+ih-8)+'" font-size="12" fill="var(--red)">Speculative</text>';
-  s += '<text x="'+(W-m.r-8)+'" y="'+(m.t+ih-8)+'" font-size="12" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
+  s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--amber)">Useful, capital does not earn its cost</text>';
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
+  s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--red)">Speculative</text>';
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
   s += '<line x1="'+x0+'" x2="'+x0+'" y1="'+m.t+'" y2="'+(m.t+ih)+'" stroke="var(--ink)" stroke-width="1.2"/>';
   s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+yg+'" y2="'+yg+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="4 3"/>';
-  [1,2,3,4,5].forEach(e => { s += '<text x="'+(m.l-8)+'" y="'+(sy(e)+4)+'" font-size="11" fill="var(--cap)" text-anchor="end">'+e+'</text>'; });
-  (isB() ? [-10,0,10,30,60] : [-100,0,100,300,600]).forEach(v => { s += '<text x="'+sx(v)+'" y="'+(m.t+ih+16)+'" font-size="11" fill="var(--cap)" text-anchor="middle">'+(v>0?'+':'')+v+(isB()?'x':'%')+'</text>'; });
-  s += '<text x="'+(m.l+iw/2)+'" y="'+(Hh-8)+'" font-size="12" fill="var(--ink)" text-anchor="middle">'+(isB() ? 'Headroom: break-even multiple minus your multiple' : 'Headroom: break-even premium minus your entry premium')+'</text>';
-  s += '<text transform="translate(12 '+(m.t+ih/2)+') rotate(-90)" font-size="12" fill="var(--ink)" text-anchor="middle">Demand evidence</text>';
+  [1,2,3,4,5].forEach(e => { s += '<text class="qa" x="'+(m.l-8)+'" y="'+(sy(e)+4)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="end">'+e+'</text>'; });
+  (isB() ? [-10,0,10,30,60] : [-100,0,100,300,600]).forEach(v => { s += '<text class="qa" x="'+sx(v)+'" y="'+(m.t+ih+fs+5)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="middle">'+(v>0?'+':'')+v+(isB()?'x':'%')+'</text>'; });
+  s += '<text class="qa" x="'+(m.l+iw/2)+'" y="'+(Hh-6)+'" font-size="'+fs+'" fill="var(--ink)" text-anchor="middle">'+(isB() ? 'Headroom: break-even multiple minus your multiple' : 'Headroom: break-even premium minus your entry premium')+'</text>';
+  s += '<text class="qa" transform="translate('+(fs+2)+' '+(m.t+ih/2)+') rotate(-90)" font-size="'+fs+'" fill="var(--ink)" text-anchor="middle">Demand evidence</text>';
   const tot = layers.reduce((a,L)=>a+L.alloc,0) || 1;
   const skipped = [], dots = [];
   res.forEach((o,i) => {
@@ -1584,7 +1633,7 @@ function quadChart(res){
     if(d.o.flags.length) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+d.rr.toFixed(1)+'" fill="none" stroke="var(--ink)" stroke-width="1.3" stroke-dasharray="3 2"/>';
     if(d.i===sel) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+(d.rr+4).toFixed(1)+'" fill="none" stroke="var(--copper)" stroke-width="2"/>';
     if(lb.leader) s += '<line x1="'+d.cx.toFixed(1)+'" y1="'+d.cy.toFixed(1)+'" x2="'+lb.lx.toFixed(1)+'" y2="'+lb.ly.toFixed(1)+'" stroke="var(--cap)" stroke-width="0.8"/>';
-    s += '<text class="qlab" x="'+lb.x.toFixed(1)+'" y="'+(lb.y + LAB_BASE).toFixed(1)+'" font-size="11.5" font-weight="700" fill="var(--ink)">'+d.L.name+'</text>';
+    s += '<text class="qlab" x="'+lb.x.toFixed(1)+'" y="'+(lb.y + labBase()).toFixed(1)+'" font-size="'+quadFs+'" font-weight="700" fill="var(--ink)">'+d.L.name+'</text>';
     s += '</g>';
   });
   s += '</svg>';
@@ -1594,12 +1643,13 @@ function quadChart(res){
 
 // Label placement: for each dot, try above, below, right and left; take the first spot that stays inside the plot and
 // clears every placed label and every dot. Otherwise move further out in the same directions and draw a leader line.
-const LAB_H = 15, LAB_BASE = 11; // label box height and baseline offset, in chart units (11.5px bold Arial)
+// Label box height and baseline follow the quadrant's font size (bold Arial at quadFs pixels).
+const labH = () => Math.round(quadFs * 1.3), labBase = () => Math.round(quadFs * 0.95);
 let measureCtx = null;
 function labelWidth(text){
   // Measure with a canvas in the same font; fall back to a generous per-character estimate.
-  try{ if(!measureCtx){ measureCtx = document.createElement('canvas').getContext('2d'); measureCtx.font = 'bold 11.5px Arial, "Helvetica Neue", sans-serif'; } return measureCtx.measureText(text).width + 2; }
-  catch(e){ return text.length * 7.2; }
+  try{ if(!measureCtx) measureCtx = document.createElement('canvas').getContext('2d'); measureCtx.font = 'bold ' + quadFs + 'px Arial, "Helvetica Neue", sans-serif'; return measureCtx.measureText(text).width + 2; }
+  catch(e){ return text.length * quadFs * 0.63; }
 }
 function placeLabels(dots, box){
   const placed = [], obstacles = dots.map(d => ({x:d.cx-d.rr, y:d.cy-d.rr, w:2*d.rr, h:2*d.rr}));
@@ -1614,12 +1664,12 @@ function placeLabels(dots, box){
     const d = dots[k], w = labelWidth(d.L.name), g = 4;
     // Above and below: centred on the dot, then slid sideways (kept inside the plot) so edge dots still get a spot.
     const at = (dist) => {
-      const up = d.cy - d.rr - dist - LAB_H, dn = d.cy + d.rr + dist, mid = d.cy - LAB_H/2;
+      const up = d.cy - d.rr - dist - labH(), dn = d.cy + d.rr + dist, mid = d.cy - labH()/2;
       const xs = [d.cx - w/2, d.cx - w + 6, d.cx - 6];
       return [].concat(
-        xs.map(x => clampBox({x:x, y:up, w:w, h:LAB_H})),
-        xs.map(x => clampBox({x:x, y:dn, w:w, h:LAB_H})),
-        [{x:d.cx + d.rr + dist, y:mid, w:w, h:LAB_H}, {x:d.cx - d.rr - dist - w, y:mid, w:w, h:LAB_H}]
+        xs.map(x => clampBox({x:x, y:up, w:w, h:labH()})),
+        xs.map(x => clampBox({x:x, y:dn, w:w, h:labH()})),
+        [{x:d.cx + d.rr + dist, y:mid, w:w, h:labH()}, {x:d.cx - d.rr - dist - w, y:mid, w:w, h:labH()}]
       ).filter(c => c.y + c.h <= d.cy - d.rr - dist + 0.01 || c.y >= d.cy + d.rr + dist - 0.01 || c.x >= d.cx + d.rr || c.x + c.w <= d.cx - d.rr);
     };
     let pick = null, leader = false;
@@ -1630,15 +1680,15 @@ function placeLabels(dots, box){
     // Then the nearest free spot anywhere in the plot, joined by a leader line.
     if(!pick){
       let best = null, bestD = Infinity;
-      for(let y = box.y0; y + LAB_H <= box.y1; y += 6) for(let x = box.x0; x + w <= box.x1; x += 8){
-        const c = {x:x, y:y, w:w, h:LAB_H};
-        const dd = Math.hypot(x + w/2 - d.cx, y + LAB_H/2 - d.cy);
+      for(let y = box.y0; y + labH() <= box.y1; y += 6) for(let x = box.x0; x + w <= box.x1; x += 8){
+        const c = {x:x, y:y, w:w, h:labH()};
+        const dd = Math.hypot(x + w/2 - d.cx, y + labH()/2 - d.cy);
         if(dd < bestD && ok(c)){ best = c; bestD = dd; }
       }
       if(best){ pick = best; leader = true; }
     }
     // Last resort: stay inside the plot even if it overlaps, so a name is never clipped.
-    if(!pick){ pick = clampBox({x:d.cx - w/2, y:d.cy - d.rr - g - LAB_H, w:w, h:LAB_H}); }
+    if(!pick){ pick = clampBox({x:d.cx - w/2, y:d.cy - d.rr - g - labH(), w:w, h:labH()}); }
     placed.push(pick);
     const lx = clamp(d.cx, pick.x, pick.x + pick.w), ly = clamp(d.cy, pick.y, pick.y + pick.h);
     out[k] = {x:pick.x, y:pick.y, leader:leader, lx:lx, ly:ly};
@@ -1797,7 +1847,8 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); lowShareNote(); renderKpis(); renderHiddenState(); updateMarginCells(false);
+  renderKpis(); renderHiddenState(); lowShareNote();
+  quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); updateMarginCells(false);
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -2159,7 +2210,9 @@ function setMode(m, opts){
   if(!(opts && opts.noStore)){ try{ localStorage.setItem(MODE_KEY, m); }catch(e){} }
   if(!(opts && opts.noHash) && location.hash !== '#'+m){ try{ history.replaceState(null, '', '#'+m); }catch(e){ location.hash = m; } }
   renderHiddenState();
+  if(typeof layersReady !== 'undefined' && layersReady){ adoptChart(); quadChart(runAll(G)); }
 }
+let layersReady = false;
 function initialMode(){
   const fromHash = modeFromHash(location.hash);
   if(fromHash) return fromHash;
@@ -2273,6 +2326,9 @@ function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   setMode(initialMode(), { noStore: false }); bindModes();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
+  layersReady = true;
+  let rz = null;
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { adoptChart(); quadChart(runAll(G)); }, 80); });
 }
 init();
 

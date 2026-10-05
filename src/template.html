@@ -185,7 +185,7 @@ section{margin-top:18px}
 .tile .lab > span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notice.slim{margin:8px 0 0;padding:6px 10px;font-size:13px}
 /* First screen: three cards */
-.first{display:grid;grid-template-columns:minmax(240px,270px) minmax(0,1fr) minmax(0,1.2fr);gap:12px;margin-top:10px;align-items:start}
+.first{display:grid;grid-template-columns:minmax(240px,270px) minmax(0,1fr) minmax(0,1.2fr);gap:12px;margin-top:10px;align-items:stretch}
 .first .card,.row2 .card{padding:12px 14px}
 .first > *,.row2 > *,.twocol > *{min-width:0}
 @media (max-width:980px){.first{grid-template-columns:1fr 1fr}.first #liteCard{grid-column:1 / -1}}
@@ -196,7 +196,7 @@ section{margin-top:18px}
 .cctl-h{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink);font-weight:700}
 .cctl-h output{margin-left:auto;font-weight:400;color:var(--body)}
 .cctl input[type=range]{display:block;margin:0;height:18px}
-#quad svg{max-height:min(330px,46vh);width:100%}
+#quad svg,#adoptChart > svg{display:block;max-width:100%;height:auto}
 table.lite{font-size:12.5px}
 table.lite th,table.lite td{padding:5px 6px}
 table.lite td.v{white-space:normal;min-width:96px}
@@ -221,6 +221,12 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 .modal ul.note{margin:0;padding-left:18px;font-size:13.5px}
 .modal ul.note li{margin-bottom:6px}
 .foot{max-width:1360px}
+/* Timing legend: two columns, three rows, one line per entry */
+#adoptChart .tlegend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 14px;margin:6px 0 0;padding:0;font-size:12px}
+#adoptChart .tlegend li{display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap;min-width:0;overflow:hidden}
+#adoptChart .tlegend button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#adoptChart .tshort{font-size:11.5px;white-space:nowrap}
+.row2{align-items:start}
 @media (max-width:600px){
   .tb-in{flex-wrap:wrap;row-gap:6px}
   .tb-title{flex-wrap:wrap;row-gap:0}
