@@ -2,7 +2,7 @@
 
 Subtitle: Capture Map & Who gets paid?
 
-Owner: Surya Sripati (independent advisor, strategy and finance). He wants consultant-grade rigour with a colleague's tone: simple words, challenge his assumptions with data, cite sources, say plainly where data is insufficient, and allow one dry, fact-based joke where it fits. Do not flatter. Do not invent data.
+Tone for contributors and AI assistants: plain words; challenge assumptions with data; cite sources; say plainly where data is insufficient. Do not invent data.
 
 ## What this is
 
@@ -71,7 +71,7 @@ Goal: time structure and layer-specific adoption. Reproduce v0.1 results exactly
 ### 2. Calendar phases
 - Three phases (default years 0-4, 5-9, 10-15, boundaries editable). Per layer, per phase: share drift and cash margin.
 - Neutral default: all three phases carry the v0.1 constant value.
-- Decided 2026-10-05: deferred until the post-Drop-1 sensitivity shows it matters (locked decision 3). Original proposal kept for reference. Optional, off by default: utilisation-linked margin and drift. Proposal to confirm with Surya before coding: capacity index K(t) = fraction of build capex spent by t; demand index D(t) = layer adoption; utilisation u = D/K capped at 1.5; margin scaled by `u^e` when u < 1, with elasticity `e` as a visible, unsourced input (default 0.5, labelled as an assumption). Do not claim the shape is evidence-based.
+- Decided 2026-10-05: deferred until the post-Drop-1 sensitivity shows it matters (locked decision 3). Original proposal kept for reference. Optional, off by default: utilisation-linked margin and drift. Proposal to confirm with the maintainer before coding: capacity index K(t) = fraction of build capex spent by t; demand index D(t) = layer adoption; utilisation u = D/K capped at 1.5; margin scaled by `u^e` when u < 1, with elasticity `e` as a visible, unsourced input (default 0.5, labelled as an assumption). Do not claim the shape is evidence-based.
 
 ### 3. Entry year and both entry-price definitions
 Entry year `e` runs 0 to 10. The investor owns the layer's cash flows from year `e` onward (operating cash minus sustaining spend, plus terminal value). Show NPV in entry-year terms and say so on the page.
@@ -105,7 +105,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Exclude allocations from export by default (see locked decision 4).
 
 ### 3. Calibration scaffold
-- Scaffold only, no data: a structure for scoring past episodes (British railways 1840s, telecom and fibre 1996-2001, dot-com applications, electricity) blind, using only what was knowable at the time. Do not populate with invented numbers. Every row needs a cited, period-appropriate source. Ask Surya for sources or propose them for his review.
+- Scaffold only, no data: a structure for scoring past episodes (British railways 1840s, telecom and fibre 1996-2001, dot-com applications, electricity) blind, using only what was knowable at the time. Do not populate with invented numbers. Every row needs a cited, period-appropriate source. Ask the maintainer for sources, or propose them for review.
 
 ## Backlog (not in either drop)
 - Separate discount rate per layer.
@@ -115,5 +115,5 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 ## Research behind the design (for the README and citations)
 Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets: The British Railway Mania of 1845 (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The Information-Technology Revolution and the Stock Market (NBER, 2000). From memory and unverified: Perez (2002) on installation and deployment phases. Verify before citing.
 
-## Working agreement
+## Contributing
 Ask one clarifying question at a time when something is ambiguous. Show what changed and why. Run `npm test` before every commit.
