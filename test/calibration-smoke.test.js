@@ -104,8 +104,48 @@ test('calibration page: judgement-heavy banner, and strict import errors shown',
   assert.ok(/Import rejected: the file contains a forbidden key "__proto__"/.test($(doc, 'epMsg').textContent));
   const bad = JSON.parse(JSON.stringify(syntheticEpisode())); bad.layers[0].inputs.share.sourceIds = [];
   await importText(win, doc, JSON.stringify(bad));
-  assert.ok(/Import rejected: .*a value needs at least one cited source/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
+  assert.ok(/Import rejected: .*a sourced value needs at least one cited source/.test($(doc, 'epMsg').textContent), $(doc, 'epMsg').textContent);
   assert.equal(doc.querySelectorAll('#epList tbody tr').length, 1, 'rejected files add nothing');
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('calibration page: uncited judgement shows its label and banner, locks, and exports as .private.json with a warning', async () => {
+  const { doc, win, errors } = load();
+  const blobs = [], names = [];
+  win.URL.createObjectURL = (b) => { blobs.push(b); return 'blob:x'; }; win.URL.revokeObjectURL = () => {};
+  win.HTMLAnchorElement.prototype.click = function(){ names.push(this.getAttribute('download')); };
+  const ep = JSON.parse(JSON.stringify(syntheticEpisode()));
+  ep.layers[0].inputs.share = { ...ep.layers[0].inputs.share, basis: 'judgement', sourceIds: [], rationale: 'synthetic uncited judgement' };
+  await importText(win, doc, JSON.stringify(ep));
+  click(win, doc.querySelector('#epList [data-ep="open"]'));
+  const tags = [...doc.querySelectorAll('#layerBox [data-uncited]')].filter(t => !t.hidden);
+  assert.equal(tags.length, 1);
+  assert.equal(tags[0].textContent, 'uncited judgement');
+  assert.equal($(doc, 'uncitedBanner').hidden, false);
+  assert.ok(/Uncited judgement in 1 input\. .*must stay out of the repository/.test($(doc, 'uncitedBanner').textContent));
+  click(win, $(doc, 'epLock'));
+  assert.equal($(doc, 'edSave').textContent, 'Locked.', 'locking is allowed');
+  click(win, $(doc, 'epExport'));
+  assert.equal(names[0], 'synthetic-test-v1.private.json');
+  assert.ok(/1 input is uncited, so this file is named \.private\.json\. Keep it out of the repository/.test($(doc, 'edSave').textContent));
+  assert.ok($(doc, 'edSave').classList.contains('warn'));
+  // A fully cited episode exports as .episode.json with no warning.
+  await importText(win, doc, JSON.stringify(syntheticEpisode()));
+  click(win, doc.querySelectorAll('#epList [data-ep="open"]')[1]);
+  assert.equal($(doc, 'uncitedBanner').hidden, true);
+  click(win, $(doc, 'epExport'));
+  assert.equal(names[1], 'synthetic-test-v1.episode.json');
+  assert.ok(!$(doc, 'edSave').classList.contains('warn'));
+  // The label follows edits: clearing the rationale-only judgement's sources shows it; adding a source hides it.
+  const row = [...doc.querySelectorAll('#layerBox tr')].find(tr => tr.firstChild.textContent === 'evidence');
+  const basisSel = row.querySelector('select'), idsInput = row.querySelectorAll('input')[1], ratInput = row.querySelectorAll('input')[3], tag = row.querySelector('[data-uncited]');
+  ratInput.value = 'synthetic'; ratInput.dispatchEvent(new win.Event('input', { bubbles: true }));
+  basisSel.value = 'judgement'; basisSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+  idsInput.value = ''; idsInput.dispatchEvent(new win.Event('input', { bubbles: true }));
+  assert.equal(tag.hidden, false);
+  idsInput.value = 'SYN-IN'; idsInput.dispatchEvent(new win.Event('input', { bubbles: true }));
+  assert.equal(tag.hidden, true);
   assert.deepEqual(errors, []);
   win.close();
 });

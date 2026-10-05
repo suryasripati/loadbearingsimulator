@@ -93,7 +93,12 @@ function calRecordRow(label, rec, range, locked){
   [num, basis].forEach(e => { e.disabled = locked; });
   const ids = txt('sourceIds', 'source ids', true), calc = txt('calculation', 'calculation'), rat = txt('rationale', 'rationale');
   [ids, calc, rat].forEach(e => { e.disabled = locked; });
-  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
+  // Distinct label for a judgement with no cited source.
+  const tag = cel('span', { cls: 'badge uncited', 'data-uncited': '' }, ['uncited judgement']);
+  const refreshTag = () => { tag.hidden = !isUncitedJudgement(rec); };
+  refreshTag();
+  [num, basis, ids].forEach(e => { e.addEventListener('input', refreshTag); e.addEventListener('change', refreshTag); });
+  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis, tag]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
 }
 const calRecHead = () => cel('thead', null, [cel('tr', null, ['Input', 'Value', 'Basis', 'Sources (ids)', 'Calculation (derived)', 'Rationale (judgement)'].map((h, i) => cel('th', { cls: i === 0 ? 'l' : '', text: h })))]);
 function calRangeOf(k){ return k === 'phase2Start' ? PHASE_RANGES[0] : k === 'phase3Start' ? PHASE_RANGES[1] : GLOBAL_RANGES[k] || LAYER_RANGES[k.replace(/\[\d\]$/, '')]; }
@@ -166,7 +171,11 @@ function calRenderBanners(){
   if (!calWork) { jb.hidden = true; return; }
   const js = judgementShare(calWork);
   jb.hidden = !js.heavy;
-  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values.';
+  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values'
+    + (js.uncited ? ', including ' + js.uncited + ' uncited judgement' + (js.uncited === 1 ? '' : 's') : '') + '.';
+  const ub = $c('uncitedBanner'), un = unsourcedInputs(calWork);
+  ub.hidden = !un.length;
+  if (un.length) ub.textContent = 'Uncited judgement in ' + un.length + ' input' + (un.length === 1 ? '' : 's') + '. This episode can be locked and scored, but its file must stay out of the repository: export names it .private.json.';
 }
 
 /* ---------- Lock, version, outcomes ---------- */
@@ -242,14 +251,14 @@ function calRenderCompare(){
 
 /* ---------- Import and export ---------- */
 function calExport(){
-  let text;
-  try { text = exportEpisodeText(calStore.episodes[calSel]); } catch (e) { $c('edSave').textContent = 'Not exported: ' + e.message; return; }
-  const ep = calStore.episodes[calSel];
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = cel('a', { href: url, download: (ep.id || 'episode') + '-v' + ep.version + '.episode.json' });
+  let f;
+  try { f = exportEpisodeFile(calStore.episodes[calSel]); } catch (e) { $c('edSave').textContent = 'Not exported: ' + e.message; return; }
+  const url = URL.createObjectURL(new Blob([f.text], { type: 'application/json' }));
+  const a = cel('a', { href: url, download: f.filename });
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 1000);
-  $c('edSave').textContent = 'Exported. Commit an episode file only if every number cites a public source; otherwise keep it in calibration/private/.';
+  $c('edSave').textContent = 'Exported as ' + f.filename + '. ' + (f.isPrivate ? f.warning : 'Every input cites a source. Commit it only if those sources are public.');
+  $c('edSave').classList.toggle('warn', f.isPrivate);
 }
 function calImportFile(file){
   const msg = $c('epMsg');

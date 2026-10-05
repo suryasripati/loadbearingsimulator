@@ -123,6 +123,9 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 .layercard{border:1px solid var(--hair);border-radius:6px;padding:10px 12px;margin-top:12px}
 fieldset{border:none;padding:0;margin:0;min-width:0}
 a{color:var(--copper)}
+.badge.uncited{background:var(--amber-bg);color:var(--amber);margin-left:4px}
+.badge[hidden]{display:none}
+#edSave.warn{color:var(--red);font-weight:700}
 </style>
 </head>
 <body>
@@ -150,6 +153,7 @@ a{color:var(--copper)}
 <section id="editor" hidden>
   <h2 id="edTitle">Episode</h2>
   <div class="notice" id="judgeBanner" hidden></div>
+  <div class="notice" id="uncitedBanner" hidden></div>
   <div class="card">
     <p class="status" id="edStatus"></p>
     <p class="legend" id="edSave" role="status"></p>
@@ -176,7 +180,7 @@ a{color:var(--copper)}
       <div class="seg" style="margin-top:6px"><button id="srcAdd">Add source</button></div>
 
       <h3 style="margin-top:14px">Settings</h3>
-      <p class="legend">Each number needs a basis and at least one cited source (comma-separated source ids). Derived values show their calculation; judgements give a rationale.</p>
+      <p class="legend">Each number needs a basis. Sourced and derived values need at least one cited source (comma-separated source ids), and derived values show their calculation. A judgement needs a rationale; its sources are optional, but an uncited judgement is labelled and keeps the episode file out of the repository.</p>
       <div class="seg" style="align-items:center">
         <label class="muted" for="f_entryDef" style="font-size:13px">Entry price definition</label><select id="f_entryDef" class="txt sel"><option value="">not set</option><option value="A">A: premium over build cost</option><option value="B">B: multiple of forward cash</option></select>
         <label class="muted" for="f_capex" style="font-size:13px">Capex model</label><select id="f_capex" class="txt sel"><option value="">not set</option><option value="sustaining">Sustaining spend</option><option value="vintage">Vintage cohorts</option></select>
@@ -942,7 +946,8 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
 
 // Calibration scaffold: a structure for scoring past episodes (for example British railways in the 1840s, telecom and
 // fibre 1996-2001, dot-com applications, electricity) using only what was knowable at the time. SCAFFOLD ONLY: this
-// file holds no episode data, and none may be invented. Every numeric input needs a cited source.
+// file holds no episode data, and none may be invented. Sourced and derived inputs need cited sources; a judgement
+// needs a rationale and may be uncited, but an episode with any uncited input must stay out of the repository.
 // Pure functions, no DOM. CommonJS export for tests; the build strips the export line and inlines this file in
 // docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
 
@@ -1073,8 +1078,9 @@ function calRecord(r, where, range, integer, ctx){
     rationale: d.snapStr(r.rationale, EP_TEXT.long, where + ' rationale') };
   if (out.value !== null) {
     if (out.basis === null) d.snapErr(where, 'a value needs a basis (sourced, derived or judgement)');
-    // Every numeric input needs at least one cited source, whatever its basis.
-    if (!out.sourceIds.length) d.snapErr(where, 'a value needs at least one cited source');
+    // Sourced and derived values need at least one cited source; a judgement needs a rationale and may be uncited
+    // (shown as "uncited judgement", and the episode must then stay out of the repository).
+    if (out.basis !== 'judgement' && !out.sourceIds.length) d.snapErr(where, 'a ' + out.basis + ' value needs at least one cited source');
     if (out.basis === 'derived' && !out.calculation.trim()) d.snapErr(where, 'a derived value needs its calculation shown');
     if (out.basis === 'judgement' && !out.rationale.trim()) d.snapErr(where, 'a judgement needs a rationale');
   }
@@ -1242,6 +1248,14 @@ function importEpisodeText(text){
   try { return { ok: true, episode: validateEpisode(data) }; } catch (e) { return fail(e.message); }
 }
 function exportEpisodeText(ep){ return JSON.stringify(validateEpisode(JSON.parse(JSON.stringify(ep))), null, 2); }
+// Export file: NAME.episode.json when every input is cited; NAME.private.json (gitignored) with a warning when any
+// input is uncited, because such a file must stay out of the public repository.
+function exportEpisodeFile(ep){
+  const text = exportEpisodeText(ep), uncited = unsourcedInputs(ep);
+  const base = (ep.id || 'episode') + '-v' + ep.version;
+  return { text, uncited, isPrivate: uncited.length > 0, filename: base + (uncited.length ? '.private.json' : '.episode.json'),
+    warning: uncited.length ? uncited.length + ' input' + (uncited.length === 1 ? ' is' : 's are') + ' uncited, so this file is named .private.json. Keep it out of the repository (calibration/private/ and *.private.json are gitignored).' : '' };
+}
 
 /* ---------- Workflow: draft, locked, outcomes ---------- */
 function lockEpisode(ep, now){
@@ -1267,14 +1281,17 @@ function setOutcome(ep, outcome){
 }
 
 /* ---------- Basis mix ---------- */
+// Judgement share of the filled inputs; uncited judgements count toward it like any other judgement.
 function judgementShare(ep){
   const filled = allRecords(ep).filter(([, r]) => r.value !== null);
-  if (!filled.length) return { judgement: 0, total: 0, share: 0, heavy: false };
+  if (!filled.length) return { judgement: 0, uncited: 0, total: 0, share: 0, heavy: false };
   const j = filled.filter(([, r]) => r.basis === 'judgement').length;
-  return { judgement: j, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
+  const u = filled.filter(([, r]) => isUncitedJudgement(r)).length;
+  return { judgement: j, uncited: u, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
 }
-// For committed files (public repo): numeric inputs without a cited source. Validation already rejects these;
-// this second check is used by the repository test as a belt-and-braces guard.
+function isUncitedJudgement(r){ return r.value !== null && r.basis === 'judgement' && !r.sourceIds.length; }
+// Numeric inputs without a cited source (any basis). The repository test requires this to be empty for every
+// committed file under calibration/; export uses it to suggest a .private.json name.
 function unsourcedInputs(ep){ return allRecords(ep).filter(([, r]) => r.value !== null && !r.sourceIds.length).map(([k]) => k); }
 
 /* ---------- Comparison ---------- */
@@ -1402,7 +1419,12 @@ function calRecordRow(label, rec, range, locked){
   [num, basis].forEach(e => { e.disabled = locked; });
   const ids = txt('sourceIds', 'source ids', true), calc = txt('calculation', 'calculation'), rat = txt('rationale', 'rationale');
   [ids, calc, rat].forEach(e => { e.disabled = locked; });
-  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
+  // Distinct label for a judgement with no cited source.
+  const tag = cel('span', { cls: 'badge uncited', 'data-uncited': '' }, ['uncited judgement']);
+  const refreshTag = () => { tag.hidden = !isUncitedJudgement(rec); };
+  refreshTag();
+  [num, basis, ids].forEach(e => { e.addEventListener('input', refreshTag); e.addEventListener('change', refreshTag); });
+  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis, tag]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
 }
 const calRecHead = () => cel('thead', null, [cel('tr', null, ['Input', 'Value', 'Basis', 'Sources (ids)', 'Calculation (derived)', 'Rationale (judgement)'].map((h, i) => cel('th', { cls: i === 0 ? 'l' : '', text: h })))]);
 function calRangeOf(k){ return k === 'phase2Start' ? PHASE_RANGES[0] : k === 'phase3Start' ? PHASE_RANGES[1] : GLOBAL_RANGES[k] || LAYER_RANGES[k.replace(/\[\d\]$/, '')]; }
@@ -1475,7 +1497,11 @@ function calRenderBanners(){
   if (!calWork) { jb.hidden = true; return; }
   const js = judgementShare(calWork);
   jb.hidden = !js.heavy;
-  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values.';
+  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values'
+    + (js.uncited ? ', including ' + js.uncited + ' uncited judgement' + (js.uncited === 1 ? '' : 's') : '') + '.';
+  const ub = $c('uncitedBanner'), un = unsourcedInputs(calWork);
+  ub.hidden = !un.length;
+  if (un.length) ub.textContent = 'Uncited judgement in ' + un.length + ' input' + (un.length === 1 ? '' : 's') + '. This episode can be locked and scored, but its file must stay out of the repository: export names it .private.json.';
 }
 
 /* ---------- Lock, version, outcomes ---------- */
@@ -1551,14 +1577,14 @@ function calRenderCompare(){
 
 /* ---------- Import and export ---------- */
 function calExport(){
-  let text;
-  try { text = exportEpisodeText(calStore.episodes[calSel]); } catch (e) { $c('edSave').textContent = 'Not exported: ' + e.message; return; }
-  const ep = calStore.episodes[calSel];
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = cel('a', { href: url, download: (ep.id || 'episode') + '-v' + ep.version + '.episode.json' });
+  let f;
+  try { f = exportEpisodeFile(calStore.episodes[calSel]); } catch (e) { $c('edSave').textContent = 'Not exported: ' + e.message; return; }
+  const url = URL.createObjectURL(new Blob([f.text], { type: 'application/json' }));
+  const a = cel('a', { href: url, download: f.filename });
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 1000);
-  $c('edSave').textContent = 'Exported. Commit an episode file only if every number cites a public source; otherwise keep it in calibration/private/.';
+  $c('edSave').textContent = 'Exported as ' + f.filename + '. ' + (f.isPrivate ? f.warning : 'Every input cites a source. Commit it only if those sources are public.');
+  $c('edSave').classList.toggle('warn', f.isPrivate);
 }
 function calImportFile(file){
   const msg = $c('epMsg');

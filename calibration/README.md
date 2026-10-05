@@ -6,14 +6,15 @@ A structure for scoring past episodes with the Load Bearing Simulator using only
 
 ## Data rules (this repository is public)
 
-- Commit an episode file only if **every numeric input cites a public source**. A repository test fails if any committed file under `calibration/`, other than the template, has a numeric input without a source.
-- Anything with an uncited number, plus personal views and working notes, goes in `calibration/private/`. That folder is gitignored.
+- Commit an episode file only if **every numeric input cites a public source**. A repository test fails if any committed file under `calibration/`, other than the template, has a numeric input without a source. That includes an uncited judgement.
+- Anything with an uncited number, plus personal views and working notes, goes in `calibration/private/`. That folder is gitignored, and so is every `*.private.json` file.
+- When an episode has any uncited input, the page exports it as `NAME.private.json` with a warning; otherwise as `NAME.episode.json`.
 - Outcome evidence must be published **after** the episode's as-of date, and input evidence **on or before** it (see "Sources" below).
 - Results are always shown with this banner: *Scored by someone who knew the outcome. Treat as a sanity check, not calibration.* The comparison always says *Too few cases for statistical conclusions.* It never shows a hit rate.
 
 ## Workflow
 
-1. **Draft.** Fill in the as-of date and rules, the sources, the settings and the layers. You can save a draft with gaps.
+1. **Draft.** Fill in the as-of date and rules, the sources, the settings and the layers. You can save a draft with gaps. Uncited judgement is allowed and labelled.
 2. **Lock.** Locking needs every field below that is marked "needed before locking". It stores a SHA-256 hash of everything decided before looking at the outcome, the time, and the model version. After locking, inputs cannot change: making a **new version** copies the inputs into an unlocked draft that links to the old hash. If a locked file's inputs are edited by hand, the hash no longer matches and import rejects the file.
 3. **Outcomes.** Only after locking, record per layer whether capital earned its cost: `yes`, `no`, `unknown` or `contested`, with a note. `yes` and `no` need a source. `contested` needs at least one citation on each side.
 
@@ -42,10 +43,10 @@ A structure for scoring past episodes with the Load Bearing Simulator using only
 
 `{ "value": number or null, "basis": "sourced" | "derived" | "judgement" | null, "sourceIds": [ ... ], "calculation": text, "rationale": text }`
 
-- A value needs a basis and **at least one cited source**, whatever the basis.
-- `sourced`: the value appears in a cited source.
-- `derived`: computed from cited sources; `calculation` must show how.
-- `judgement`: the scorer's call, informed by the cited sources; `rationale` must say why.
+- A value needs a basis.
+- `sourced`: the value appears in a cited source; at least one source is required.
+- `derived`: computed from cited sources; at least one source is required, and `calculation` must show how.
+- `judgement`: the scorer's call; `rationale` must say why. Sources are optional. A judgement with no source is shown as **uncited judgement**, counts toward the judgement-heavy banner, may still be locked and scored, and makes the file private (it cannot be committed).
 - Values must sit inside the same ranges as the simulator's inputs.
 - An episode where more than half of the filled inputs are judgement shows a **judgement-heavy** banner.
 

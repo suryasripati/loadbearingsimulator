@@ -7,3 +7,5 @@ exports/
 *.snapshot.json
 # Uncited calibration material (personal notes, unsourced figures). Only cited, public-source material is committed.
 calibration/private/
+# Calibration exports with any uncited input (named by the calibration page). Never commit these.
+*.private.json

@@ -1,6 +1,7 @@
 // Calibration scaffold: a structure for scoring past episodes (for example British railways in the 1840s, telecom and
 // fibre 1996-2001, dot-com applications, electricity) using only what was knowable at the time. SCAFFOLD ONLY: this
-// file holds no episode data, and none may be invented. Every numeric input needs a cited source.
+// file holds no episode data, and none may be invented. Sourced and derived inputs need cited sources; a judgement
+// needs a rationale and may be uncited, but an episode with any uncited input must stay out of the repository.
 // Pure functions, no DOM. CommonJS export for tests; the build strips the export line and inlines this file in
 // docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
 
@@ -131,8 +132,9 @@ function calRecord(r, where, range, integer, ctx){
     rationale: d.snapStr(r.rationale, EP_TEXT.long, where + ' rationale') };
   if (out.value !== null) {
     if (out.basis === null) d.snapErr(where, 'a value needs a basis (sourced, derived or judgement)');
-    // Every numeric input needs at least one cited source, whatever its basis.
-    if (!out.sourceIds.length) d.snapErr(where, 'a value needs at least one cited source');
+    // Sourced and derived values need at least one cited source; a judgement needs a rationale and may be uncited
+    // (shown as "uncited judgement", and the episode must then stay out of the repository).
+    if (out.basis !== 'judgement' && !out.sourceIds.length) d.snapErr(where, 'a ' + out.basis + ' value needs at least one cited source');
     if (out.basis === 'derived' && !out.calculation.trim()) d.snapErr(where, 'a derived value needs its calculation shown');
     if (out.basis === 'judgement' && !out.rationale.trim()) d.snapErr(where, 'a judgement needs a rationale');
   }
@@ -300,6 +302,14 @@ function importEpisodeText(text){
   try { return { ok: true, episode: validateEpisode(data) }; } catch (e) { return fail(e.message); }
 }
 function exportEpisodeText(ep){ return JSON.stringify(validateEpisode(JSON.parse(JSON.stringify(ep))), null, 2); }
+// Export file: NAME.episode.json when every input is cited; NAME.private.json (gitignored) with a warning when any
+// input is uncited, because such a file must stay out of the public repository.
+function exportEpisodeFile(ep){
+  const text = exportEpisodeText(ep), uncited = unsourcedInputs(ep);
+  const base = (ep.id || 'episode') + '-v' + ep.version;
+  return { text, uncited, isPrivate: uncited.length > 0, filename: base + (uncited.length ? '.private.json' : '.episode.json'),
+    warning: uncited.length ? uncited.length + ' input' + (uncited.length === 1 ? ' is' : 's are') + ' uncited, so this file is named .private.json. Keep it out of the repository (calibration/private/ and *.private.json are gitignored).' : '' };
+}
 
 /* ---------- Workflow: draft, locked, outcomes ---------- */
 function lockEpisode(ep, now){
@@ -325,14 +335,17 @@ function setOutcome(ep, outcome){
 }
 
 /* ---------- Basis mix ---------- */
+// Judgement share of the filled inputs; uncited judgements count toward it like any other judgement.
 function judgementShare(ep){
   const filled = allRecords(ep).filter(([, r]) => r.value !== null);
-  if (!filled.length) return { judgement: 0, total: 0, share: 0, heavy: false };
+  if (!filled.length) return { judgement: 0, uncited: 0, total: 0, share: 0, heavy: false };
   const j = filled.filter(([, r]) => r.basis === 'judgement').length;
-  return { judgement: j, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
+  const u = filled.filter(([, r]) => isUncitedJudgement(r)).length;
+  return { judgement: j, uncited: u, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
 }
-// For committed files (public repo): numeric inputs without a cited source. Validation already rejects these;
-// this second check is used by the repository test as a belt-and-braces guard.
+function isUncitedJudgement(r){ return r.value !== null && r.basis === 'judgement' && !r.sourceIds.length; }
+// Numeric inputs without a cited source (any basis). The repository test requires this to be empty for every
+// committed file under calibration/; export uses it to suggest a .private.json name.
 function unsourcedInputs(ep){ return allRecords(ep).filter(([, r]) => r.value !== null && !r.sourceIds.length).map(([k]) => k); }
 
 /* ---------- Comparison ---------- */
@@ -364,4 +377,4 @@ function compareEpisodes(episodes){
   return { rows, episodes: lockedEps.length, layers: rows.length, caveat: EP_FEW_CASES, banner: EP_BANNER, currentModelVersion: d.MODEL_VERSION };
 }
 
-if (typeof module !== 'undefined') module.exports = { EP_FORMAT, EP_SCHEMA_VERSION, EP_BANNER, EP_FEW_CASES, EP_SETTING_KEYS, EP_LAYER_KEYS, calSha256, calCanonical, episodeHash, calEmptyRecord, calEmptyLayer, templateEpisode, validateEpisode, lockProblems, allRecords, importEpisodeText, exportEpisodeText, lockEpisode, newEpisodeVersion, setOutcome, judgementShare, unsourcedInputs, sourceValidForInput, sourceValidForOutcome, episodeModelInputs, compareEpisodes };
+if (typeof module !== 'undefined') module.exports = { EP_FORMAT, EP_SCHEMA_VERSION, EP_BANNER, EP_FEW_CASES, EP_SETTING_KEYS, EP_LAYER_KEYS, calSha256, calCanonical, episodeHash, calEmptyRecord, calEmptyLayer, templateEpisode, validateEpisode, lockProblems, allRecords, importEpisodeText, exportEpisodeText, exportEpisodeFile, isUncitedJudgement, lockEpisode, newEpisodeVersion, setOutcome, judgementShare, unsourcedInputs, sourceValidForInput, sourceValidForOutcome, episodeModelInputs, compareEpisodes };

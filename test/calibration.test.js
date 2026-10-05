@@ -46,12 +46,14 @@ test('schema validation: format, version, fields, types, ranges and dates', () =
   const e8 = clone(ep); e8.sources[0].citation = '  '; rejects(e8, /a source needs a citation/);
 });
 
-test('basis: every value needs a basis and a cited source; derived shows its calculation; judgement gives a rationale', () => {
+test('basis: every value needs a basis; sourced and derived need a cited source; derived shows its calculation; judgement gives a rationale', () => {
   const ep = syntheticEpisode();
   const set = (r) => { const e = clone(ep); e.layers[0].inputs.share = { ...e.layers[0].inputs.share, ...r }; return e; };
   rejects(set({ basis: null }), /a value needs a basis/);
-  rejects(set({ sourceIds: [] }), /a value needs at least one cited source/);
-  rejects(set({ basis: 'judgement', sourceIds: [], rationale: 'gut feel' }), /a value needs at least one cited source/);
+  rejects(set({ sourceIds: [] }), /a sourced value needs at least one cited source/);
+  rejects(set({ basis: 'derived', sourceIds: [], calculation: 'a + b' }), /a derived value needs at least one cited source/);
+  rejects(set({ basis: 'judgement', sourceIds: [], rationale: '' }), /a judgement needs a rationale/);
+  assert.ok(C.validateEpisode(set({ basis: 'judgement', sourceIds: [], rationale: 'read across from neighbouring layers' })), 'an uncited judgement with a rationale is allowed');
   rejects(set({ basis: 'derived', calculation: '' }), /a derived value needs its calculation shown/);
   rejects(set({ basis: 'judgement', rationale: ' ' }), /a judgement needs a rationale/);
   rejects(set({ basis: 'guess' }), /basis: unexpected value/);
@@ -198,23 +200,76 @@ test('import hardening: size, prototype keys, unknown fields, fresh objects, tex
   assert.equal(C.importEpisodeText(JSON.stringify(html)).episode.name, '<img src=x onerror=alert(1)>', 'kept as text; the page renders it with textContent');
 });
 
-test('public repo rule: no committed file under calibration/ (other than the template) has a numeric input without a source', () => {
-  const dir = path.join(__dirname, '..', 'calibration');
-  const files = [];
+// Committed-file check: every episode file under a calibration folder (other than the template, the README and
+// private/) must import strictly and have no numeric input without a cited source. Returns problems as text.
+function committedFileProblems(dir){
+  const problems = [];
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach(f => {
     const p = path.join(d, f.name), rel = path.relative(dir, p);
     if (f.isDirectory()) { if (rel !== 'private') walk(p); return; }
     if (rel === 'template.episode.json' || rel === 'README.md') return;
-    files.push(p);
+    if (/\.private\.json$/.test(rel)) { problems.push(rel + ': a .private.json file is in the folder (it should be gitignored)'); return; }
+    if (!/\.json$/.test(rel)) { problems.push(rel + ': only episode files belong here'); return; }
+    const r = C.importEpisodeText(fs.readFileSync(p, 'utf8'));
+    if (!r.ok) { problems.push(rel + ': ' + r.error); return; }
+    const u = C.unsourcedInputs(r.episode);
+    if (u.length) problems.push(rel + ': numeric inputs without a source: ' + u.join(', '));
   });
   walk(dir);
-  for (const f of files) {
-    assert.ok(/\.json$/.test(f), 'only episode files belong in calibration/: ' + path.relative(dir, f));
-    const r = C.importEpisodeText(fs.readFileSync(f, 'utf8'));
-    assert.equal(r.ok, true, path.relative(dir, f) + ': ' + r.error);
-    assert.deepEqual(C.unsourcedInputs(r.episode), [], path.relative(dir, f) + ' has numeric inputs without a source');
-  }
-  // The checker itself flags an unsourced number (validation rejects it too).
-  const raw = clone(syntheticEpisode()); raw.layers[0].inputs.share.sourceIds = [];
-  assert.deepEqual(C.unsourcedInputs(raw), ['layer 1 share']);
+  return problems;
+}
+
+test('public repo rule: no committed file under calibration/ (other than the template) has a numeric input without a source', () => {
+  assert.deepEqual(committedFileProblems(path.join(__dirname, '..', 'calibration')), []);
+});
+
+test('public repo rule: the committed-file check catches an uncited judgement, which is otherwise a valid episode', () => {
+  const os = require('os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lbs-cal-'));
+  try {
+    fs.mkdirSync(path.join(tmp, 'private'));
+    fs.copyFileSync(path.join(__dirname, '..', 'calibration', 'template.episode.json'), path.join(tmp, 'template.episode.json'));
+    const ep = clone(syntheticEpisode());
+    ep.layers[0].inputs.share = { ...ep.layers[0].inputs.share, basis: 'judgement', sourceIds: [], rationale: 'synthetic uncited judgement' };
+    assert.equal(C.importEpisodeText(JSON.stringify(ep)).ok, true, 'valid as an episode');
+    const cited = syntheticEpisode();
+    fs.writeFileSync(path.join(tmp, 'cited.episode.json'), JSON.stringify(cited));
+    fs.writeFileSync(path.join(tmp, 'private', 'ignored.json'), JSON.stringify(ep));
+    assert.deepEqual(committedFileProblems(tmp), [], 'cited file passes; private/ is skipped');
+    fs.writeFileSync(path.join(tmp, 'uncited.episode.json'), JSON.stringify(ep));
+    assert.deepEqual(committedFileProblems(tmp), ['uncited.episode.json: numeric inputs without a source: layer 1 share']);
+    fs.writeFileSync(path.join(tmp, 'x.private.json'), JSON.stringify(ep));
+    assert.ok(committedFileProblems(tmp).some(p => /x\.private\.json: a \.private\.json file is in the folder/.test(p)));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('uncited judgement: labelled, counted toward judgement-heavy, allowed when locking, and exported as .private.json', () => {
+  const ep = clone(syntheticEpisode());
+  const recs = C.allRecords(ep);
+  // Make just over half of the inputs uncited judgements.
+  const n = Math.floor(recs.length / 2) + 1;
+  recs.slice(0, n).forEach(([, r]) => { r.basis = 'judgement'; r.sourceIds = []; r.rationale = 'synthetic'; });
+  const v = C.validateEpisode(ep);
+  assert.equal(C.isUncitedJudgement(C.allRecords(v)[0][1]), true);
+  assert.equal(C.isUncitedJudgement(C.allRecords(v)[n][1]), false, 'a cited sourced input is not labelled');
+  const js = C.judgementShare(v);
+  assert.equal(js.uncited, n); assert.equal(js.judgement, n); assert.equal(js.heavy, true);
+  const L = C.lockEpisode(v, NOW);
+  assert.ok(L.lock, 'locking is allowed with uncited judgement');
+  const f = C.exportEpisodeFile(L);
+  assert.equal(f.isPrivate, true);
+  assert.equal(f.filename, 'synthetic-test-v1.private.json');
+  assert.match(f.warning, new RegExp(n + ' inputs are uncited, so this file is named \\.private\\.json\\. Keep it out of the repository'));
+  assert.equal(C.importEpisodeText(f.text).ok, true, 'the private file still imports');
+  const cited = C.exportEpisodeFile(syntheticEpisode());
+  assert.equal(cited.isPrivate, false); assert.equal(cited.filename, 'synthetic-test-v1.episode.json'); assert.equal(cited.warning, '');
+  // A cited judgement is a judgement but not uncited.
+  const cj = clone(syntheticEpisode()); C.allRecords(cj)[0][1].basis = 'judgement'; C.allRecords(cj)[0][1].rationale = 'synthetic';
+  assert.deepEqual([C.judgementShare(C.validateEpisode(cj)).judgement, C.judgementShare(C.validateEpisode(cj)).uncited], [1, 0]);
+});
+
+test('gitignore keeps private calibration files out of the repository', () => {
+  const gi = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8').split('\n').map(l => l.trim());
+  assert.ok(gi.includes('*.private.json'));
+  assert.ok(gi.includes('calibration/private/'));
 });
