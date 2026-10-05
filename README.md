@@ -26,7 +26,9 @@ Open `docs/index.html` in a browser. No server needed.
 
 ## Develop
 
-Requires Node 22.22 or 24.15 or newer (the test runner's jsdom needs it). The page itself has no dependencies; `jsdom` is a pinned dev dependency used only by the UI smoke test.
+Node is needed only to run the tests and the build. The page itself (`docs/index.html`) needs no Node and no dependencies; open it in any modern browser.
+
+Supported Node versions for tests and build: 22.22.2 or later on 22.x, 24.15.0 or later on 24.x, or 26.0.0 or later. The floor comes from `jsdom` 30, a pinned dev dependency used only by the UI smoke test.
 
 ```
 npm install     # once, installs jsdom for the smoke test
