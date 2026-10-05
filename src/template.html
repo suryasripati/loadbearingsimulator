@@ -94,6 +94,19 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 .frag td:nth-child(2){min-width:160px}
 .frag td.frag-n{min-width:200px}
 .frag td:last-child{min-width:320px;line-height:1.45}
+.txt{font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);width:100%}
+textarea.txt{resize:vertical}
+select.txt.sel{width:auto;max-width:220px}
+#killTable input.txt,#killTable select.txt{min-width:90px}
+#killTable td{white-space:normal;vertical-align:top}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+label.btn{display:inline-block}
+label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
+.badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--red-bg);color:var(--red);margin-left:6px}
+.pre{white-space:pre-wrap;word-break:break-word}
+.notice.strong{border-width:2px;font-weight:700}
+.snapbox{margin-top:16px;border-top:1px solid var(--hair);padding-top:12px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
 #quad .dot{cursor:pointer}
@@ -248,6 +261,44 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <h2>Your allocation across scenarios</h2>
   <div class="card scroll"><table id="expo" aria-label="Allocation exposure"></table>
     <div class="legend" id="expoNote"></div></div>
+</section>
+
+<section id="snapshots">
+  <h2>Snapshots</h2>
+  <p class="dek" style="font-size:14px">Save a dated view of every input and result, with a note and what would make you revise each layer, so you can later compare what you believed then with what you believe now. Snapshots stay in this browser. Nothing is sent anywhere; export writes a file you download.</p>
+  <div class="card">
+    <div class="twocol">
+      <div>
+        <h3>Save the current view</h3>
+        <div class="ctl"><label for="snapName">Name</label><input type="text" id="snapName" class="txt" maxlength="120" placeholder="e.g. Base view, October"></div>
+        <div class="ctl"><label for="snapNote">Note</label><textarea id="snapNote" class="txt" maxlength="5000" rows="3" placeholder="What you believe and why"></textarea></div>
+        <details id="killBox"><summary>Kill criteria: what would make me revise each layer</summary>
+          <p class="legend">Optional. A trigger is a metric, a direction and a threshold you will check yourself; nothing is fetched. A review-by date shows as overdue once it passes and the criterion is still unanswered.</p>
+          <div class="scroll"><table id="killTable" aria-label="Kill criteria for the next snapshot"></table></div>
+        </details>
+        <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button></div>
+        <p class="legend" id="snapMsg" role="status"></p>
+      </div>
+      <div>
+        <h3>Compare two views</h3>
+        <div class="seg" style="align-items:center">
+          <label class="muted" for="cmpA" style="font-size:13px">Before</label><select id="cmpA" class="txt sel"></select>
+          <label class="muted" for="cmpB" style="font-size:13px">After</label><select id="cmpB" class="txt sel"></select>
+          <button id="cmpGo">Compare</button>
+        </div>
+        <h3 style="margin-top:14px">Export and import</h3>
+        <label class="chk"><input type="checkbox" id="expAlloc"> Include my allocations in the export</label>
+        <p class="notice" id="expWarn" style="margin-top:6px">This page and its code repository are public. Allocations are your personal split and are left out of exports unless you tick the box. Keep any file that includes them private, and never commit snapshot files.</p>
+        <div class="seg"><button id="snapExport">Export snapshots (.json)</button>
+          <label class="btn" for="snapImport">Import snapshots</label><input type="file" id="snapImport" accept=".json,application/json" class="vh"></div>
+        <p class="legend" id="snapErr" role="alert"></p>
+      </div>
+    </div>
+    <h3 style="margin-top:14px">Saved snapshots</h3>
+    <div class="scroll"><table id="snapList" aria-label="Saved snapshots"></table></div>
+    <div id="snapReview"></div>
+    <div id="snapCompare"></div>
+  </div>
 </section>
 
 <section>

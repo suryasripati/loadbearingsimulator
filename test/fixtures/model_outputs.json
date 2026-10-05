@@ -1,0 +1,2026 @@
+{
+ "modelVersion": 1,
+ "note": "Canonical model outputs. Regenerate only with a MODEL_VERSION bump.",
+ "outputs": {
+  "sustaining/A/e0/defaults": [
+   {
+    "id": "hw",
+    "npv": 270.6411599274969,
+    "breakEven": 258.72540678266074,
+    "breakEvenM": 96.72484571268288,
+    "irr": 0.25508436552449976,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -56.1363307455843,
+    "breakEven": -30.59632775154081,
+    "breakEvenM": -33.77894570162942,
+    "irr": 0.06271365195392764,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -70.89614664265608,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": 0.005883971136899313,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 282.53009334433995,
+    "breakEven": 516.4069681973585,
+    "breakEvenM": 124.95513846771156,
+    "irr": 0.3113233036765105,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 79.35361189143609,
+    "breakEven": 554.2157020989188,
+    "breakEvenM": 140.38351022271496,
+    "irr": 0.3163271125996042,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e0/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 365.13357248486193,
+    "breakEven": 422.3595990968865,
+    "breakEvenM": null,
+    "irr": 0.4907048011751779,
+    "payback": 7,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 13.470838888178275,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 69.56724338889897,
+    "breakEven": 45.87915887956613,
+    "breakEvenM": null,
+    "irr": 0.17963702666636283,
+    "payback": 10,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 1.0526774958864877,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -25.100238157390447,
+    "breakEven": -34.84092614079629,
+    "breakEvenM": null,
+    "irr": 0.048833953935335406,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 256.2552905572461,
+    "breakEven": 566.7422521221513,
+    "breakEvenM": null,
+    "irr": 0.3794637524855188,
+    "payback": 9,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 59.216851043672044,
+    "breakEven": 500.429388819857,
+    "breakEvenM": null,
+    "irr": 0.3207597191602861,
+    "payback": 9,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e0/declineExample": [
+   {
+    "id": "hw",
+    "npv": 270.6411599274969,
+    "breakEven": 258.72540678266074,
+    "breakEvenM": 96.72484571268288,
+    "irr": 0.25508436552449976,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -56.1363307455843,
+    "breakEven": -30.59632775154081,
+    "breakEvenM": -33.77894570162942,
+    "irr": 0.06271365195392764,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -70.89614664265608,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": 0.005883971136899313,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 282.53009334433995,
+    "breakEven": 516.4069681973585,
+    "breakEvenM": 124.95513846771156,
+    "irr": 0.3113233036765105,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 79.35361189143609,
+    "breakEven": 554.2157020989188,
+    "breakEvenM": 140.38351022271496,
+    "irr": 0.3163271125996042,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e3/defaults": [
+   {
+    "id": "hw",
+    "npv": 368.678429949292,
+    "breakEven": 307.23202495774336,
+    "breakEvenM": 35.36989498451473,
+    "irr": 0.305104568656844,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -52.895221307706336,
+    "breakEven": -24.488528383197373,
+    "breakEvenM": 10.587986971251263,
+    "irr": 0.06824696987509171,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.23714448748673,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.003596378027219793,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 380.1357995209357,
+    "breakEven": 633.5596658682261,
+    "breakEvenM": 40.75331477045702,
+    "irr": 0.38659977449528415,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 109.14421874740624,
+    "breakEven": 727.6281249827084,
+    "breakEvenM": 45.97934027681715,
+    "irr": 0.4578329310245227,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e3/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 480.21892206487234,
+    "breakEven": 428.5139348808965,
+    "breakEvenM": 24.378338703859225,
+    "irr": 0.5038626038694789,
+    "payback": 7,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 13.470838888178275,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 88.43683695062455,
+    "breakEven": 44.79595307696571,
+    "breakEvenM": 7.090542580753318,
+    "irr": 0.17795858153584476,
+    "payback": 11,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 1.0526774958864877,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -33.2371444874867,
+    "breakEven": -35.590216663591946,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.047657803772088614,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 340.58863428871297,
+    "breakEven": 585.3867151837254,
+    "breakEvenM": 55.38526991914842,
+    "irr": 0.39579049899908536,
+    "payback": 9,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 79.20543361717628,
+    "breakEven": 528.0362241145085,
+    "breakEvenM": 89.91674597336801,
+    "irr": 0.33997585616809045,
+    "payback": 9,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e3/declineExample": [
+   {
+    "id": "hw",
+    "npv": 368.678429949292,
+    "breakEven": 307.23202495774336,
+    "breakEvenM": 35.36989498451473,
+    "irr": 0.305104568656844,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -52.895221307706336,
+    "breakEven": -24.488528383197373,
+    "breakEvenM": 10.587986971251263,
+    "irr": 0.06824696987509171,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.23714448748673,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.003596378027219793,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 380.1357995209357,
+    "breakEven": 633.5596658682261,
+    "breakEvenM": 40.75331477045702,
+    "irr": 0.38659977449528415,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 109.14421874740624,
+    "breakEven": 727.6281249827084,
+    "breakEvenM": 45.97934027681715,
+    "irr": 0.4578329310245227,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e0/defaults": [
+   {
+    "id": "hw",
+    "npv": 242.66063869395313,
+    "breakEven": 258.72540678266074,
+    "breakEvenM": 96.72484571268288,
+    "irr": 0.21828907988724444,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -72.75506456914364,
+    "breakEven": -30.59632775154081,
+    "breakEvenM": -33.77894570162942,
+    "irr": 0.05480285057973078,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.68993379253907,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": -0.0018482567516287518,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 259.9195711354157,
+    "breakEven": 516.4069681973585,
+    "breakEvenM": 124.95513846771156,
+    "irr": 0.25962866361096004,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 73.70098133920501,
+    "breakEven": 554.2157020989188,
+    "breakEvenM": 140.38351022271496,
+    "irr": 0.26868777487843165,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e0/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 365.13357248486193,
+    "breakEven": 422.3595990968865,
+    "breakEvenM": null,
+    "irr": 0.4907048011751779,
+    "payback": 7,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 13.470838888178275,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 69.56724338889897,
+    "breakEven": 45.87915887956613,
+    "breakEvenM": null,
+    "irr": 0.17963702666636283,
+    "payback": 10,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 1.0526774958864877,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -25.100238157390447,
+    "breakEven": -34.84092614079629,
+    "breakEvenM": null,
+    "irr": 0.048833953935335406,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 256.2552905572461,
+    "breakEven": 566.7422521221513,
+    "breakEvenM": null,
+    "irr": 0.3794637524855188,
+    "payback": 9,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 59.216851043672044,
+    "breakEven": 500.429388819857,
+    "breakEvenM": null,
+    "irr": 0.3207597191602861,
+    "payback": 9,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e0/declineExample": [
+   {
+    "id": "hw",
+    "npv": 242.66063869395313,
+    "breakEven": 258.72540678266074,
+    "breakEvenM": 96.72484571268288,
+    "irr": 0.21828907988724444,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -72.75506456914364,
+    "breakEven": -30.59632775154081,
+    "breakEvenM": -33.77894570162942,
+    "irr": 0.05480285057973078,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.68993379253907,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": -0.0018482567516287518,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 259.9195711354157,
+    "breakEven": 516.4069681973585,
+    "breakEvenM": 124.95513846771156,
+    "irr": 0.25962866361096004,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 73.70098133920501,
+    "breakEven": 554.2157020989188,
+    "breakEvenM": 140.38351022271496,
+    "irr": 0.26868777487843165,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e3/defaults": [
+   {
+    "id": "hw",
+    "npv": 328.99796859929205,
+    "breakEven": 307.23202495774336,
+    "breakEvenM": 35.36989498451473,
+    "irr": 0.2560498712762972,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 4.392957732293709,
+    "breakEven": -24.488528383197373,
+    "breakEvenM": 10.587986971251263,
+    "irr": 0.10319834894968583,
+    "payback": 13,
+    "tv": 182.85819915956756,
+    "flags": [
+     "debt"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -64.0105915174867,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.017850969616209134,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 332.1357995209357,
+    "breakEven": 633.5596658682261,
+    "breakEvenM": 40.75331477045702,
+    "irr": 0.2890504673664104,
+    "payback": 9,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 97.14421874740624,
+    "breakEven": 727.6281249827084,
+    "breakEvenM": 45.97934027681715,
+    "irr": 0.3303234405467651,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e3/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 300.92700588352,
+    "breakEven": 428.5139348808965,
+    "breakEvenM": 24.378338703859225,
+    "irr": 0.21383524164135348,
+    "payback": 10,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 13.470838888178275,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -54.342715449375405,
+    "breakEven": 44.79595307696571,
+    "breakEvenM": 7.090542580753318,
+    "irr": 0.07125400588543129,
+    "payback": 14,
+    "tv": 187.00351056184346,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 1.0526774958864877,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -64.0105915174867,
+    "breakEven": -35.590216663591946,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.017850969616209134,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 295.48312251363245,
+    "breakEven": 585.3867151837254,
+    "breakEvenM": 55.38526991914842,
+    "irr": 0.2848889634330233,
+    "payback": 10,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 77.06257647431914,
+    "breakEven": 528.0362241145085,
+    "breakEvenM": 89.91674597336801,
+    "irr": 0.319215053072487,
+    "payback": 9,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/e3/declineExample": [
+   {
+    "id": "hw",
+    "npv": 328.99796859929205,
+    "breakEven": 307.23202495774336,
+    "breakEvenM": 35.36989498451473,
+    "irr": 0.2560498712762972,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 4.392957732293709,
+    "breakEven": -24.488528383197373,
+    "breakEvenM": 10.587986971251263,
+    "irr": 0.10319834894968583,
+    "payback": 13,
+    "tv": 182.85819915956756,
+    "flags": [
+     "debt"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -64.0105915174867,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.017850969616209134,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 332.1357995209357,
+    "breakEven": 633.5596658682261,
+    "breakEvenM": 40.75331477045702,
+    "irr": 0.2890504673664104,
+    "payback": 9,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 97.14421874740624,
+    "breakEven": 727.6281249827084,
+    "breakEvenM": 45.97934027681715,
+    "irr": 0.3303234405467651,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e0/defaults": [
+   {
+    "id": "hw",
+    "npv": 298.63030703256476,
+    "breakEven": 285.48225142594544,
+    "breakEvenM": 106.72792852570555,
+    "irr": 0.2779372157987253,
+    "payback": 7,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -29.27682161570293,
+    "breakEven": -15.956925181610714,
+    "breakEvenM": -17.616758247971354,
+    "irr": 0.07842042228107948,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -70.89614664265608,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": 0.005883971136899313,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 293.1243325923669,
+    "breakEven": 535.771061082725,
+    "breakEvenM": 129.6406734368444,
+    "irr": 0.33126307850096703,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 83.87881587043033,
+    "breakEven": 585.8203013172913,
+    "breakEvenM": 148.388993576316,
+    "irr": 0.347291427318246,
+    "payback": 6,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e0/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 382.03299194762155,
+    "breakEven": 441.9076017105253,
+    "breakEvenM": null,
+    "irr": 0.5280447937924089,
+    "payback": 6,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 19.881095298434683,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 92.20044309013329,
+    "breakEven": 60.80561153834114,
+    "breakEvenM": null,
+    "irr": 0.21471924777899953,
+    "payback": 9,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 1.0393377155908707,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -25.100238157390447,
+    "breakEven": -34.84092614079629,
+    "breakEvenM": null,
+    "irr": 0.048833953935335406,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 263.98206790543395,
+    "breakEven": 583.8310356802808,
+    "breakEvenM": null,
+    "irr": 0.40464721484087296,
+    "payback": 8,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 62.33347833580542,
+    "breakEven": 526.767362952108,
+    "breakEvenM": null,
+    "irr": 0.3519908646398381,
+    "payback": 8,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e0/declineExample": [
+   {
+    "id": "hw",
+    "npv": 208.12069789468026,
+    "breakEven": 198.95758737184482,
+    "breakEvenM": 76.28775899640065,
+    "irr": 0.2457857624941383,
+    "payback": 8,
+    "tv": 354.0405349026423,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 8.496116210937506,
+    "shortfall": 0,
+    "minDSCR": 5.008147973190526,
+    "shareLeftPct": 58.82977053667142
+   },
+   {
+    "id": "dc",
+    "npv": -36.259289440051845,
+    "breakEven": -19.76262233407684,
+    "breakEvenM": -22.03870961397764,
+    "irr": 0.0727504270254381,
+    "payback": 15,
+    "tv": 170.63253962139407,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.4201938656076845,
+    "shortfall": 12.219330512738301,
+    "minDSCR": 0.5238922586910836,
+    "shareLeftPct": 63.52125272100988
+   },
+   {
+    "id": "ml",
+    "npv": -57.645456667868494,
+    "breakEven": -66.12894016370008,
+    "breakEvenM": -46.93477388065317,
+    "irr": 0.019944207641121925,
+    "payback": null,
+    "tv": 70.0812105163409,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.803199999999999,
+    "shortfall": 36.82374030382931,
+    "minDSCR": -6.755243826960375,
+    "shareLeftPct": 34.327684466177764
+   },
+   {
+    "id": "ap",
+    "npv": 293.1243325923669,
+    "breakEven": 535.771061082725,
+    "breakEvenM": 129.6406734368444,
+    "irr": 0.33126307850096703,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 83.87881587043033,
+    "breakEven": 585.8203013172913,
+    "breakEvenM": 148.388993576316,
+    "irr": 0.347291427318246,
+    "payback": 6,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e3/defaults": [
+   {
+    "id": "hw",
+    "npv": 405.9319847461373,
+    "breakEven": 338.27665395511434,
+    "breakEvenM": 38.24261415971106,
+    "irr": 0.3466925278134455,
+    "payback": 8,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -17.145214655834124,
+    "breakEven": -7.937599377701021,
+    "breakEvenM": 15.373040553469846,
+    "irr": 0.0881249406273642,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.23714448748673,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.003596378027219793,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 394.23673196005956,
+    "breakEven": 657.0612199334325,
+    "breakEvenM": 42.05895666296849,
+    "irr": 0.43597012280641534,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 113.51726524344758,
+    "breakEven": 756.7817682896506,
+    "breakEvenM": 47.59898712720282,
+    "irr": 0.5321452012159045,
+    "payback": 6,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e3/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 502.7120493698054,
+    "breakEven": 448.58523579459046,
+    "breakEvenM": 25.453063791924386,
+    "irr": 0.5472476065091703,
+    "payback": 7,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 19.881095298434683,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 118.56162575296746,
+    "breakEven": 60.05507667493746,
+    "breakEvenM": 8.703395187757579,
+    "irr": 0.21471607581414054,
+    "payback": 9,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 1.0393377155908707,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -33.2371444874867,
+    "breakEven": -35.590216663591946,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.047657803772088614,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 350.872974939151,
+    "breakEven": 603.0629256766658,
+    "breakEvenM": 56.96491200628342,
+    "irr": 0.4258290735967921,
+    "payback": 8,
+    "tv": 460.71428571428567,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 83.3536645430058,
+    "breakEven": 555.691096953372,
+    "breakEvenM": 94.21861508163566,
+    "irr": 0.3785105491887807,
+    "payback": 8,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e3/declineExample": [
+   {
+    "id": "hw",
+    "npv": 285.80498880922835,
+    "breakEven": 238.1708240076903,
+    "breakEvenM": 32.06782695474812,
+    "irr": 0.30284079845134115,
+    "payback": 8,
+    "tv": 354.0405349026423,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 8.496116210937506,
+    "shortfall": 0,
+    "minDSCR": 5.008147973190526,
+    "shareLeftPct": 58.82977053667142
+   },
+   {
+    "id": "dc",
+    "npv": -26.35795367511605,
+    "breakEven": -12.202756331072251,
+    "breakEvenM": 14.719962547737218,
+    "irr": 0.08141996406118357,
+    "payback": 15,
+    "tv": 170.63253962139407,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.4201938656076845,
+    "shortfall": 12.219330512738301,
+    "minDSCR": 0.5238922586910836,
+    "shareLeftPct": 63.52125272100988
+   },
+   {
+    "id": "ml",
+    "npv": -65.35598196523904,
+    "breakEven": -65.35598196523902,
+    "breakEvenM": 2.0358491508176773,
+    "irr": 0.019097412680366355,
+    "payback": null,
+    "tv": 70.0812105163409,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.803199999999999,
+    "shortfall": 36.82374030382931,
+    "minDSCR": -6.755243826960375,
+    "shareLeftPct": 34.327684466177764
+   },
+   {
+    "id": "ap",
+    "npv": 394.23673196005956,
+    "breakEven": 657.0612199334325,
+    "breakEvenM": 42.05895666296849,
+    "irr": 0.43597012280641534,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 113.51726524344758,
+    "breakEven": 756.7817682896506,
+    "breakEvenM": 47.59898712720282,
+    "irr": 0.5321452012159045,
+    "payback": 6,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e0/defaults": [
+   {
+    "id": "hw",
+    "npv": 270.64978579902095,
+    "breakEven": 285.48225142594544,
+    "breakEvenM": 106.72792852570555,
+    "irr": 0.23551601824848312,
+    "payback": 8,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -45.89555543926225,
+    "breakEven": -15.956925181610714,
+    "breakEvenM": -17.616758247971354,
+    "irr": 0.06859593500495464,
+    "payback": 15,
+    "tv": 182.85819915956756,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -83.68993379253907,
+    "breakEven": -81.32968858554212,
+    "breakEvenM": -55.4145116001125,
+    "irr": -0.0018482567516287518,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 270.51381038344266,
+    "breakEven": 535.771061082725,
+    "breakEvenM": 129.6406734368444,
+    "irr": 0.27233288946363554,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 78.22618531819927,
+    "breakEven": 585.8203013172913,
+    "breakEvenM": 148.388993576316,
+    "irr": 0.28993813641118715,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e0/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 382.03299194762155,
+    "breakEven": 441.9076017105253,
+    "breakEvenM": null,
+    "irr": 0.5280447937924089,
+    "payback": 6,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 19.881095298434683,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 92.20044309013329,
+    "breakEven": 60.80561153834114,
+    "breakEvenM": null,
+    "irr": 0.21471924777899953,
+    "payback": 9,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 1.0393377155908707,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -25.100238157390447,
+    "breakEven": -34.84092614079629,
+    "breakEvenM": null,
+    "irr": 0.048833953935335406,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 263.98206790543395,
+    "breakEven": 583.8310356802808,
+    "breakEvenM": null,
+    "irr": 0.40464721484087296,
+    "payback": 8,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 62.33347833580542,
+    "breakEven": 526.767362952108,
+    "breakEvenM": null,
+    "irr": 0.3519908646398381,
+    "payback": 8,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e0/declineExample": [
+   {
+    "id": "hw",
+    "npv": 180.83968969197508,
+    "breakEven": 198.95758737184482,
+    "breakEvenM": 76.28775899640065,
+    "irr": 0.2063505874803141,
+    "payback": 9,
+    "tv": 354.0405349026423,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 8.496116210937506,
+    "shortfall": 0,
+    "minDSCR": 5.008147973190526,
+    "shareLeftPct": 58.82977053667142
+   },
+   {
+    "id": "dc",
+    "npv": -52.71183592537558,
+    "breakEven": -19.76262233407684,
+    "breakEvenM": -22.03870961397764,
+    "irr": 0.06319830642491964,
+    "payback": 15,
+    "tv": 170.63253962139407,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.4201938656076845,
+    "shortfall": 12.219330512738301,
+    "minDSCR": 0.5238922586910836,
+    "shareLeftPct": 63.52125272100988
+   },
+   {
+    "id": "ml",
+    "npv": -69.92749233175618,
+    "breakEven": -66.12894016370008,
+    "breakEvenM": -46.93477388065317,
+    "irr": 0.011177357366218943,
+    "payback": null,
+    "tv": 70.0812105163409,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.803199999999999,
+    "shortfall": 36.82374030382931,
+    "minDSCR": -6.755243826960375,
+    "shareLeftPct": 34.327684466177764
+   },
+   {
+    "id": "ap",
+    "npv": 270.51381038344266,
+    "breakEven": 535.771061082725,
+    "breakEvenM": 129.6406734368444,
+    "irr": 0.27233288946363554,
+    "payback": 8,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 78.22618531819927,
+    "breakEven": 585.8203013172913,
+    "breakEvenM": 148.388993576316,
+    "irr": 0.28993813641118715,
+    "payback": 7,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e3/defaults": [
+   {
+    "id": "hw",
+    "npv": 366.2515233961373,
+    "breakEven": 338.27665395511434,
+    "breakEvenM": 38.24261415971106,
+    "irr": 0.2854271415289976,
+    "payback": 9,
+    "tv": 493.38540905250227,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": 40.14296438416586,
+    "breakEven": -7.937599377701021,
+    "breakEvenM": 15.373040553469846,
+    "irr": 0.1349024787440115,
+    "payback": 12,
+    "tv": 182.85819915956756,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -64.0105915174867,
+    "breakEven": -83.23714448748669,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.017850969616209134,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 346.2367319600596,
+    "breakEven": 657.0612199334325,
+    "breakEvenM": 42.05895666296849,
+    "irr": 0.31095498942429944,
+    "payback": 9,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 101.51726524344758,
+    "breakEven": 756.7817682896506,
+    "breakEvenM": 47.59898712720282,
+    "irr": 0.36243304363982987,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e3/leadLagBuildLater": [
+   {
+    "id": "hw",
+    "npv": 323.42013318845306,
+    "breakEven": 448.58523579459046,
+    "breakEvenM": 25.453063791924386,
+    "irr": 0.22529751514913954,
+    "payback": 9,
+    "tv": 498.45964073185894,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 19.881095298434683,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npv": -24.217926647032456,
+    "breakEven": 60.05507667493746,
+    "breakEvenM": 8.703395187757579,
+    "irr": 0.08624499397281216,
+    "payback": 11,
+    "tv": 187.00351056184346,
+    "flags": [],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 1.0393377155908707,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npv": -64.0105915174867,
+    "breakEven": -35.590216663591946,
+    "breakEvenM": -1.4768935624610058,
+    "irr": 0.017850969616209134,
+    "payback": null,
+    "tv": 70.29800038931214,
+    "flags": [
+     "life",
+     "debt"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 5.3067105084242865,
+    "minDSCR": -6.092662011470898,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npv": 305.7674631640705,
+    "breakEven": 603.0629256766658,
+    "breakEvenM": 56.96491200628342,
+    "irr": 0.2988135321603641,
+    "payback": 10,
+    "tv": 460.71428571428567,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 81.21080740014867,
+    "breakEven": 555.691096953372,
+    "breakEvenM": 94.21861508163566,
+    "irr": 0.35256188141991573,
+    "payback": 9,
+    "tv": 119.36181102811491,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/e3/declineExample": [
+   {
+    "id": "hw",
+    "npv": 258.6143262365701,
+    "breakEven": 238.1708240076903,
+    "breakEvenM": 32.06782695474812,
+    "irr": 0.2605196042461332,
+    "payback": 9,
+    "tv": 354.0405349026423,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 8.496116210937506,
+    "shortfall": 0,
+    "minDSCR": 5.008147973190526,
+    "shareLeftPct": 58.82977053667142
+   },
+   {
+    "id": "dc",
+    "npv": 33.87416921087358,
+    "breakEven": -12.202756331072251,
+    "breakEvenM": 14.719962547737218,
+    "irr": 0.13037535471577966,
+    "payback": 12,
+    "tv": 170.63253962139407,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 4.4201938656076845,
+    "shortfall": 12.219330512738301,
+    "minDSCR": 0.5238922586910836,
+    "shareLeftPct": 63.52125272100988
+   },
+   {
+    "id": "ml",
+    "npv": -37.726967339511724,
+    "breakEven": -65.35598196523902,
+    "breakEvenM": 2.0358491508176773,
+    "irr": 0.04477377227357093,
+    "payback": null,
+    "tv": 70.0812105163409,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 4.803199999999999,
+    "shortfall": 36.82374030382931,
+    "minDSCR": -6.755243826960375,
+    "shareLeftPct": 34.327684466177764
+   },
+   {
+    "id": "ap",
+    "npv": 346.2367319600596,
+    "breakEven": 657.0612199334325,
+    "breakEvenM": 42.05895666296849,
+    "irr": 0.31095498942429944,
+    "payback": 9,
+    "tv": 468.69473889553797,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npv": 101.51726524344758,
+    "breakEven": 756.7817682896506,
+    "breakEvenM": 47.59898712720282,
+    "irr": 0.36243304363982987,
+    "payback": 8,
+    "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ]
+ }
+}

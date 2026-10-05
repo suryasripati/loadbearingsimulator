@@ -81,6 +81,12 @@ function syncDriverLabels(){
     ? '<b>Forward cash multiple.</b> You pay the multiple times the layer’s operating cash in year '+(G.entry+1)+' (before sustaining spend), at year '+G.entry+'. Build capex from year '+G.entry+' on is paid at cost.'
     : '<b>Replacement-cost premium.</b> You pay build capex already spent before year '+G.entry+', marked up by the premium, at year '+G.entry+'. Build capex from then on is also paid at the premium. At entry year 0 this is the v0.1 model.';
 }
+// Slider and phase-input ranges come from the shared definitions in defaults.js (also used by the snapshot validator).
+const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv'};
+function applyRanges(){
+  for(const id in SLIDERS){ const r = GLOBAL_RANGES[SLIDERS[id]], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
+  ['ph1','ph2'].forEach((id,i) => { const r = PHASE_RANGES[i], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; });
+}
 function syncDriverInputs(){
   $('g_speed').value = G.speed; $('g_mid').value = G.mid; $('g_pool').value = G.pool;
   $('g_prem').value = G.premium; $('g_mult').value = G.mult; $('g_entry').value = G.entry;
@@ -127,21 +133,22 @@ function adoptChart(){
 
 /* ---------- inputs tables ---------- */
 // [key, label, min, max, step, phase index or undefined]
+const LR = (k) => LAYER_RANGES[k];
 const COLS = [
-  ['evidence','Demand evidence (1-5)',1,5,1],
-  ['share','Share of pool, % at start',0,100,1],
-  ['offset','Timing offset, years (− leads, + lags)',-5,5,0.5],
-  ['steepness','Curve steepness (1 = same as demand)',0.25,4,0.25],
-  ['capex','Build capex, $B',1,2000,5],
-  ['buildStart','Build starts, year',0,H-1,1],
-  ['buildYears','Build years',1,10,1],
-  ['unitCostDecline','Unit-cost decline, % a year (vintage only)',-10,50,0.5],
-  ['passThrough','Pass-through to prices, 0\u20131 (vintage only; no view, placeholder, unsourced)',0,1,0.05],
-  ['life','Asset life, years',1,40,1],
-  ['debt','Debt, % of build',0,100,5],
-  ['alloc','My allocation',0,1000,1]
-];
-const PCOLS = [0,1,2].map(p => ['driftP','Share drift, % a year',-20,20,0.5,p]).concat([0,1,2].map(p => ['marginP','Cash margin, %',0,90,1,p]));
+  ['evidence','Demand evidence (1-5)'],
+  ['share','Share of pool, % at start'],
+  ['offset','Timing offset, years (\u2212 leads, + lags)'],
+  ['steepness','Curve steepness (1 = same as demand)'],
+  ['capex','Build capex, $B'],
+  ['buildStart','Build starts, year'],
+  ['buildYears','Build years'],
+  ['unitCostDecline','Unit-cost decline, % a year (vintage only)'],
+  ['passThrough','Pass-through to prices, 0\u20131 (vintage only; no view, placeholder, unsourced)'],
+  ['life','Asset life, years'],
+  ['debt','Debt, % of build'],
+  ['alloc','My allocation']
+].map(c => c.concat(LR(c[0])));
+const PCOLS = [0,1,2].map(p => ['driftP','Share drift, % a year'].concat(LR('driftP'), [p])).concat([0,1,2].map(p => ['marginP','Cash margin, %'].concat(LR('marginP'), [p])));
 const getV = (L, c) => c[5]===undefined ? L[c[0]] : L[c[0]][c[5]];
 function cellInput(L, i, c){
   return '<td><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
@@ -215,7 +222,7 @@ function refreshInputsFromState(){
 function onPhaseBounds(){
   let a = Math.round(parseFloat($('ph1').value)), b = Math.round(parseFloat($('ph2').value));
   if(!isFinite(a) || !isFinite(b)) return;
-  a = clamp(a, 1, H-1); b = clamp(b, a+1, H);
+  a = clamp(a, PHASE_RANGES[0][0], PHASE_RANGES[0][1]); b = clamp(b, Math.max(a+1, PHASE_RANGES[1][0]), PHASE_RANGES[1][1]);
   G.phases = [a, b];
   buildPhaseTable(); update();
 }
@@ -536,7 +543,209 @@ function bind(){
     syncDriverInputs(); buildInputs(); update();
   });
 }
+/* ---------- snapshots ---------- */
+// Separate storage key from the settings. Snapshots keep allocations in this browser; exports leave them out unless
+// the box is ticked. Every piece of user text is written with textContent or .value, never as HTML.
+const SNAP_KEY = 'load-bearing-snapshots-v1';
+let snapStore = { snapshots: [], draftKill: snapBlankKill() };
+let snapOpen = -1;
+function el(tag, props, kids){
+  const e = document.createElement(tag);
+  if(props) for(const k in props){ if(k==='text') e.textContent = props[k]; else if(k==='cls') e.className = props[k]; else e.setAttribute(k, props[k]); }
+  (kids || []).forEach(c => { if(c !== null && c !== undefined) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+function snapLoad(){
+  let raw = null;
+  try{ raw = localStorage.getItem(SNAP_KEY); }catch(e){ $('snapErr').textContent = 'This browser blocks local storage, so snapshots cannot be kept here. Export them to keep a copy.'; return; }
+  if(!raw) return;
+  try{
+    const o = JSON.parse(raw);
+    // Stored data goes through the same strict check as an import (fresh objects, whitelisted fields only).
+    const list = o && Array.isArray(o.snapshots) ? o.snapshots.slice(0, SNAP_MAX_COUNT) : [];
+    const r = importSnapshotsText(JSON.stringify({ format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: list }));
+    if(r.ok) snapStore.snapshots = r.snapshots; else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
+    if(Array.isArray(o.draftKill) && o.draftKill.length === layers.length) snapStore.draftKill = o.draftKill.map((k,i) => snapCleanKill(k, i));
+  }catch(e){ $('snapErr').textContent = 'Saved snapshots could not be read and were ignored.'; }
+}
+function snapSaveStore(){
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify(snapStore)); return true; }
+  catch(e){ $('snapErr').textContent = 'This browser would not store the snapshots (storage full or blocked).'; return false; }
+}
+function snapCleanKill(k, i){
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  return { id: layers[i].id, text: str(k && k.text, 2000), metric: str(k && k.metric, 120),
+    direction: ['above','below'].indexOf(k && k.direction) >= 0 ? k.direction : '',
+    threshold: k && typeof k.threshold === 'number' && isFinite(k.threshold) ? k.threshold : null,
+    reviewBy: k && /^\d{4}-\d{2}-\d{2}$/.test(k.reviewBy) ? k.reviewBy : '',
+    status: ['yes','no','unknown'].indexOf(k && k.status) >= 0 ? k.status : '' };
+}
+function snapBuildKillTable(){
+  const t = $('killTable'); t.textContent = '';
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise this layer','Metric','Direction','Threshold','Review by'].map((h,i) => el('th', {cls: i<2 ? 'l' : ''}, [h])))]));
+  const tb = el('tbody');
+  layers.forEach((L,i) => {
+    const k = snapStore.draftKill[i];
+    const inp = (type, field, attrs) => { const e = el('input', Object.assign({type, cls:'txt', 'aria-label': L.name+': '+field}, attrs||{})); e.value = k[field]===null ? '' : k[field]; e.addEventListener('input', () => snapDraft(i, field, e)); return e; };
+    const dir = el('select', {cls:'txt', 'aria-label': L.name+': direction'}, [['','—'],['above','above'],['below','below']].map(o => { const op = el('option', {value:o[0]}, [o[1]]); return op; }));
+    dir.value = k.direction; dir.addEventListener('change', () => snapDraft(i, 'direction', dir));
+    tb.appendChild(el('tr', null, [el('td', {text: L.name}), el('td', {cls:'l'}, [inp('text','text',{maxlength:'2000'})]), el('td', null, [inp('text','metric',{maxlength:'120'})]),
+      el('td', null, [dir]), el('td', null, [inp('number','threshold',{step:'any'})]), el('td', null, [inp('date','reviewBy')])]));
+  });
+  t.appendChild(tb);
+}
+function snapDraft(i, field, e){
+  const k = snapStore.draftKill[i];
+  if(field==='threshold'){ const v = parseFloat(e.value); k.threshold = isFinite(v) ? v : null; }
+  else if(field==='reviewBy') k.reviewBy = /^\d{4}-\d{2}-\d{2}$/.test(e.value) ? e.value : '';
+  else k[field] = String(e.value).slice(0, field==='metric' ? 120 : 2000);
+  snapSaveStore();
+}
+const snapWhen = (iso) => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); };
+const snapOverdueCount = (s, today) => s.kill.filter(k => snapIsOverdue(k, today)).length;
+function snapRenderList(){
+  const t = $('snapList'); t.textContent = '';
+  const list = snapStore.snapshots, today = snapTodayLocal();
+  if(!list.length){ t.appendChild(el('tbody', null, [el('tr', null, [el('td', {cls:'l muted', text:'No snapshots yet.'})])])); }
+  else {
+    t.appendChild(el('thead', null, [el('tr', null, ['Name','Saved','Model version','Kill criteria',''].map((h,i) => el('th', {cls: i<2||i===3 ? 'l' : ''}, [h])))]));
+    const tb = el('tbody');
+    list.forEach((s,i) => {
+      const set = s.kill.filter(k => k.text || k.metric || k.reviewBy).length, od = snapOverdueCount(s, today);
+      const crit = el('td', {cls:'l'}, [set ? set+' of '+s.kill.length+' layers' : 'none', od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null]);
+      const review = el('button', {'data-snap':'review', 'aria-expanded': String(snapOpen===i)}, [snapOpen===i ? 'Close' : 'Review']);
+      review.addEventListener('click', () => { snapOpen = snapOpen===i ? -1 : i; snapRenderList(); });
+      const del = el('button', {cls:'reset', 'data-snap':'delete'}, ['Delete']);
+      del.addEventListener('click', () => snapDelete(i));
+      tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.name}), el('td', {cls:'l', text: snapWhen(s.created)}),
+        el('td', {text: 'v'+s.modelVersion + (s.modelVersion!==MODEL_VERSION ? ' (current v'+MODEL_VERSION+')' : '')}), crit, el('td', null, [review, ' ', del])]));
+    });
+    t.appendChild(tb);
+  }
+  snapRenderReview(); snapFillSelects();
+}
+function snapRenderReview(){
+  const box = $('snapReview'); box.textContent = '';
+  const s = snapStore.snapshots[snapOpen]; if(!s) return;
+  const today = snapTodayLocal();
+  box.appendChild(el('div', {cls:'snapbox'}, [el('h3', {text: 'Review: ' + s.name}), el('p', {cls:'muted', text: 'Saved ' + snapWhen(s.created) + ' under model version ' + s.modelVersion + '.'}),
+    el('p', {cls:'pre', text: s.note || '(no note)'})]));
+  const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?'].map((h,i) => el('th', {cls: i<3 ? 'l' : ''}, [h])))]));
+  const tb = el('tbody');
+  s.kill.forEach((k,i) => {
+    const trig = k.metric ? k.metric + (k.direction ? ' ' + k.direction + ' ' : ' ') + (k.threshold===null ? '' : k.threshold) : '—';
+    const st = el('select', {cls:'txt', 'aria-label': layers[i].name+': criterion met?'}, [['','not reviewed'],['yes','yes'],['no','no'],['unknown','unknown']].map(o => el('option', {value:o[0]}, [o[1]])));
+    st.value = k.status;
+    st.addEventListener('change', () => { k.status = st.value; snapSaveStore(); snapRenderList(); });
+    tb.appendChild(el('tr', null, [el('td', {text: layers[i].name}), el('td', {cls:'l pre', text: k.text || '—'}), el('td', {cls:'l', text: trig}),
+      el('td', null, [k.reviewBy || '—', snapIsOverdue(k, today) ? el('span', {cls:'badge', text:'overdue'}) : null]), el('td', null, [st])]));
+  });
+  t.appendChild(tb);
+  box.firstChild.appendChild(el('div', {cls:'scroll'}, [t]));
+}
+function snapFillSelects(){
+  ['cmpA','cmpB'].forEach((id, j) => {
+    const sel = $(id), prev = sel.value; sel.textContent = '';
+    sel.appendChild(el('option', {value:'current'}, ['Current settings']));
+    snapStore.snapshots.forEach((s,i) => sel.appendChild(el('option', {value:String(i)}, [s.name + ' (' + snapWhen(s.created) + ')'])));
+    const n = snapStore.snapshots.length;
+    sel.value = [...sel.options].some(o => o.value===prev) ? prev : (j===0 ? (n ? String(n-1) : 'current') : 'current');
+  });
+}
+function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill }); }
+function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots[+v]; }
+function snapSaveNew(){
+  const name = $('snapName').value.trim();
+  if(!name){ $('snapMsg').textContent = 'Give the snapshot a name first.'; $('snapName').focus(); return; }
+  if(snapStore.snapshots.length >= SNAP_MAX_COUNT){ $('snapMsg').textContent = 'This browser holds at most ' + SNAP_MAX_COUNT + ' snapshots. Export and delete some first.'; return; }
+  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill }));
+  if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
+  else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
+  snapRenderList();
+}
+function snapDelete(i){
+  const s = snapStore.snapshots[i]; if(!s) return;
+  if(!window.confirm('Delete the snapshot “' + s.name + '”? This cannot be undone.')) return;
+  snapStore.snapshots.splice(i, 1);
+  if(snapOpen===i) snapOpen = -1; else if(snapOpen>i) snapOpen--;
+  snapSaveStore(); snapRenderList(); $('snapCompare').textContent = '';
+}
+function snapFmt(v){ return typeof v === 'number' ? String(Math.round(v*1000)/1000) : String(v); }
+function snapRenderCompare(){
+  const a = snapPick($('cmpA').value), b = snapPick($('cmpB').value), box = $('snapCompare');
+  box.textContent = '';
+  if(!a || !b) return;
+  const c = compareSnapshots(a, b), wrap = el('div', {cls:'snapbox'});
+  wrap.appendChild(el('h3', {text: 'Before: ' + a.name + '   →   After: ' + b.name}));
+  if(c.versionMismatch) wrap.appendChild(el('p', {cls:'notice', text: 'Model version differs (before v' + c.versions.before + ', after v' + c.versions.after + ', current v' + c.versions.current + '). Both sides are recomputed under the current model; the outputs stored at the time are shown alongside.'}));
+  // Inputs that changed
+  if(!c.inputs.length) wrap.appendChild(el('p', {text: 'No inputs changed.'}));
+  else {
+    const t = el('table', {'aria-label':'Changed inputs'});
+    t.appendChild(el('thead', null, [el('tr', null, [el('th', {cls:'l', text:'Input that changed'}), el('th', {text:'Before'}), el('th', {text:'After'})])]));
+    const tb = el('tbody');
+    c.inputs.forEach(d => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: snapLabel(d.path)}), el('td', {text: snapFmt(d.before)}), el('td', {text: snapFmt(d.after)})])));
+    t.appendChild(tb); wrap.appendChild(el('div', {cls:'scroll'}, [t]));
+  }
+  // Verdicts, present value and fragility per layer
+  const heads = ['Layer','Verdict before','Verdict after','Present value before','Present value after','Fragility before','Fragility after'].concat(c.versionMismatch ? ['Stored at the time (before → after)'] : []);
+  const t = el('table', {'aria-label':'Verdicts before and after'});
+  t.appendChild(el('thead', null, [el('tr', null, heads.map((h,i) => el('th', {cls: i<3||i===7 ? 'l' : '', text: h})))]));
+  const tb = el('tbody');
+  const frag = (f) => f.n + ' of ' + f.m + ' (' + f.worse + ' worse, ' + f.better + ' better' + (f.mixed ? ', ' + f.mixed + ' mixed' : '') + ')';
+  c.layers.forEach(x => {
+    const cells = [el('td', {text: x.name}), el('td', {cls:'l', text: x.before.bin}),
+      el('td', {cls:'l'}, [x.after.bin, x.verdictChanged ? el('span', {cls:'badge', text:'changed'}) : null]),
+      el('td', {text: money(x.before.npv)}), el('td', {text: money(x.after.npv) + ' (' + (x.npvChange>=0?'+':'') + money(x.npvChange) + ')'}),
+      el('td', {text: frag(x.before.fragility)}), el('td', {text: frag(x.after.fragility)})];
+    if(c.versionMismatch) cells.push(el('td', {cls:'l', text: money(x.storedBefore.npv) + ' ' + x.storedBefore.bin + ' → ' + money(x.storedAfter.npv) + ' ' + x.storedAfter.bin}));
+    tb.appendChild(el('tr', null, cells));
+  });
+  t.appendChild(tb); wrap.appendChild(el('div', {cls:'scroll'}, [t]));
+  const changed = c.layers.filter(x => x.verdictChanged).map(x => x.name);
+  wrap.appendChild(el('p', {cls:'legend', text: changed.length ? 'Verdict changed for: ' + changed.join(', ') + '.' : 'No verdict changed.'}));
+  box.appendChild(wrap);
+}
+function snapLabel(path){
+  const m = /^layer (\w+)\.(.+)$/.exec(path);
+  if(m){ const L = layers.find(x => x.id===m[1]); return (L ? L.name : m[1]) + ': ' + m[2]; }
+  return path.replace(/^settings\./, 'Setting: ');
+}
+function snapExport(){
+  const include = $('expAlloc').checked;
+  const text = exportSnapshotsText(snapStore.snapshots, { includeAllocations: include });
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: 'load-bearing-' + snapTodayLocal() + (include ? '-with-allocations' : '') + '.snapshot.json' });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(e){} }, 1000);
+  $('snapErr').textContent = 'Exported ' + snapStore.snapshots.length + ' snapshot' + (snapStore.snapshots.length===1?'':'s') + (include ? ', including allocations.' : ', without allocations.');
+}
+function snapImportFile(file){
+  const err = $('snapErr');
+  if(!file) return;
+  if(file.size > SNAP_MAX_BYTES){ err.textContent = 'Import rejected: the file is larger than 1 MB.'; return Promise.resolve(); }
+  return file.text().then(text => {
+    const r = importSnapshotsText(text);
+    if(!r.ok){ err.textContent = 'Import rejected: ' + r.error; return; }
+    if(snapStore.snapshots.length + r.snapshots.length > SNAP_MAX_COUNT){ err.textContent = 'Import rejected: this browser holds at most ' + SNAP_MAX_COUNT + ' snapshots, and this file would take it to ' + (snapStore.snapshots.length + r.snapshots.length) + '.'; return; }
+    const before = snapStore.snapshots;
+    snapStore.snapshots = before.concat(r.snapshots);
+    if(!snapSaveStore()){ snapStore.snapshots = before; err.textContent = 'Import not kept: the browser refused to store more. Export and delete some snapshots, then try again.'; return; }
+    snapRenderList();
+    err.textContent = 'Imported ' + r.snapshots.length + ' snapshot' + (r.snapshots.length===1?'':'s') + '.';
+  }, () => { err.textContent = 'Import rejected: the file could not be read.'; });
+}
+function snapInit(){
+  snapLoad(); snapBuildKillTable(); snapRenderList();
+  $('snapSave').addEventListener('click', snapSaveNew);
+  $('cmpGo').addEventListener('click', snapRenderCompare);
+  $('snapExport').addEventListener('click', snapExport);
+  $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });
+  $('snapImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; snapImportFile(f); e.target.value = ''; });
+}
 function init(){
-  load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults();
+  applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
 }
 init();

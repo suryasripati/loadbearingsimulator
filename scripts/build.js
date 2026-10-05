@@ -9,8 +9,8 @@ const template = read('src/template.html');
 const strip = (src) => src.split('\n').filter((l) => !l.includes('module.exports')).join('\n');
 // The model is a CommonJS module for tests; strip the export line so it runs as a plain script in the page.
 const model = strip(read('src/model.js'));
-// Defaults are a CommonJS module too (tests read them); they run in the page just ahead of the UI code.
-const app = strip(read('src/defaults.js')) + '\n' + read('src/app.js');
+// Defaults and snapshots are CommonJS modules too (tests read them); they run in the page just ahead of the UI code.
+const app = strip(read('src/defaults.js')) + '\n' + strip(read('src/snapshots.js')) + '\n' + read('src/app.js');
 
 if (!template.includes('/*MODEL*/') || !template.includes('/*APP*/')) {
   throw new Error('template.html must contain /*MODEL*/ and /*APP*/ placeholders');

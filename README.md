@@ -25,6 +25,7 @@ A scenario tool for one question: if a technology works the way you expect, whic
 - Verdict fragility panel: for each layer, which tested shocks change its verdict and "flips under N of M shocks". The shocks are a display choice: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage mode pass-through 0 and 1 and unit-cost decline ±3 points. Each count is split into worse and better (a display rule: worse means present value turns negative or a fragility flag is added; better is the reverse; mixed means both), and each layer's present value sits next to its verdict so a layer near zero is visible.
 - Low-share warning: in any mode, the page warns when a layer's share falls below 5% of its starting level by year 15 at the current inputs. The 5% is a display threshold, not evidence.
 - Caveat: pass-through lowers a layer's revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; that is not modelled.
+- Snapshots: save a named, dated view of every input and result with a note and per-layer kill criteria ("what would make me revise this layer", an optional trigger and review-by date; overdue criteria are flagged). Compare two snapshots, or a snapshot with the current settings, to see which inputs moved and which verdicts changed. Snapshots stay in your browser (at most 50). Export and import as `.snapshot.json` files; allocations are left out of exports unless you tick the box. Import is strict and says exactly what it rejected.
 - Outputs: a quadrant chart, a scorecard with three fragility flags (life, debt, tail), cumulative cash, a sensitivity chart, a heatmap of value by entry year and price with the break-even line, and your allocation across slow, base and fast adoption.
 
 It does not say whether there is a bubble. It shows which assumptions carry the answer.
@@ -42,7 +43,8 @@ Supported Node versions for tests and build: 22.22.2 or later on 22.x, 24.15.0 o
 ```
 npm install     # once, installs jsdom for the smoke test
 npm run build   # assembles docs/index.html from src/
-npm test        # model tests plus a UI smoke test against docs/index.html
+npm test        # model, snapshot and model-version tests, plus a UI smoke test against docs/index.html
+npm run fixture:model   # only after bumping MODEL_VERSION: regenerates the canonical model fixture
 ```
 
 The smoke test checks that the page loads without errors, that every way of choosing a layer works, the default verdicts, the lead/lag note and Reset. jsdom has no layout, so label overlap and clipping on the charts still need a check in a real browser.
@@ -55,7 +57,7 @@ Settings, then Pages, then deploy from the `main` branch and `/docs` folder.
 
 ## Privacy
 
-Your allocation split is personal. Settings are kept in your browser's local storage. If you make the repo public, keep personal snapshot exports out of it (the `.gitignore` already excludes `exports/` and `*.snapshot.json`).
+Your allocation split is personal. Settings and snapshots are kept in your browser's local storage and are not sent anywhere. Snapshot exports leave allocations out unless you tick the box. This repository is public: never commit snapshot exports (the `.gitignore` already excludes `exports/` and `*.snapshot.json`).
 
 ## Roadmap
 

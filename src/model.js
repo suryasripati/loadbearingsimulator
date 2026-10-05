@@ -1,4 +1,7 @@
 const H = 15;
+// Model version stamp, saved with every snapshot. Bump it whenever the maths changes (any change that can move an
+// output for the same inputs), so comparisons can flag snapshots made under older maths.
+const MODEL_VERSION = 1;
 const AMORT = 8;
 // Below this share of the layer's peak operating cash, a forward multiple on year e+1 is reported as
 // "not meaningful". This is a display cut-off for near-zero denominators, not an evidence-based threshold.
@@ -309,4 +312,4 @@ function verdictFragility(L, G){
   return { bin: base.bin, npv: base.npv, flags: base.flags, results, flips, n: flips.length, m: results.length,
     worse: count('worse'), better: count('better'), mixed: count('mixed') };
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, verdictFragility, lowShareLayers, LOW_SHARE_PCT, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
+if (typeof module !== 'undefined') module.exports = { MODEL_VERSION, flipDirection, runLayer, verdictFragility, lowShareLayers, LOW_SHARE_PCT, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };

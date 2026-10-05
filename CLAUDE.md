@@ -15,16 +15,20 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 ## Commands
 
 - `npm test` runs `node --test`: model tests and a jsdom UI smoke test against `docs/index.html` (build first). Node 22.22+ or 24.15+. jsdom is a pinned devDependency (test only; the page stays dependency-free).
+- `npm run fixture:model` regenerates `test/fixtures/model_outputs.json` (only after bumping `MODEL_VERSION`)
 - `npm run build` writes `docs/index.html` (self-contained; serve from GitHub Pages using the `/docs` folder)
 
 ## Layout
 
 - `src/model.js` pure model, no DOM. CommonJS export for tests; the build script strips the export line so the same file runs in the page.
 - `src/defaults.js` default inputs (neutral) and the opt-in lead/lag example. CommonJS export for tests; stripped and prepended to the UI code by the build.
+- `src/snapshots.js` snapshot capture, export, strict import, diff and compare. Pure, no DOM; CommonJS export for tests; stripped and inlined after the defaults.
 - `src/app.js` UI logic, vanilla JS, no framework.
 - `src/template.html` markup and CSS with `/*MODEL*/` and `/*APP*/` placeholders.
 - `scripts/build.js` assembles the page.
 - `test/model.test.js` property tests plus a regression test against `test/fixtures/v0_1_defaults.json`.
+- `test/snapshots.test.js` snapshot round trip, export privacy, import hardening, diff, compare, overdue.
+- `test/model-version.test.js` runs the model on a canonical input set (`test/support/canonical.js`) and compares with `test/fixtures/model_outputs.json`; fails if outputs change without a `MODEL_VERSION` bump.
 - `test/smoke.test.js` jsdom smoke test of the built page (selection, default verdicts, lead/lag note, Reset). No layout: label overlap and clipping need a real-browser check.
 
 Keep the model pure and testable. Keep the page dependency-free. If a library is ever needed, ask first.
@@ -59,6 +63,8 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 10. Default build start is year 0 for every layer, so defaults reproduce v0.1. As in decision 9, any feature that shows a verdict (examples, profiles, preset delays) must be opt-in and labelled as a placeholder.
 11. Capacity limit, an unsourced assumption: capacity share K(t) = cumulative build spend through t / total build capex, and revenue uses min(layer adoption, K(t)). Capacity is assumed to scale linearly with spend. It is a first-order version of the utilisation backlog item, to be refined by vintage capex in Drop 2. It must stay labelled as an assumption in the UI, README and here. Any uncapped version lives only in tests or scratch code.
 12. This repo is public. Do not commit personal views, private notes or allocation data. Calibration material may be committed only with a citation to a public source; anything uncited goes in `calibration/private/`, which is gitignored.
+13. Snapshots stay in the browser (local storage). Snapshot exports are files the user downloads and are never committed; `exports/` and `*.snapshot.json` are gitignored, and export file names end in `.snapshot.json`. Allocations are excluded from exports unless the user ticks the box. The public-repo rule (12) applies.
+14. Bump `MODEL_VERSION` in `src/model.js` whenever the maths changes (any change that can move an output for the same inputs), then run `npm run fixture:model`. Snapshots record the version; comparisons across versions recompute under the current model and show the stored outputs alongside. Bump `SNAP_SCHEMA_VERSION` in `src/snapshots.js` when the snapshot file format changes.
 
 ## Build start and capacity limit (built after drop 1)
 - Per-layer `buildStart` (whole years, default 0, clamped so buildStart + buildYears <= 15). Build spend runs over buildStart to buildEnd - 1, where buildEnd = buildStart + buildYears; sustaining spend, debt repayment, payback and the DSCR check all start at buildEnd.
@@ -122,7 +128,14 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Replace the sustaining-spend shortcut. Keep it behind a legacy switch for regression.
 - New metric: stranded value, meaning cohorts whose remaining life outlasts their economic value.
 
-### 2. Snapshots (as-of dimension)
+### Built: step 2, snapshots
+- A snapshot holds `schemaVersion`, name, created (ISO UTC), note, `modelVersion`, every input (settings, capex mode, entry definition, phases, all layer fields) and per-layer outputs (present value, verdict, flags, break-even premium and multiple, fragility summary), plus kill criteria per layer: free text, optional metric / direction / threshold, optional review-by date and a status (blank, yes, no, unknown) set at review time. Nothing is fetched.
+- Overdue: review-by date earlier than today's local calendar date and status still blank. Dates compare as YYYY-MM-DD local calendar dates, so time zones cannot flip the badge.
+- Storage: key `load-bearing-snapshots-v1`, separate from settings; every read and write in try/catch; at most 50 snapshots, with a message when full or when the browser refuses to store.
+- Import: size checked before parsing (1 MB), then JSON parse, then rejection of any `__proto__`, `constructor` or `prototype` key at any depth, then a strict structural check (exact fields, types, ranges from `LAYER_RANGES` / `GLOBAL_RANGES` / `PHASE_RANGES`, text lengths, ISO UTC dates). Each snapshot is rebuilt from whitelisted fields into fresh objects; nothing parsed is merged into existing objects. Errors say which field and why, and whether the schema or the model version is incompatible (a model version newer than the page is rejected). Free text is always rendered with textContent.
+- Compare: two snapshots or a snapshot against current settings. Lists only changed inputs, each layer's verdict and present value before and after, and the fragility summary. If model versions differ, says so and recomputes both under the current model, showing stored outputs alongside.
+
+### 2. Snapshots (as-of dimension), original spec
 - Save named, dated snapshots: inputs, outputs, a free-text note, and a kill-criteria field ("what observation would make me revise this layer"), optionally with a metric, threshold and direction. No automatic data fetching.
 - Storage: browser local storage for quick work, plus JSON export and import so snapshots move between devices. Git history is the shared record.
 - Compare two snapshots: input diff plus verdict changes per layer.

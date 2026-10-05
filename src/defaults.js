@@ -24,4 +24,16 @@ const LEAD_LAG_EXAMPLE = [-1, -2, 0, 1, 2];
 const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 // passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
 // customers as lower prices, used only in Vintage mode.
-if (typeof module !== 'undefined') module.exports = { DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };
+// Input ranges [min, max, step], shared by the page's inputs and the snapshot import validator.
+const LAYER_RANGES = {
+  evidence:[1,5,1], share:[0,100,1], offset:[-5,5,0.5], steepness:[0.25,4,0.25], capex:[1,2000,5],
+  buildStart:[0,14,1], buildYears:[1,10,1], unitCostDecline:[-10,50,0.5], passThrough:[0,1,0.05],
+  life:[1,40,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
+};
+const GLOBAL_RANGES = {
+  pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,12,0.5]
+};
+// Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
+const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
+if (typeof module !== 'undefined') module.exports = { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };
