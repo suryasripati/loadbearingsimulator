@@ -125,7 +125,9 @@ test('calibration page: uncited judgement shows its label and banner, locks, and
   assert.equal($(doc, 'uncitedBanner').hidden, false);
   assert.ok(/Uncited judgement in 1 input\. .*must stay out of the repository/.test($(doc, 'uncitedBanner').textContent));
   click(win, $(doc, 'epLock'));
-  assert.equal($(doc, 'edSave').textContent, 'Locked.', 'locking is allowed');
+  assert.equal($(doc, 'lockAck').hidden, false, 'asks before locking');
+  click(win, $(doc, 'lockAnyway'));
+  assert.equal($(doc, 'edSave').textContent, 'Locked, with your acknowledgement recorded.', 'locking is allowed');
   click(win, $(doc, 'epExport'));
   assert.equal(names[0], 'synthetic-test-v1.private.json');
   assert.ok(/1 input is uncited, so this file is named \.private\.json\. Keep it out of the repository/.test($(doc, 'edSave').textContent));
@@ -146,6 +148,40 @@ test('calibration page: uncited judgement shows its label and banner, locks, and
   assert.equal(tag.hidden, false);
   idsInput.value = 'SYN-IN'; idsInput.dispatchEvent(new win.Event('input', { bubbles: true }));
   assert.equal(tag.hidden, true);
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('calibration page: lock confirmation shows the counts, Cancel leaves it unlocked, Lock anyway records it, and the comparison shows the counts', async () => {
+  const { doc, win, errors } = load();
+  const ep = JSON.parse(JSON.stringify(syntheticEpisode()));
+  const recs = C.allRecords(ep), total = recs.length;
+  recs.slice(0, 2).forEach(([, r]) => { r.basis = 'judgement'; r.rationale = 'synthetic'; r.sourceIds = []; });
+  await importText(win, doc, JSON.stringify(ep));
+  click(win, doc.querySelector('#epList [data-ep="open"]'));
+  click(win, $(doc, 'epLock'));
+  assert.equal($(doc, 'lockAck').hidden, false);
+  assert.equal($(doc, 'lockAckText').textContent, 'Before locking: 2 inputs are uncited. Lock anyway, or cancel and add sources?');
+  click(win, $(doc, 'lockCancel'));
+  assert.equal($(doc, 'lockAck').hidden, true);
+  assert.equal($(doc, 'edSave').textContent, 'Not locked.');
+  assert.equal(JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes[0].lock, null);
+  click(win, $(doc, 'epLock'));
+  click(win, $(doc, 'lockAnyway'));
+  const lock = JSON.parse(win.localStorage.getItem('load-bearing-calibration-v1')).episodes[0].lock;
+  assert.equal(lock.acknowledged, true);
+  assert.deepEqual(lock.counts, { judgement: 2, uncited: 2, total });
+  assert.ok(/Locked with an acknowledgement: 2 of \d+ inputs judgement, 2 uncited\./.test($(doc, 'edStatus').textContent));
+  const cells = [...doc.querySelectorAll('#cmpTable [data-basis]')];
+  assert.equal(cells.length, 3, 'beside every result');
+  cells.forEach(c => assert.equal(c.textContent, 'judgement 2 of ' + total + ' (' + Math.round(200 / total) + '%), uncited 2; acknowledged at lock'));
+  // A fully sourced episode locks with no question and shows zero counts.
+  await importText(win, doc, JSON.stringify(syntheticEpisode()));
+  click(win, doc.querySelectorAll('#epList [data-ep="open"]')[1]);
+  click(win, $(doc, 'epLock'));
+  assert.equal($(doc, 'lockAck').hidden, true);
+  assert.equal($(doc, 'edSave').textContent, 'Locked.');
+  assert.ok([...doc.querySelectorAll('#cmpTable [data-basis]')].some(c => c.textContent === 'judgement 0 of ' + total + ' (0%), uncited 0'));
   assert.deepEqual(errors, []);
   win.close();
 });

@@ -158,6 +158,11 @@ a{color:var(--copper)}
     <p class="status" id="edStatus"></p>
     <p class="legend" id="edSave" role="status"></p>
     <div class="seg"><button id="epLock">Lock inputs</button><button id="epVersion" hidden>Make a new version</button><button id="epExport">Export (.json)</button></div>
+    <div class="notice" id="lockAck" role="alertdialog" aria-labelledby="lockAckText" hidden>
+      <p id="lockAckText" style="margin:0 0 8px"></p>
+      <p class="legend" style="margin:0 0 8px">Locking is not blocked. If you lock anyway, this acknowledgement and the counts are recorded in the lock and covered by its hash.</p>
+      <div class="seg"><button id="lockAnyway">Lock anyway</button><button id="lockCancel" class="reset">Cancel</button></div>
+    </div>
     <fieldset id="edInputs">
       <h3>Episode and rules</h3>
       <div class="twocol">
@@ -952,7 +957,9 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
 // docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
 
 const EP_FORMAT = 'load-bearing-simulator-episode';
-const EP_SCHEMA_VERSION = 1;
+const EP_SCHEMA_VERSION = 2;
+// Schema 1 locks had no basis counts or acknowledgement; they still import and validate under hash scheme 1.
+const EP_SCHEMA_READABLE = [1, 2];
 const EP_MAX_LAYERS = 8;
 const EP_MAX_SOURCES = 100;
 const EP_MAX_IDS = 20;
@@ -1016,11 +1023,14 @@ function calCanonical(v){
   return JSON.stringify(v);
 }
 // The lock covers everything decided before the outcome is looked at: inputs, sources, rules and the scorer's
-// statement. Outcomes are not covered (they are entered after locking).
-function episodeHash(ep){
-  return calSha256(calCanonical({ id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
+// statement, and (hash scheme 2) the basis counts and the acknowledgement given at lock time. Outcomes are not
+// covered (they are entered after locking). Without lockMeta this is hash scheme 1, used by schema 1 locks.
+function episodeHash(ep, lockMeta){
+  const body = { id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
     asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer,
-    settings: ep.settings, layers: ep.layers, sources: ep.sources }));
+    settings: ep.settings, layers: ep.layers, sources: ep.sources };
+  if (lockMeta) { body.counts = lockMeta.counts; body.acknowledged = lockMeta.acknowledged; }
+  return calSha256(calCanonical(body));
 }
 
 /* ---------- Template ---------- */
@@ -1099,7 +1109,8 @@ function validateEpisode(raw){
   const where = 'Episode';
   if (!d.snapIsObj(raw)) d.snapErr(where, 'expected an object');
   if (raw.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
-  if (raw.schemaVersion !== EP_SCHEMA_VERSION) d.snapErr(where, 'schema version ' + String(raw.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema version ' + EP_SCHEMA_VERSION + ')');
+  if (EP_SCHEMA_READABLE.indexOf(raw.schemaVersion) < 0) d.snapErr(where, 'schema version ' + String(raw.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema versions ' + EP_SCHEMA_READABLE.join(' and ') + ')');
+  const schema = raw.schemaVersion;
   d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
     'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], where);
   const ep = { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION };
@@ -1159,15 +1170,32 @@ function validateEpisode(raw){
     });
     return { name: d.snapStr(L.name, EP_TEXT.name, w + ' name'), inputs };
   });
-  // Lock
+  // Lock. Schema 2: { hash, lockedAt, modelVersion, hashScheme, counts, acknowledged }. A schema 1 lock (first three
+  // fields only) is carried over as hash scheme 1 with counts and acknowledgement not recorded (null).
   if (raw.lock === null) ep.lock = null;
   else {
-    d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], where + ' lock');
-    ep.lock = { hash: d.snapStr(raw.lock.hash, 64, where + ' lock hash'), lockedAt: d.snapDate(raw.lock.lockedAt, where + ' lock lockedAt'),
-      modelVersion: d.snapNum(raw.lock.modelVersion, [1, 100000], where + ' lock modelVersion', true) };
+    const w = where + ' lock';
+    if (schema === 1) d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], w);
+    else d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion', 'hashScheme', 'counts', 'acknowledged'], [], w);
+    ep.lock = { hash: d.snapStr(raw.lock.hash, 64, w + ' hash'), lockedAt: d.snapDate(raw.lock.lockedAt, w + ' lockedAt'),
+      modelVersion: d.snapNum(raw.lock.modelVersion, [1, 100000], w + ' modelVersion', true),
+      hashScheme: schema === 1 ? 1 : d.snapNum(raw.lock.hashScheme, [1, 2], w + ' hashScheme', true), counts: null, acknowledged: null };
     const missing = lockProblems(ep);
-    if (missing.length) d.snapErr(where + ' lock', 'locked episode is incomplete: ' + missing[0]);
-    if (episodeHash(ep) !== ep.lock.hash) d.snapErr(where + ' lock', 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
+    if (missing.length) d.snapErr(w, 'locked episode is incomplete: ' + missing[0]);
+    if (ep.lock.hashScheme === 1) {
+      if (schema !== 1 && (raw.lock.counts !== null || raw.lock.acknowledged !== null)) d.snapErr(w, 'a scheme 1 lock has no counts or acknowledgement');
+      if (episodeHash(ep) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
+    } else {
+      d.snapKeys(raw.lock.counts, ['judgement', 'uncited', 'total'], [], w + ' counts');
+      const c = {}; ['judgement', 'uncited', 'total'].forEach(k => { c[k] = d.snapNum(raw.lock.counts[k], [0, 10000], w + ' counts ' + k, true); });
+      if (typeof raw.lock.acknowledged !== 'boolean') d.snapErr(w + ' acknowledged', 'expected true or false');
+      ep.lock.counts = c; ep.lock.acknowledged = raw.lock.acknowledged;
+      const need = lockAcknowledgement(ep);
+      if (c.judgement !== need.judgement || c.uncited !== need.uncited || c.total !== need.total) d.snapErr(w + ' counts', 'the recorded counts do not match the inputs');
+      if (need.needed && !ep.lock.acknowledged) d.snapErr(w, 'this episode needed an acknowledgement at lock time and has none');
+      if (!need.needed && ep.lock.acknowledged) d.snapErr(w, 'an acknowledgement is recorded but none was needed');
+      if (episodeHash(ep, { counts: c, acknowledged: ep.lock.acknowledged }) !== ep.lock.hash) d.snapErr(w, 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
+    }
   }
   // Outcomes (only after locking)
   if (!Array.isArray(raw.outcomes)) d.snapErr(where + ' outcomes', 'expected a list');
@@ -1258,18 +1286,36 @@ function exportEpisodeFile(ep){
 }
 
 /* ---------- Workflow: draft, locked, outcomes ---------- */
-function lockEpisode(ep, now){
+// Lock-time acknowledgement: needed when more than half the filled inputs are judgement or any input is uncited.
+// The page asks "Lock anyway" or "Cancel"; locking is never blocked, but the answer and the counts are recorded in
+// the lock and covered by the hash.
+function lockAcknowledgement(ep){
+  const js = judgementShare(ep), uncited = unsourcedInputs(ep).length;
+  const needed = js.heavy || uncited > 0;
+  const parts = [];
+  if (js.heavy) parts.push(js.judgement + ' of ' + js.total + ' filled inputs are judgement');
+  if (uncited) parts.push(uncited + ' input' + (uncited === 1 ? ' is' : 's are') + ' uncited');
+  return { needed, judgement: js.judgement, uncited, total: js.total,
+    message: needed ? 'Before locking: ' + parts.join(', and ') + '. Lock anyway, or cancel and add sources?' : '' };
+}
+function lockEpisode(ep, now, opts){
   if (ep.lock) throw new Error('This episode is already locked. Make a new version to change its inputs.');
   const problems = lockProblems(ep);
   if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
   const copy = validateEpisode(JSON.parse(JSON.stringify(ep)));
-  copy.lock = { hash: episodeHash(copy), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION };
+  const ack = lockAcknowledgement(copy);
+  if (ack.needed && !(opts && opts.acknowledged)) throw new Error('Needs acknowledgement: ' + ack.message);
+  const meta = { counts: { judgement: ack.judgement, uncited: ack.uncited, total: ack.total }, acknowledged: ack.needed };
+  copy.schemaVersion = EP_SCHEMA_VERSION;
+  copy.lock = { hash: episodeHash(copy, meta), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION,
+    hashScheme: 2, counts: meta.counts, acknowledged: meta.acknowledged };
   return validateEpisode(copy);
 }
 // A new version keeps the inputs as a starting point, links to the old lock and starts as an unlocked draft.
 function newEpisodeVersion(ep){
   if (!ep.lock) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
   const copy = JSON.parse(JSON.stringify(ep));
+  copy.schemaVersion = EP_SCHEMA_VERSION;
   copy.version = ep.version + 1; copy.previousHash = ep.lock.hash; copy.lock = null; copy.outcomes = [];
   return validateEpisode(copy);
 }
@@ -1307,6 +1353,13 @@ function episodeModelInputs(ep){
   });
   return { G, layers };
 }
+// Judgement share and uncited count from the lock record. Scheme 1 locks did not record them; their inputs cannot
+// change after locking, so the counts are computed from the inputs and marked as such.
+function basisFromLock(ep){
+  const c = ep.lock.counts || (() => { const a = lockAcknowledgement(ep); return { judgement: a.judgement, uncited: a.uncited, total: a.total }; })();
+  return { judgement: c.judgement, uncited: c.uncited, total: c.total, share: c.total ? c.judgement / c.total : 0,
+    acknowledged: ep.lock.acknowledged, recorded: !!ep.lock.counts };
+}
 // Model verdict (current model) against the recorded outcome, per layer of every locked episode. No hit rate.
 function compareEpisodes(episodes){
   const d = calDeps(), rows = [];
@@ -1315,6 +1368,7 @@ function compareEpisodes(episodes){
     m.layers.forEach((L, i) => {
       const o = d.runLayer(L, m.G), outcome = ep.outcomes.find(x => x.layer === i) || null;
       rows.push({ episode: ep.name, episodeId: ep.id, version: ep.version, layer: L.name, verdict: o.bin, npv: o.npv,
+        basis: basisFromLock(ep),
         modelSaysEarnsCost: o.npv >= 0, outcome: outcome ? outcome.result : null,
         lockedModelVersion: ep.lock.modelVersion, versionDiffers: ep.lock.modelVersion !== d.MODEL_VERSION });
     });
@@ -1388,7 +1442,7 @@ function calDelete(i){
   if (calSel === i) { calSel = -1; calWork = null; $c('editor').hidden = true; } else if (calSel > i) calSel--;
   calRenderAll();
 }
-function calOpen(i){ calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
+function calOpen(i){ $c('lockAck').hidden = true; calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
 
 /* ---------- Editing ---------- */
 // Every edit updates the working copy, then validates it strictly. A valid copy is saved; an invalid one is kept on
@@ -1488,6 +1542,7 @@ function calRenderStatus(){
   $c('edStatus').textContent = !w.lock
     ? 'Draft, version ' + w.version + (w.previousHash ? ' (replaces a locked version with hash ' + w.previousHash.slice(0, 12) + '…)' : '') + '. Inputs can still change.'
     : 'Locked on ' + new Date(w.lock.lockedAt).toLocaleString() + ' under model version ' + w.lock.modelVersion + '. Input hash ' + w.lock.hash.slice(0, 16) + '…. Inputs cannot change; make a new version to revise them.'
+      + (w.lock.acknowledged ? ' Locked with an acknowledgement: ' + w.lock.counts.judgement + ' of ' + w.lock.counts.total + ' inputs judgement, ' + w.lock.counts.uncited + ' uncited.' : '')
       + (w.lock.modelVersion !== MODEL_VERSION ? ' This page uses model version ' + MODEL_VERSION + ', so verdicts are recomputed under it.' : '');
 }
 function calRenderBanners(){
@@ -1505,14 +1560,27 @@ function calRenderBanners(){
 }
 
 /* ---------- Lock, version, outcomes ---------- */
+// Lock: if the episode is judgement-heavy or has uncited inputs, ask first ("Lock anyway" or "Cancel").
 function calLock(){
+  let ep;
   try {
-    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))));
+    ep = validateEpisode(JSON.parse(JSON.stringify(calWork)));
+    const problems = lockProblems(ep);
+    if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
+  } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; return; }
+  const ack = lockAcknowledgement(ep);
+  if (ack.needed) { $c('lockAckText').textContent = ack.message; $c('lockAck').hidden = false; $c('lockAnyway').focus(); return; }
+  calDoLock(false);
+}
+function calDoLock(acknowledged){
+  $c('lockAck').hidden = true;
+  try {
+    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))), undefined, { acknowledged: acknowledged });
     const before = calStore.episodes[calSel];
     calStore.episodes[calSel] = ep;
     if (!calPersist()) { calStore.episodes[calSel] = before; return; }
     calWork = JSON.parse(JSON.stringify(ep));
-    $c('edSave').textContent = 'Locked.';
+    $c('edSave').textContent = ep.lock.acknowledged ? 'Locked, with your acknowledgement recorded.' : 'Locked.';
   } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; }
   calRenderAll();
 }
@@ -1561,16 +1629,21 @@ function calRenderOutcomes(){
 }
 
 /* ---------- Comparison ---------- */
+function calBasisText(b){
+  return 'judgement ' + b.judgement + ' of ' + b.total + ' (' + Math.round(b.share * 100) + '%), uncited ' + b.uncited
+    + (b.recorded ? (b.acknowledged ? '; acknowledged at lock' : '') : '; computed from inputs (locked before counts were recorded)');
+}
 function calRenderCompare(){
   const c = compareEpisodes(calStore.episodes);
   $c('cmpCounts').textContent = 'Episodes: ' + c.episodes + '. Layers: ' + c.layers + '. ' + c.caveat;
   const t = $c('cmpTable'); t.textContent = '';
   if (!c.rows.length) { t.appendChild(cel('tbody', null, [cel('tr', null, [cel('td', { cls: 'l muted', text: 'No locked episodes yet.' })])])); return; }
-  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 ? 'l' : '', text: h })))]));
+  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Inputs at lock: judgement share, uncited', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 || i === 6 ? 'l' : '', text: h })))]));
   const tb = cel('tbody');
   c.rows.forEach(r => tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: r.episode + ' (v' + r.version + ')' }), cel('td', { cls: 'l', text: r.layer }),
     cel('td', { cls: 'l', text: r.verdict }), cel('td', { text: (r.npv < 0 ? '−' : '') + '$' + Math.abs(r.npv).toFixed(0) + 'B' }),
     cel('td', { text: r.modelSaysEarnsCost ? 'yes' : 'no' }), cel('td', { cls: 'l', text: r.outcome || 'not recorded' }),
+    cel('td', { cls: 'l', 'data-basis': '', text: calBasisText(r.basis) }),
     cel('td', { text: r.versionDiffers ? 'locked under v' + r.lockedModelVersion + ', recomputed under v' + c.currentModelVersion : 'v' + r.lockedModelVersion })])));
   t.appendChild(tb);
 }
@@ -1607,6 +1680,8 @@ function calInit(){
   $c('epNew').addEventListener('click', calNew);
   $c('epImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; calImportFile(f); e.target.value = ''; });
   $c('epLock').addEventListener('click', calLock);
+  $c('lockAnyway').addEventListener('click', () => calDoLock(true));
+  $c('lockCancel').addEventListener('click', () => { $c('lockAck').hidden = true; $c('edSave').textContent = 'Not locked.'; });
   $c('epVersion').addEventListener('click', calNewVersion);
   $c('epExport').addEventListener('click', calExport);
   $c('srcAdd').addEventListener('click', () => { calWork.sources.push({ id: 'S' + (calWork.sources.length + 1), citation: '', publicationDate: '', kind: 'contemporary', truncatedAt: null }); calCommit(); calRenderEditor(); });

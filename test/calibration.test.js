@@ -32,7 +32,7 @@ test('hash: SHA-256 matches the standard and Node crypto', () => {
 test('schema validation: format, version, fields, types, ranges and dates', () => {
   const ep = syntheticEpisode();
   rejects({ ...ep, format: 'x' }, /not a Load Bearing Simulator episode file/);
-  rejects({ ...ep, schemaVersion: 2 }, /schema version 2 is not compatible/);
+  rejects({ ...ep, schemaVersion: 3 }, /schema version 3 is not compatible \(this page reads schema versions 1 and 2\)/);
   rejects({ ...ep, extra: 1 }, /unknown field "extra"/);
   rejects({ ...ep, id: 'Has Spaces' }, /id: use lower-case letters/);
   rejects({ ...ep, asOfDate: '1845-02-30' }, /not a real calendar date/);
@@ -87,7 +87,10 @@ test('lock: needs the as-of rule, horizon, measure and scorer statement; stores 
   }
   const ep = locked();
   assert.match(ep.lock.hash, /^[0-9a-f]{64}$/);
-  assert.equal(ep.lock.hash, C.episodeHash(ep));
+  assert.equal(ep.lock.hash, C.episodeHash(ep, { counts: ep.lock.counts, acknowledged: ep.lock.acknowledged }));
+  assert.equal(ep.lock.hashScheme, 2);
+  assert.deepEqual(ep.lock.counts, { judgement: 0, uncited: 0, total: C.allRecords(ep).length });
+  assert.equal(ep.lock.acknowledged, false, 'no acknowledgement needed for a fully sourced episode');
   assert.equal(ep.lock.lockedAt, NOW.toISOString());
   assert.equal(ep.lock.modelVersion, M.MODEL_VERSION);
   assert.throws(() => C.lockEpisode(ep), /already locked/);
@@ -254,8 +257,9 @@ test('uncited judgement: labelled, counted toward judgement-heavy, allowed when 
   assert.equal(C.isUncitedJudgement(C.allRecords(v)[n][1]), false, 'a cited sourced input is not labelled');
   const js = C.judgementShare(v);
   assert.equal(js.uncited, n); assert.equal(js.judgement, n); assert.equal(js.heavy, true);
-  const L = C.lockEpisode(v, NOW);
-  assert.ok(L.lock, 'locking is allowed with uncited judgement');
+  assert.throws(() => C.lockEpisode(v, NOW), /Needs acknowledgement/);
+  const L = C.lockEpisode(v, NOW, { acknowledged: true });
+  assert.ok(L.lock, 'locking is allowed with uncited judgement, after acknowledging');
   const f = C.exportEpisodeFile(L);
   assert.equal(f.isPrivate, true);
   assert.equal(f.filename, 'synthetic-test-v1.private.json');
@@ -272,4 +276,76 @@ test('gitignore keeps private calibration files out of the repository', () => {
   const gi = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8').split('\n').map(l => l.trim());
   assert.ok(gi.includes('*.private.json'));
   assert.ok(gi.includes('calibration/private/'));
+});
+
+/* ---------- Lock-time acknowledgement ---------- */
+const judgementEp = (n, cited) => {
+  const ep = clone(syntheticEpisode());
+  C.allRecords(ep).slice(0, n).forEach(([, r]) => { r.basis = 'judgement'; r.rationale = 'synthetic'; if (!cited) r.sourceIds = []; });
+  return C.validateEpisode(ep);
+};
+
+test('acknowledgement: needed when more than half the filled inputs are judgement or any input is uncited, with the counts in the message', () => {
+  const total = C.allRecords(syntheticEpisode()).length, half = Math.floor(total / 2);
+  assert.equal(C.lockAcknowledgement(syntheticEpisode()).needed, false);
+  assert.equal(C.lockAcknowledgement(judgementEp(half, true)).needed, false, 'half or less, all cited: not needed');
+  const heavy = C.lockAcknowledgement(judgementEp(half + 1, true));
+  assert.equal(heavy.needed, true);
+  assert.equal(heavy.message, 'Before locking: ' + (half + 1) + ' of ' + total + ' filled inputs are judgement. Lock anyway, or cancel and add sources?');
+  const one = C.lockAcknowledgement(judgementEp(1, false));
+  assert.equal(one.needed, true, 'a single uncited input is enough');
+  assert.equal(one.message, 'Before locking: 1 input is uncited. Lock anyway, or cancel and add sources?');
+  const both = C.lockAcknowledgement(judgementEp(half + 2, false));
+  assert.match(both.message, new RegExp((half + 2) + ' of ' + total + ' filled inputs are judgement, and ' + (half + 2) + ' inputs are uncited'));
+});
+
+test('acknowledgement: never blocks locking, and is recorded with the counts in the lock and the hash', () => {
+  const ep = judgementEp(3, false), total = C.allRecords(ep).length;
+  assert.throws(() => C.lockEpisode(ep, NOW), /Needs acknowledgement: Before locking: 3 inputs are uncited/);
+  const L = C.lockEpisode(ep, NOW, { acknowledged: true });
+  assert.equal(L.lock.acknowledged, true);
+  assert.deepEqual(L.lock.counts, { judgement: 3, uncited: 3, total });
+  assert.equal(L.lock.hash, C.episodeHash(L, { counts: L.lock.counts, acknowledged: true }));
+  assert.equal(C.importEpisodeText(C.exportEpisodeText(L)).ok, true, 'round trip');
+  // An acknowledgement passed when none is needed is not recorded as one.
+  assert.equal(C.lockEpisode(syntheticEpisode(), NOW, { acknowledged: true }).lock.acknowledged, false);
+});
+
+test('acknowledgement: the hash changes when the counts or the acknowledgement change; tampering is rejected', () => {
+  const L = C.lockEpisode(judgementEp(3, false), NOW, { acknowledged: true });
+  const base = C.episodeHash(L, { counts: L.lock.counts, acknowledged: true });
+  for (const k of ['judgement', 'uncited', 'total']) assert.notEqual(C.episodeHash(L, { counts: { ...L.lock.counts, [k]: L.lock.counts[k] + 1 }, acknowledged: true }), base, k);
+  assert.notEqual(C.episodeHash(L, { counts: L.lock.counts, acknowledged: false }), base);
+  assert.notEqual(C.episodeHash(L), base, 'scheme 1 (no counts) differs from scheme 2');
+  const t1 = clone(L); t1.lock.counts.uncited = 0; rejects(t1, /the recorded counts do not match the inputs/);
+  const t2 = clone(L); t2.lock.acknowledged = false; rejects(t2, /needed an acknowledgement at lock time and has none/);
+  const t3 = clone(C.lockEpisode(syntheticEpisode(), NOW)); t3.lock.acknowledged = true; rejects(t3, /an acknowledgement is recorded but none was needed/);
+  // Changing an input's basis after locking changes the counts and breaks the lock.
+  const t4 = clone(L); C.allRecords(t4)[0][1].sourceIds = ['SYN-IN']; rejects(t4, /recorded counts do not match|do not match the lock hash/);
+});
+
+test('schema 1 locks still import, validate under hash scheme 1, and stay tamper-evident', () => {
+  const ep = clone(syntheticEpisode());
+  ep.schemaVersion = 1;
+  ep.lock = { hash: C.episodeHash(ep), lockedAt: NOW.toISOString(), modelVersion: M.MODEL_VERSION }; // scheme 1: no counts
+  const r = C.importEpisodeText(JSON.stringify(ep));
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.episode.schemaVersion, 2);
+  assert.deepEqual([r.episode.lock.hashScheme, r.episode.lock.counts, r.episode.lock.acknowledged], [1, null, null]);
+  assert.equal(C.importEpisodeText(C.exportEpisodeText(r.episode)).ok, true, 'still valid after re-saving as schema 2');
+  const t = clone(ep); t.layers[0].inputs.share.value = 26;
+  assert.match(C.importEpisodeText(JSON.stringify(t)).error, /do not match the lock hash/);
+  const b = C.basisFromLock(r.episode);
+  assert.equal(b.recorded, false, 'counts computed, not recorded');
+  assert.deepEqual([b.judgement, b.uncited], [0, 0]);
+});
+
+test('comparison: every row carries the judgement share and uncited count from the lock record', () => {
+  const L = C.lockEpisode(judgementEp(4, false), NOW, { acknowledged: true });
+  const c = C.compareEpisodes([L]);
+  c.rows.forEach(r => {
+    assert.deepEqual([r.basis.judgement, r.basis.uncited, r.basis.total], [L.lock.counts.judgement, L.lock.counts.uncited, L.lock.counts.total]);
+    assert.equal(r.basis.share, L.lock.counts.judgement / L.lock.counts.total);
+    assert.equal(r.basis.acknowledged, true); assert.equal(r.basis.recorded, true);
+  });
 });

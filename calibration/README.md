@@ -15,15 +15,15 @@ A structure for scoring past episodes with the Load Bearing Simulator using only
 ## Workflow
 
 1. **Draft.** Fill in the as-of date and rules, the sources, the settings and the layers. You can save a draft with gaps. Uncited judgement is allowed and labelled.
-2. **Lock.** Locking needs every field below that is marked "needed before locking". It stores a SHA-256 hash of everything decided before looking at the outcome, the time, and the model version. After locking, inputs cannot change: making a **new version** copies the inputs into an unlocked draft that links to the old hash. If a locked file's inputs are edited by hand, the hash no longer matches and import rejects the file.
+2. **Lock.** Locking needs every field below that is marked "needed before locking". If more than half of the filled inputs are judgement, or any input is uncited, the page first says how many and offers **Lock anyway** or **Cancel**. Locking is never blocked. The lock stores the judgement and uncited counts, whether you acknowledged them, a SHA-256 hash of everything decided before looking at the outcome (counts and acknowledgement included), the time, and the model version. After locking, inputs cannot change: making a **new version** copies the inputs into an unlocked draft that links to the old hash. If a locked file's inputs are edited by hand, the hash no longer matches and import rejects the file.
 3. **Outcomes.** Only after locking, record per layer whether capital earned its cost: `yes`, `no`, `unknown` or `contested`, with a note. `yes` and `no` need a source. `contested` needs at least one citation on each side.
 
-## Schema (`template.episode.json`, schema version 1)
+## Schema (`template.episode.json`, schema version 2)
 
 | Field | Type | Notes |
 |---|---|---|
 | `format` | `"load-bearing-simulator-episode"` | fixed |
-| `schemaVersion` | `1` | file format version |
+| `schemaVersion` | `2` | file format version. Schema 1 files still import; a schema 1 lock is kept as hash scheme 1 and its counts are not recorded |
 | `id` | text | lower-case letters, digits, hyphens; needed before locking |
 | `name` | text, up to 120 characters | needed before locking |
 | `version` | whole number from 1 | rises by one with each new version after a lock |
@@ -36,7 +36,7 @@ A structure for scoring past episodes with the Load Bearing Simulator using only
 | `settings` | object | `pool`, `speed`, `mid`, `disc`, `rd`, `tv`, `premium`, `entry`, `mult`, `phase2Start`, `phase3Start` (each an input record) plus `entryDef` (`"A"`, `"B"` or `null`) and `capexModel` (`"sustaining"`, `"vintage"` or `null`) |
 | `layers` | list of 1 to 8 | `{ name, inputs }`. Names are free text and specific to the episode. `inputs` has `evidence`, `share`, `offset`, `steepness`, `capex`, `buildStart`, `buildYears`, `unitCostDecline`, `passThrough`, `life`, `debt` (input records) and `driftP`, `marginP` (three input records each, one per phase) |
 | `sources` | list of up to 100 | see below |
-| `lock` | `null` or `{ hash, lockedAt, modelVersion }` | set by the page when locking |
+| `lock` | `null` or `{ hash, lockedAt, modelVersion, hashScheme, counts, acknowledged }` | set by the page when locking. `counts` is `{ judgement, uncited, total }` over the filled inputs; `acknowledged` is `true` when the lock-time question was needed and answered "Lock anyway", otherwise `false`. Both are covered by the hash (`hashScheme` 2). A lock carried over from schema 1 has `hashScheme` 1 with `counts` and `acknowledged` set to `null` |
 | `outcomes` | list | empty until locked; see below |
 
 ### Input record
@@ -61,6 +61,10 @@ A structure for scoring past episodes with the Load Bearing Simulator using only
 ### Outcome
 
 `{ "layer": index from 0, "result": "yes" | "no" | "unknown" | "contested", "sourceIds": [ ... ], "note": text, "contested": null or { "forSourceIds": [ ... ], "againstSourceIds": [ ... ] } }`
+
+## Comparison
+
+For every locked episode, each layer shows the model's verdict under the current model, the recorded outcome, and, beside every result, the judgement share and uncited count from the lock record. For a schema 1 lock, those counts are computed from its inputs and labelled as computed. The page always shows the number of episodes and layers and the sentence "Too few cases for statistical conclusions." It never shows a hit rate.
 
 ## Import and export
 

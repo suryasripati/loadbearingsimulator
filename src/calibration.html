@@ -51,6 +51,11 @@ a{color:var(--copper)}
     <p class="status" id="edStatus"></p>
     <p class="legend" id="edSave" role="status"></p>
     <div class="seg"><button id="epLock">Lock inputs</button><button id="epVersion" hidden>Make a new version</button><button id="epExport">Export (.json)</button></div>
+    <div class="notice" id="lockAck" role="alertdialog" aria-labelledby="lockAckText" hidden>
+      <p id="lockAckText" style="margin:0 0 8px"></p>
+      <p class="legend" style="margin:0 0 8px">Locking is not blocked. If you lock anyway, this acknowledgement and the counts are recorded in the lock and covered by its hash.</p>
+      <div class="seg"><button id="lockAnyway">Lock anyway</button><button id="lockCancel" class="reset">Cancel</button></div>
+    </div>
     <fieldset id="edInputs">
       <h3>Episode and rules</h3>
       <div class="twocol">

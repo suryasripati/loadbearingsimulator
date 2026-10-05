@@ -62,7 +62,7 @@ function calDelete(i){
   if (calSel === i) { calSel = -1; calWork = null; $c('editor').hidden = true; } else if (calSel > i) calSel--;
   calRenderAll();
 }
-function calOpen(i){ calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
+function calOpen(i){ $c('lockAck').hidden = true; calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
 
 /* ---------- Editing ---------- */
 // Every edit updates the working copy, then validates it strictly. A valid copy is saved; an invalid one is kept on
@@ -162,6 +162,7 @@ function calRenderStatus(){
   $c('edStatus').textContent = !w.lock
     ? 'Draft, version ' + w.version + (w.previousHash ? ' (replaces a locked version with hash ' + w.previousHash.slice(0, 12) + '…)' : '') + '. Inputs can still change.'
     : 'Locked on ' + new Date(w.lock.lockedAt).toLocaleString() + ' under model version ' + w.lock.modelVersion + '. Input hash ' + w.lock.hash.slice(0, 16) + '…. Inputs cannot change; make a new version to revise them.'
+      + (w.lock.acknowledged ? ' Locked with an acknowledgement: ' + w.lock.counts.judgement + ' of ' + w.lock.counts.total + ' inputs judgement, ' + w.lock.counts.uncited + ' uncited.' : '')
       + (w.lock.modelVersion !== MODEL_VERSION ? ' This page uses model version ' + MODEL_VERSION + ', so verdicts are recomputed under it.' : '');
 }
 function calRenderBanners(){
@@ -179,14 +180,27 @@ function calRenderBanners(){
 }
 
 /* ---------- Lock, version, outcomes ---------- */
+// Lock: if the episode is judgement-heavy or has uncited inputs, ask first ("Lock anyway" or "Cancel").
 function calLock(){
+  let ep;
   try {
-    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))));
+    ep = validateEpisode(JSON.parse(JSON.stringify(calWork)));
+    const problems = lockProblems(ep);
+    if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
+  } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; return; }
+  const ack = lockAcknowledgement(ep);
+  if (ack.needed) { $c('lockAckText').textContent = ack.message; $c('lockAck').hidden = false; $c('lockAnyway').focus(); return; }
+  calDoLock(false);
+}
+function calDoLock(acknowledged){
+  $c('lockAck').hidden = true;
+  try {
+    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))), undefined, { acknowledged: acknowledged });
     const before = calStore.episodes[calSel];
     calStore.episodes[calSel] = ep;
     if (!calPersist()) { calStore.episodes[calSel] = before; return; }
     calWork = JSON.parse(JSON.stringify(ep));
-    $c('edSave').textContent = 'Locked.';
+    $c('edSave').textContent = ep.lock.acknowledged ? 'Locked, with your acknowledgement recorded.' : 'Locked.';
   } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; }
   calRenderAll();
 }
@@ -235,16 +249,21 @@ function calRenderOutcomes(){
 }
 
 /* ---------- Comparison ---------- */
+function calBasisText(b){
+  return 'judgement ' + b.judgement + ' of ' + b.total + ' (' + Math.round(b.share * 100) + '%), uncited ' + b.uncited
+    + (b.recorded ? (b.acknowledged ? '; acknowledged at lock' : '') : '; computed from inputs (locked before counts were recorded)');
+}
 function calRenderCompare(){
   const c = compareEpisodes(calStore.episodes);
   $c('cmpCounts').textContent = 'Episodes: ' + c.episodes + '. Layers: ' + c.layers + '. ' + c.caveat;
   const t = $c('cmpTable'); t.textContent = '';
   if (!c.rows.length) { t.appendChild(cel('tbody', null, [cel('tr', null, [cel('td', { cls: 'l muted', text: 'No locked episodes yet.' })])])); return; }
-  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 ? 'l' : '', text: h })))]));
+  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Inputs at lock: judgement share, uncited', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 || i === 6 ? 'l' : '', text: h })))]));
   const tb = cel('tbody');
   c.rows.forEach(r => tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: r.episode + ' (v' + r.version + ')' }), cel('td', { cls: 'l', text: r.layer }),
     cel('td', { cls: 'l', text: r.verdict }), cel('td', { text: (r.npv < 0 ? '−' : '') + '$' + Math.abs(r.npv).toFixed(0) + 'B' }),
     cel('td', { text: r.modelSaysEarnsCost ? 'yes' : 'no' }), cel('td', { cls: 'l', text: r.outcome || 'not recorded' }),
+    cel('td', { cls: 'l', 'data-basis': '', text: calBasisText(r.basis) }),
     cel('td', { text: r.versionDiffers ? 'locked under v' + r.lockedModelVersion + ', recomputed under v' + c.currentModelVersion : 'v' + r.lockedModelVersion })])));
   t.appendChild(tb);
 }
@@ -281,6 +300,8 @@ function calInit(){
   $c('epNew').addEventListener('click', calNew);
   $c('epImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; calImportFile(f); e.target.value = ''; });
   $c('epLock').addEventListener('click', calLock);
+  $c('lockAnyway').addEventListener('click', () => calDoLock(true));
+  $c('lockCancel').addEventListener('click', () => { $c('lockAck').hidden = true; $c('edSave').textContent = 'Not locked.'; });
   $c('epVersion').addEventListener('click', calNewVersion);
   $c('epExport').addEventListener('click', calExport);
   $c('srcAdd').addEventListener('click', () => { calWork.sources.push({ id: 'S' + (calWork.sources.length + 1), citation: '', publicationDate: '', kind: 'contemporary', truncatedAt: null }); calCommit(); calRenderEditor(); });
