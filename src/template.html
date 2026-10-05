@@ -88,6 +88,8 @@ svg text{font-family:Arial,"Helvetica Neue",sans-serif}
 details summary{cursor:pointer;color:var(--ink);font-weight:700}
 .muted{color:var(--cap)}
 .reset{margin-left:8px;border-color:var(--hair)}
+.eff{display:block;font-size:11px;color:var(--cap);text-align:right}
+#score td.l{min-width:190px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
 #quad .dot{cursor:pointer}
@@ -163,6 +165,12 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
         <input type="range" id="g_rd" min="2" max="14" step="0.5"><small>Debt is repaid evenly over eight years after the build ends.</small></div>
       <div class="ctl"><label for="g_tv">Value beyond year 15 <output id="o_tv"></output></label>
         <input type="range" id="g_tv" min="0" max="12" step="0.5"><small>Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</small></div>
+      <h3>Capex model</h3>
+      <div class="seg" id="capexSwitch" role="group" aria-label="Capex model">
+        <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
+        <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
+      </div>
+      <p class="legend" id="capexNote" style="margin-top:0"></p>
     </div>
   </div>
 </section>
@@ -176,9 +184,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
+      <button id="ucdExample" title="Placeholder example, invented, not data: chips 10%, data centres 5%, models 20%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 10%, data centres 5%, models 20%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
@@ -193,6 +202,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <input type="number" id="ph2" min="2" max="15" step="1" style="width:56px">
     </div>
     <table id="phaseTable" aria-label="Share drift and cash margin by phase"></table>
+    <div class="legend" id="effNote" hidden><b>Effective drift</b> (Vintage cohorts): the phase drift after price erosion from cheaper capacity, (1 + drift) × (1 − pass-through × unit-cost decline) − 1. Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity.</div>
   </div>
 </section>
 
@@ -204,7 +214,9 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <span id="beLegend"></span><br>
       <b>Life flag.</b> Cash payback comes after the asset has worn out, or never arrives by year 15. The clock starts when your capital first goes in: your entry year or the build start, whichever is later.<br>
       <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
-      <b>Tail flag.</b> More than half the value arrives after year 15.
+      <b>Tail flag.</b> More than half the value arrives after year 15.<br>
+      <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
+      <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
     </div>
     <div class="notice" id="buildNote"></div>
   </div>
@@ -236,6 +248,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <ul style="margin:0;padding-left:18px">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
       <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>

@@ -88,6 +88,8 @@ svg text{font-family:Arial,"Helvetica Neue",sans-serif}
 details summary{cursor:pointer;color:var(--ink);font-weight:700}
 .muted{color:var(--cap)}
 .reset{margin-left:8px;border-color:var(--hair)}
+.eff{display:block;font-size:11px;color:var(--cap);text-align:right}
+#score td.l{min-width:190px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
 #quad .dot{cursor:pointer}
@@ -163,6 +165,12 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
         <input type="range" id="g_rd" min="2" max="14" step="0.5"><small>Debt is repaid evenly over eight years after the build ends.</small></div>
       <div class="ctl"><label for="g_tv">Value beyond year 15 <output id="o_tv"></output></label>
         <input type="range" id="g_tv" min="0" max="12" step="0.5"><small>Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</small></div>
+      <h3>Capex model</h3>
+      <div class="seg" id="capexSwitch" role="group" aria-label="Capex model">
+        <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
+        <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
+      </div>
+      <p class="legend" id="capexNote" style="margin-top:0"></p>
     </div>
   </div>
 </section>
@@ -176,9 +184,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
+      <button id="ucdExample" title="Placeholder example, invented, not data: chips 10%, data centres 5%, models 20%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 10%, data centres 5%, models 20%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
@@ -193,6 +202,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <input type="number" id="ph2" min="2" max="15" step="1" style="width:56px">
     </div>
     <table id="phaseTable" aria-label="Share drift and cash margin by phase"></table>
+    <div class="legend" id="effNote" hidden><b>Effective drift</b> (Vintage cohorts): the phase drift after price erosion from cheaper capacity, (1 + drift) × (1 − pass-through × unit-cost decline) − 1. Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity.</div>
   </div>
 </section>
 
@@ -204,7 +214,9 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <span id="beLegend"></span><br>
       <b>Life flag.</b> Cash payback comes after the asset has worn out, or never arrives by year 15. The clock starts when your capital first goes in: your entry year or the build start, whichever is later.<br>
       <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
-      <b>Tail flag.</b> More than half the value arrives after year 15.
+      <b>Tail flag.</b> More than half the value arrives after year 15.<br>
+      <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
+      <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
     </div>
     <div class="notice" id="buildNote"></div>
   </div>
@@ -236,6 +248,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <ul style="margin:0;padding-left:18px">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
       <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
@@ -278,6 +291,48 @@ function buildStartOf(L){
   const B = Math.max(1, Math.round(L.buildYears));
   return Math.max(0, Math.min(H - B, Math.round(L.buildStart || 0)));
 }
+// Vintage cohorts (opt-in). Assumptions: replacement happens on time, so capacity stays at 100% after the initial
+// build; replacement timing uses asset life rounded to whole years; debt and the Definition A entry price cover the
+// initial build only (replacement spend before the entry year is not priced).
+// Unit-cost decline lowers the owner's replacement cost. Competition passes a share of it (passThrough, 0 to 1) to
+// customers as lower prices; that erosion is routed through share drift (see passThroughFactor), so drift covers
+// other commoditisation and passThrough covers erosion caused by cheaper capacity.
+// Stranded value is a diagnostic, not a cash item: the cash effect of cheaper capacity already comes through revenue,
+// so deducting stranded value as well would double count. For each cohort in use at year t,
+// unamortised cost (spend x remaining life / life) x (1 - (1 - decline)^(t - t0)), the gap between book value and
+// what the same capacity would cost to buy now.
+// Yearly price-erosion factor from cheaper capacity, used only in Vintage mode. passThrough is the share of the
+// unit-cost decline that competition passes to customers (0 = owner keeps all the savings, 1 = customers get all).
+// Default 0.5 is a placeholder with no view behind it, unsourced.
+function passThroughFactor(L, G){
+  if (G.capexModel !== 'vintage') return 1;
+  const pt = Math.max(0, Math.min(1, L.passThrough === undefined ? 0.5 : L.passThrough));
+  return 1 - pt * (L.unitCostDecline || 0) / 100;
+}
+// Effective share drift in % a year for a given phase drift, after pass-through (equals the phase drift outside Vintage mode).
+function effectiveDrift(drift, L, G){ return ((1 + drift / 100) * passThroughFactor(L, G) - 1) * 100; }
+function vintageSchedule(L, G, build){
+  if (G.capexModel !== 'vintage') return null;
+  const d = (L.unitCostDecline || 0) / 100;
+  const life = Math.max(1, Math.round(L.life));
+  const cohorts = [];
+  for (let t = 0; t <= H; t++) if (build[t] > 0) cohorts.push({ t0: t, spend: build[t], replacement: false });
+  const repl = new Array(H + 1).fill(0);
+  for (let k = 0; k < cohorts.length; k++){
+    const c = cohorts[k], tr = c.t0 + life;
+    if (tr > H) continue;
+    const spend = c.spend * Math.pow(1 - d, life);
+    repl[tr] += spend;
+    cohorts.push({ t0: tr, spend: spend, replacement: true });
+  }
+  const stranded = new Array(H + 1).fill(0);
+  for (let t = 0; t <= H; t++) for (const c of cohorts){
+    if (t < c.t0 || t >= c.t0 + life) continue;
+    stranded[t] += c.spend * (c.t0 + life - t) / life * (1 - Math.pow(1 - d, t - c.t0));
+  }
+  return { repl, cohorts, stranded, peak: Math.max.apply(null, stranded), life,
+    normSust: L.capex * Math.pow(1 - d, H) / L.life };
+}
 function npvOf(cf, r){ let s = 0; for (let t = 0; t < cf.length; t++) s += cf[t] / Math.pow(1 + r, t); return s; }
 function irrOf(cf){
   let lo = -0.5, hi = 1.5;
@@ -300,19 +355,27 @@ function runLayer(L, G){
   const buildEnd = S + B; // first year after the build
   const years = []; for (let t = 0; t <= H; t++) years.push(t);
   const build = years.map(t => t >= S && t < buildEnd ? L.capex / B : 0);
-  const sust  = years.map(t => t >= buildEnd ? L.capex / L.life : 0);
+  // Capex model. "sustaining" (v0.1, default): after the build, sustaining spend = build capex / asset life each year.
+  // "vintage" (opt-in): each year's build spend is a cohort, replaced at end of life at the same capacity and later
+  // prices, original spend x (1 - unit-cost decline)^life. Replacement after year 15 is not charged.
+  const vin = vintageSchedule(L, G, build);
+  const sust  = vin ? vin.repl : years.map(t => t >= buildEnd ? L.capex / L.life : 0);
   // Capacity limit (assumption, unsourced): capacity scales linearly with build spend, so the layer can serve at most
   // K(t) = cumulative build spend through t / total build capex of full adoption. A first-order stand-in for the
   // utilisation backlog item, to be refined by vintage capex in Drop 2.
   let spent = 0;
   const cap = years.map(t => { spent += build[t]; return L.capex > 0 ? Math.min(1, spent / L.capex) : 1; });
   // Share compounds by the drift of the phase each year falls in. With one constant drift this is (1 + drift)^t.
+  // In Vintage mode each year also carries price erosion from cheaper capacity: (1 - passThrough x unit-cost decline).
+  const pf = passThroughFactor(L, G);
   const shareMult = [1];
-  for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100));
+  for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100) * pf);
   const rev   = years.map(t => G.pool * Math.min(layerAdoption(t, L, G), cap[t]) * (L.share / 100) * shareMult[t]);
   const ocf   = rev.map((x, t) => x * phaseVal(L.marginP, L.margin, t, bounds) / 100);
   const opsNet = years.map(t => ocf[t] - sust[t]);
-  const tv = G.tv * Math.max(0, opsNet[H]);
+  // Terminal value: v0.1 uses year-15 cash after sustaining spend. Vintage mode uses a normalised sustaining spend,
+  // capex x (1 - decline)^15 / life, instead of the lumpy year-15 replacement; at decline 0 this equals capex / life.
+  const tv = vin ? G.tv * Math.max(0, ocf[H] - vin.normSust) : G.tv * Math.max(0, opsNet[H]);
 
   // Entry year e: the investor owns cash flows from e onward, valued in year-e terms.
   const disc = (t) => Math.pow(1 + r, t - e);
@@ -368,7 +431,9 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+  return { years, rev, ocf, opsNet, build, sust, cap, capexModel: vin ? 'vintage' : 'sustaining',
+    cohorts: vin ? vin.cohorts : null, stranded: vin ? vin.stranded : null,
+    strandedPeakPct: vin ? vin.peak / L.capex * 100 : null, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
 }
 // NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).
@@ -407,6 +472,11 @@ function sensItems(G){
     {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
     {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
   ];
+  if (G.capexModel === 'vintage'){
+    items.push({id:'decline', n:'Unit-cost decline (\u00b13 points)', lab:'\u00b13 points', L:(L,k)=>{ L.unitCostDecline=(L.unitCostDecline||0)+k; }, lo:-3, hi:3});
+    const pt0 = L0pt => (L0pt === undefined ? 0.5 : L0pt);
+    items.push({id:'passThrough', n:'Pass-through to prices (\u00b10.25)', lab:'\u00b10.25, clamped to 0\u20131', L:(L,k)=>{ L.passThrough=Math.max(0, Math.min(1, pt0(L.passThrough)+k)); }, lo:0.25, hi:-0.25});
+  }
   items.push(G.entryDef === 'B'
     ? {id:'mult', n:'Entry multiple', lab:'±25%', g:(g,k)=>{ g.mult*=k; }, lo:1.25, hi:0.75}
     : {id:'premium', n:'Entry premium', lab:'±25 points', g:(g,k)=>{ g.premium+=k; }, lo:25, hi:-25});
@@ -448,24 +518,32 @@ function sensitivity(L, G){
 // so the default page reproduces the v0.1 results. Anything that demonstrates a verdict must be opt-in.
 const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
 const DEFAULT_DEF = 'A';
+// Capex model: 'sustaining' (v0.1, default) or 'vintage' (opt-in cohorts with replacement at end of life).
+const DEFAULT_CAPEX = 'sustaining';
 const DEFAULT_PHASES = [5, 10];
 const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mid:5.5} };
 const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
 const ph = (v) => [v, v, v];
 const DEFAULT_LAYERS = [
-  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:0, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildStart:0, buildYears:4, life:8,  debt:10, alloc:20},
-  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:0, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildStart:0, buildYears:5, life:10, debt:50, alloc:20},
-  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0, steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildStart:0, buildYears:4, life:4,  debt:10, alloc:20},
-  {id:'ap', name:'Applications',           evidence:3, share:30, offset:0, steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildStart:0, buildYears:3, life:5,  debt:0,  alloc:20},
-  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:0, steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildStart:0, buildYears:2, life:10, debt:0,  alloc:20}
+  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:0, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:4, life:8,  debt:10, alloc:20},
+  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:0, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:5, life:10, debt:50, alloc:20},
+  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0, steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:4, life:4,  debt:10, alloc:20},
+  {id:'ap', name:'Applications',           evidence:3, share:30, offset:0, steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:3, life:5,  debt:0,  alloc:20},
+  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:0, steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:2, life:10, debt:0,  alloc:20}
 ];
 // Opt-in example only, loaded by the "Load lead/lag example" button. A placeholder, not data:
 // infrastructure leads end demand, applications and services lag (years, in DEFAULT_LAYERS order).
 const LEAD_LAG_EXAMPLE = [-1, -2, 0, 1, 2];
+// Opt-in example only, loaded by the "Load unit-cost-decline example" button. Invented round numbers, not data:
+// unit-cost decline in % a year for chips, data centres, models, applications, services. Used in Vintage mode only.
+const UCD_EXAMPLE = [10, 5, 20, 0, 0];
+// passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
+// customers as lower prices, used only in Vintage mode.
 
 const KEY = 'load-bearing-sim-v3', V2_KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
 const copyLayer = (l) => Object.assign({}, l, {driftP:l.driftP.slice(), marginP:l.marginP.slice()});
-let G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()});
+const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, phases:DEFAULT_PHASES.slice()});
+let G = freshG();
 let layers = DEFAULT_LAYERS.map(copyLayer);
 let sel = 1;
 
@@ -480,6 +558,7 @@ function load(){
     if(o && o.G){
       for(const k in DEFAULT_G){ if(num(o.G[k])) G[k]=o.G[k]; }
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
+      if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
     if(o && Array.isArray(o.layers) && o.layers.length===DEFAULT_LAYERS.length){
@@ -519,6 +598,7 @@ function binColor(o){
 
 /* ---------- drivers ---------- */
 const isB = () => G.entryDef==='B';
+const isV = () => G.capexModel==='vintage';
 const mx = (x, d) => (x<0?'−':'') + Math.abs(x).toFixed(d===undefined?1:d) + 'x';
 function syncDriverLabels(){
   $('o_speed').textContent = G.speed.toFixed(1) + ' years';
@@ -533,6 +613,11 @@ function syncDriverLabels(){
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
+  document.querySelectorAll('#capexSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
+  $('capexNote').innerHTML = isV()
+    ? '<b>Vintage cohorts.</b> Each year\u2019s build spend is replaced at the end of its asset life, at the original cost \u00d7 (1 \u2212 unit-cost decline)<sup>life</sup>. Replacement after year 15 is not charged; value beyond year 15 uses a normalised sustaining spend. Unit-cost decline lowers your replacement cost; pass-through sets how much of it competition hands to customers as lower prices, applied through share drift (see the effective drift in the Phases table). Replacement before your entry year is not in the entry price, and debt covers the initial build only.'
+    : '<b>Sustaining spend (v0.1).</b> After the build, build capex \u00f7 asset life is spent every year. Unit-cost decline is ignored in this mode.';
+  document.querySelectorAll('#inputs input[data-k="unitCostDecline"], #inputs input[data-k="passThrough"]').forEach(i => { i.disabled = !isV(); });
   $('ctl_prem').hidden = isB(); $('ctl_mult').hidden = !isB();
   $('defNote').innerHTML = isB()
     ? '<b>Forward cash multiple.</b> You pay the multiple times the layer’s operating cash in year '+(G.entry+1)+' (before sustaining spend), at year '+G.entry+'. Build capex from year '+G.entry+' on is paid at cost.'
@@ -592,6 +677,8 @@ const COLS = [
   ['capex','Build capex, $B',1,2000,5],
   ['buildStart','Build starts, year',0,H-1,1],
   ['buildYears','Build years',1,10,1],
+  ['unitCostDecline','Unit-cost decline, % a year (vintage only)',-10,50,0.5],
+  ['passThrough','Pass-through to prices, 0\u20131 (vintage only; no view, placeholder, unsourced)',0,1,0.05],
   ['life','Asset life, years',1,40,1],
   ['debt','Debt, % of build',0,100,5],
   ['alloc','My allocation',0,1000,1]
@@ -627,10 +714,22 @@ function buildPhaseTable(){
   const pl = phaseLabels();
   let h = '<thead><tr><th class="l" rowspan="2">Layer</th><th colspan="3" style="text-align:center">Share drift, % a year</th><th colspan="3" style="text-align:center">Cash margin, %</th></tr><tr>'
     + pl.map(x => '<th>'+x+'</th>').join('') + pl.map(x => '<th>'+x+'</th>').join('') + '</tr></thead><tbody>';
-  layers.forEach((L,i) => { h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>' + PCOLS.map(c => cellInput(L, i, c)).join('') + '</tr>'; });
+  layers.forEach((L,i) => {
+    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>'
+      + PCOLS.map(c => c[0]==='driftP' ? cellInput(L, i, c).replace('</td>', '<small class="eff" data-i="'+i+'" data-p="'+c[5]+'"></small></td>') : cellInput(L, i, c)).join('') + '</tr>';
+  });
   h += '</tbody>';
   $('phaseTable').innerHTML = h;
+  updateEffDrift();
   $('phaseTable').querySelectorAll('input').forEach(inp => inp.addEventListener('input', onLayerInput));
+}
+// Effective drift after pass-through, shown beside each drift input in Vintage mode only.
+function updateEffDrift(){
+  document.querySelectorAll('#phaseTable small.eff').forEach(el => {
+    const L = layers[+el.dataset.i];
+    el.textContent = isV() ? 'effective ' + pct(effectiveDrift(L.driftP[+el.dataset.p], L, G), 1) : '';
+  });
+  $('effNote').hidden = !isV();
 }
 function markSel(){
   document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
@@ -772,8 +871,14 @@ function hrText(o){
   const v = isB() ? mx(o.headroom) : pct(o.headroom);
   return '<td class="'+(o.headroom<0?'neg':'pos')+'">'+(o.headroom>0?'+':'')+v+'</td>';
 }
+// Bounds, not forecasts: present value with pass-through at 0 and at 1, everything else as set.
+function ptCells(L){
+  const a = runLayer(Object.assign({}, L, {passThrough:0}), G).npv, b = runLayer(Object.assign({}, L, {passThrough:1}), G).npv;
+  const c = (v) => '<td class="'+(v<0?'neg':'pos')+'">'+money(v)+'</td>';
+  return c(a) + c(b) + '<td>'+money(a-b)+'</td>';
+}
 function scoreTable(res){
-  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th><th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
+  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th>'+(isV()?'<th>Value if owner keeps savings (pass-through 0)</th><th>Value if competition takes savings (pass-through 1)</th><th>Value at stake in pricing power</th><th>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
   res.forEach((o,i) => {
     const L = layers[i];
     const irr = isNaN(o.irr) ? (o.npv<0 ? 'below −50%' : 'n/a') : pct(o.irr*100,1);
@@ -785,7 +890,7 @@ function scoreTable(res){
       + '<td class="'+(o.npv<0?'neg':'pos')+'">'+money(o.npv)+'</td>'
       + '<td>'+beText(o)+'</td>'
       + hrText(o)
-      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td><td>'+fl+'</td>'
+      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td>'+(isV()?ptCells(L)+'<td>'+pct(o.strandedPeakPct)+'</td>':'')+'<td>'+fl+'</td>'
       + '<td class="l"><span class="chip '+binClass(o)+'">'+o.bin+'</span></td></tr>';
   });
   h += '</tbody>';
@@ -836,7 +941,7 @@ function tornado(){
   });
   s += '<line x1="'+cx+'" x2="'+cx+'" y1="'+m.t+'" y2="'+(Hh-m.b)+'" stroke="var(--ink)" stroke-width="1.2"/></svg>';
   s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end.</div>';
-  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.</div>';
+  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.'+(isV()?' Unit-cost decline moves by \u00b13 points (a negative value means unit costs rise); pass-through by \u00b10.25, clamped to 0\u20131, so it can be one-sided at the ends.':'')+'</div>';
   $('tornado').innerHTML = s;
 }
 
@@ -906,7 +1011,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res); buildNote();
+  quadChart(res); scoreTable(res); timingNote(res); buildNote(); updateEffDrift();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -944,6 +1049,9 @@ function bind(){
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
   document.querySelectorAll('#defSwitch button').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
+  document.querySelectorAll('#capexSwitch button').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
+  // The example only has an effect in Vintage mode, so it switches that mode on.
+  $('ucdExample').addEventListener('click', () => { layers.forEach((L,i) => { L.unitCostDecline = UCD_EXAMPLE[i]; }); G.capexModel = 'vintage'; refreshInputsFromState(); update(); });
   $('ph1').addEventListener('change', onPhaseBounds); $('ph2').addEventListener('change', onPhaseBounds);
   $('arch_rail').addEventListener('click', () => setProfile({life:25, drift:-6, margin:35, debt:60, buildYears:5, evidence:4}));
   $('leadlag').addEventListener('click', () => { layers.forEach((L,i) => { L.offset = LEAD_LAG_EXAMPLE[i]; }); refreshInputsFromState(); save(); renderResults(); });
@@ -954,7 +1062,7 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
-    G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()}); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
+    G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
     syncDriverInputs(); buildInputs(); update();
   });
 }

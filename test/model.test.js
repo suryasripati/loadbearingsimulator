@@ -352,3 +352,139 @@ test('life flag: a later build no longer counts idle years before any capital go
   assert.ok(!o.flags.includes('life'));
   assert.equal(o.bin, 'Durable value');
 });
+
+/* ---------- Drop 2 step 1: vintage capex ---------- */
+const GV = { ...GA, capexModel: 'vintage' };
+
+test('vintage: the default capex model is sustaining spend and reproduces the v0.1 fixture exactly', () => {
+  assert.equal(D.DEFAULT_CAPEX, 'sustaining');
+  D.DEFAULT_LAYERS.forEach((L, i) => {
+    assert.equal(L.unitCostDecline, 0);
+    for (const g of [GA, { ...GA, capexModel: D.DEFAULT_CAPEX }]) {
+      const o = runLayer({ ...L, unitCostDecline: 25, passThrough: 1 }, g), row = fx.layers[i];
+      near(o.npv, row.npv, 1e-6); near(o.breakEven, row.breakEven, 1e-6); near(o.irr, row.irr, 1e-6);
+      assert.equal(o.payback, row.payback); assert.deepEqual(o.flags, row.flags); assert.equal(o.bin, row.bin);
+      assert.equal(o.capexModel, 'sustaining');
+    }
+  });
+});
+
+test('vintage: at decline 0, replacement spend matches a hand calculation (chips)', () => {
+  // Chips: capex 120 over 4 build years = 30 a year in years 0-3, asset life 8.
+  // Cohorts are replaced in years 8, 9, 10 and 11 at 30 each; the next round (years 16-19) falls after year 15.
+  const o = runLayer({ ...D.DEFAULT_LAYERS[0], unitCostDecline: 0 }, GV);
+  const expected = new Array(16).fill(0); [8, 9, 10, 11].forEach(t => { expected[t] = 30; });
+  o.sust.forEach((v, t) => near(v, expected[t], 1e-9));
+  near(o.sust.reduce((a, b) => a + b, 0), 120, 1e-9);
+});
+
+test('vintage: each replacement costs the original spend x (1 - decline)^life', () => {
+  for (const d of [0, 5, 20]) for (const L0 of D.DEFAULT_LAYERS) {
+    const L = { ...L0, unitCostDecline: d }, o = runLayer(L, GV), life = Math.round(L.life);
+    for (const c of o.cohorts.filter(c => c.replacement)) {
+      const parent = o.cohorts.find(p => p.t0 === c.t0 - life);
+      near(c.spend, parent.spend * Math.pow(1 - d / 100, life), 1e-9);
+    }
+    o.sust.forEach((v, t) => near(v, o.cohorts.filter(c => c.replacement && c.t0 === t).reduce((a, c) => a + c.spend, 0), 1e-9));
+  }
+});
+
+test('vintage: terminal value uses normalised sustaining spend, equal to capex / life at decline 0', () => {
+  const L = D.DEFAULT_LAYERS[0];
+  const o = runLayer({ ...L, unitCostDecline: 0 }, GV);
+  near(o.tv, GV.tv * Math.max(0, o.ocf[H] - L.capex / L.life), 1e-9);
+  const d = runLayer({ ...L, unitCostDecline: 10 }, GV);
+  near(d.tv, GV.tv * Math.max(0, d.ocf[H] - L.capex * Math.pow(0.9, H) / L.life), 1e-9);
+});
+
+test('vintage: NPV is zero at the break-even price under both definitions, entry years 0 and 3, build starts 0 and 2', () => {
+  let checked = 0;
+  for (const L0 of D.DEFAULT_LAYERS) for (const bs of [0, 2]) for (const entry of [0, 3]) for (const d of [0, 10]) {
+    const L = { ...L0, buildStart: bs, unitCostDecline: d };
+    const a = runLayer(L, { ...GV, entry });
+    if (isFinite(a.breakEven)) { near(runLayer(L, { ...GV, entry, premium: a.breakEven }).npv, 0, 1e-6); checked++; }
+    const gB = { ...GV, entryDef: 'B', entry }, b = runLayer(L, gB);
+    if (b.bMeaningful) { near(runLayer(L, { ...gB, mult: b.breakEvenM }).npv, 0, 1e-6); checked++; }
+  }
+  assert.ok(checked >= 60, 'checked ' + checked);
+});
+
+test('vintage: stranded value is 0 at decline 0 and rises with decline', () => {
+  for (const L0 of D.DEFAULT_LAYERS) {
+    const peak = (d) => runLayer({ ...L0, unitCostDecline: d }, GV).strandedPeakPct;
+    assert.equal(peak(0), 0);
+    assert.ok(peak(5) > 0);
+    assert.ok(peak(10) > peak(5) && peak(20) > peak(10), L0.id);
+  }
+  assert.equal(runLayer(D.DEFAULT_LAYERS[0], GA).strandedPeakPct, null, 'not reported in sustaining mode');
+});
+
+test('vintage: heatmap cells equal direct runLayer calls', () => {
+  const L = { ...D.DEFAULT_LAYERS[2], unitCostDecline: 15 };
+  for (const [def, key, prices] of [['A', 'premium', [-50, 0, 100]], ['B', 'mult', [0, 10, 30]]]) {
+    const g = { ...GV, entryDef: def };
+    heatmap(L, g, [0, 3, 7], prices).forEach((row, i) => row.forEach((v, j) => assert.equal(v, runLayer(L, { ...g, entry: [0, 3, 7][i], [key]: prices[j] }).npv)));
+  }
+});
+
+test('vintage: sensitivity adds a unit-cost decline bar only in vintage mode', () => {
+  const L = D.DEFAULT_LAYERS[2];
+  assert.ok(!sensitivity(L, GA).rows.some(r => r.id === 'decline'));
+  const s = sensitivity(L, GV), b = s.rows.find(r => r.id === 'decline');
+  assert.ok(b);
+  assert.ok(s.rows.some(r => r.id === 'passThrough'));
+  assert.ok(runLayer({ ...L, passThrough: 0, unitCostDecline: 3 }, GV).npv > runLayer({ ...L, passThrough: 0, unitCostDecline: -3 }, GV).npv, 'at pass-through 0, faster decline raises NPV');
+});
+
+/* ---------- Vintage: pass-through to prices ---------- */
+const { effectiveDrift } = require('../src/model.js');
+
+test('pass-through: has no effect at decline 0', () => {
+  for (const L0 of D.DEFAULT_LAYERS) {
+    const base = runLayer({ ...L0, unitCostDecline: 0, passThrough: 0 }, GV);
+    for (const pt of [0.25, 0.5, 1]) assert.equal(runLayer({ ...L0, unitCostDecline: 0, passThrough: pt }, GV).npv, base.npv);
+  }
+});
+
+test('pass-through: at 0, a higher decline raises NPV', () => {
+  for (const L0 of D.DEFAULT_LAYERS) {
+    const npv = [0, 5, 10, 20].map(d => runLayer({ ...L0, unitCostDecline: d, passThrough: 0 }, GV).npv);
+    npv.forEach((v, i) => { if (i) assert.ok(v > npv[i - 1], L0.id + ': ' + npv.join(', ')); });
+  }
+});
+
+test('pass-through: present value falls as pass-through rises when decline > 0', () => {
+  for (const L0 of D.DEFAULT_LAYERS) for (const d of [5, 20]) {
+    const npv = [0, 0.25, 0.5, 0.75, 1].map(pt => runLayer({ ...L0, unitCostDecline: d, passThrough: pt }, GV).npv);
+    npv.forEach((v, i) => { if (i) assert.ok(v < npv[i - 1], L0.id + ' d' + d + ': ' + npv.map(x => x.toFixed(1)).join(', ')); });
+  }
+});
+
+test('pass-through: share multiplier is (1 + drift) x (1 - passThrough x decline) each year, and terminal value uses the year-15 share', () => {
+  const L = { ...D.DEFAULT_LAYERS[0], unitCostDecline: 10, passThrough: 0.6 };
+  const o = runLayer(L, GV), plain = runLayer({ ...L, passThrough: 0 }, GV);
+  // Same adoption and capacity in both runs, so the revenue ratio isolates the pass-through factor.
+  for (let t = 1; t <= H; t++) near(o.rev[t] / plain.rev[t], Math.pow(1 - 0.6 * 0.10, t), 1e-12);
+  near(effectiveDrift(-1, L, GV), ((1 - 0.01) * (1 - 0.06) - 1) * 100, 1e-12);
+  near(effectiveDrift(-1, L, GA), -1, 1e-12, 'legacy mode: effective drift is the phase drift');
+  near(o.tv, GV.tv * Math.max(0, o.ocf[H] - L.capex * Math.pow(0.9, H) / L.life), 1e-9);
+});
+
+test('pass-through: NPV is zero at the break-even price under Definitions A and B', () => {
+  let checked = 0;
+  for (const L0 of D.DEFAULT_LAYERS) for (const pt of [0, 0.5, 1]) for (const entry of [0, 3]) for (const bs of [0, 2]) {
+    const L = { ...L0, unitCostDecline: 10, passThrough: pt, buildStart: bs };
+    const a = runLayer(L, { ...GV, entry });
+    if (isFinite(a.breakEven)) { near(runLayer(L, { ...GV, entry, premium: a.breakEven }).npv, 0, 1e-6); checked++; }
+    const gB = { ...GV, entryDef: 'B', entry }, b = runLayer(L, gB);
+    if (b.bMeaningful) { near(runLayer(L, { ...gB, mult: b.breakEvenM }).npv, 0, 1e-6); checked++; }
+  }
+  assert.ok(checked >= 100, 'checked ' + checked);
+});
+
+test('pass-through: legacy mode ignores decline and pass-through', () => {
+  for (const L0 of D.DEFAULT_LAYERS) {
+    const base = runLayer(L0, GA).npv;
+    for (const [d, pt] of [[20, 0], [20, 1], [-5, 0.5]]) assert.equal(runLayer({ ...L0, unitCostDecline: d, passThrough: pt }, GA).npv, base);
+  }
+});

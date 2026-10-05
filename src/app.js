@@ -1,6 +1,7 @@
 const KEY = 'load-bearing-sim-v3', V2_KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
 const copyLayer = (l) => Object.assign({}, l, {driftP:l.driftP.slice(), marginP:l.marginP.slice()});
-let G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()});
+const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, phases:DEFAULT_PHASES.slice()});
+let G = freshG();
 let layers = DEFAULT_LAYERS.map(copyLayer);
 let sel = 1;
 
@@ -15,6 +16,7 @@ function load(){
     if(o && o.G){
       for(const k in DEFAULT_G){ if(num(o.G[k])) G[k]=o.G[k]; }
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
+      if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
     if(o && Array.isArray(o.layers) && o.layers.length===DEFAULT_LAYERS.length){
@@ -54,6 +56,7 @@ function binColor(o){
 
 /* ---------- drivers ---------- */
 const isB = () => G.entryDef==='B';
+const isV = () => G.capexModel==='vintage';
 const mx = (x, d) => (x<0?'−':'') + Math.abs(x).toFixed(d===undefined?1:d) + 'x';
 function syncDriverLabels(){
   $('o_speed').textContent = G.speed.toFixed(1) + ' years';
@@ -68,6 +71,11 @@ function syncDriverLabels(){
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
+  document.querySelectorAll('#capexSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
+  $('capexNote').innerHTML = isV()
+    ? '<b>Vintage cohorts.</b> Each year\u2019s build spend is replaced at the end of its asset life, at the original cost \u00d7 (1 \u2212 unit-cost decline)<sup>life</sup>. Replacement after year 15 is not charged; value beyond year 15 uses a normalised sustaining spend. Unit-cost decline lowers your replacement cost; pass-through sets how much of it competition hands to customers as lower prices, applied through share drift (see the effective drift in the Phases table). Replacement before your entry year is not in the entry price, and debt covers the initial build only.'
+    : '<b>Sustaining spend (v0.1).</b> After the build, build capex \u00f7 asset life is spent every year. Unit-cost decline is ignored in this mode.';
+  document.querySelectorAll('#inputs input[data-k="unitCostDecline"], #inputs input[data-k="passThrough"]').forEach(i => { i.disabled = !isV(); });
   $('ctl_prem').hidden = isB(); $('ctl_mult').hidden = !isB();
   $('defNote').innerHTML = isB()
     ? '<b>Forward cash multiple.</b> You pay the multiple times the layer’s operating cash in year '+(G.entry+1)+' (before sustaining spend), at year '+G.entry+'. Build capex from year '+G.entry+' on is paid at cost.'
@@ -127,6 +135,8 @@ const COLS = [
   ['capex','Build capex, $B',1,2000,5],
   ['buildStart','Build starts, year',0,H-1,1],
   ['buildYears','Build years',1,10,1],
+  ['unitCostDecline','Unit-cost decline, % a year (vintage only)',-10,50,0.5],
+  ['passThrough','Pass-through to prices, 0\u20131 (vintage only; no view, placeholder, unsourced)',0,1,0.05],
   ['life','Asset life, years',1,40,1],
   ['debt','Debt, % of build',0,100,5],
   ['alloc','My allocation',0,1000,1]
@@ -162,10 +172,22 @@ function buildPhaseTable(){
   const pl = phaseLabels();
   let h = '<thead><tr><th class="l" rowspan="2">Layer</th><th colspan="3" style="text-align:center">Share drift, % a year</th><th colspan="3" style="text-align:center">Cash margin, %</th></tr><tr>'
     + pl.map(x => '<th>'+x+'</th>').join('') + pl.map(x => '<th>'+x+'</th>').join('') + '</tr></thead><tbody>';
-  layers.forEach((L,i) => { h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>' + PCOLS.map(c => cellInput(L, i, c)).join('') + '</tr>'; });
+  layers.forEach((L,i) => {
+    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>'
+      + PCOLS.map(c => c[0]==='driftP' ? cellInput(L, i, c).replace('</td>', '<small class="eff" data-i="'+i+'" data-p="'+c[5]+'"></small></td>') : cellInput(L, i, c)).join('') + '</tr>';
+  });
   h += '</tbody>';
   $('phaseTable').innerHTML = h;
+  updateEffDrift();
   $('phaseTable').querySelectorAll('input').forEach(inp => inp.addEventListener('input', onLayerInput));
+}
+// Effective drift after pass-through, shown beside each drift input in Vintage mode only.
+function updateEffDrift(){
+  document.querySelectorAll('#phaseTable small.eff').forEach(el => {
+    const L = layers[+el.dataset.i];
+    el.textContent = isV() ? 'effective ' + pct(effectiveDrift(L.driftP[+el.dataset.p], L, G), 1) : '';
+  });
+  $('effNote').hidden = !isV();
 }
 function markSel(){
   document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
@@ -307,8 +329,14 @@ function hrText(o){
   const v = isB() ? mx(o.headroom) : pct(o.headroom);
   return '<td class="'+(o.headroom<0?'neg':'pos')+'">'+(o.headroom>0?'+':'')+v+'</td>';
 }
+// Bounds, not forecasts: present value with pass-through at 0 and at 1, everything else as set.
+function ptCells(L){
+  const a = runLayer(Object.assign({}, L, {passThrough:0}), G).npv, b = runLayer(Object.assign({}, L, {passThrough:1}), G).npv;
+  const c = (v) => '<td class="'+(v<0?'neg':'pos')+'">'+money(v)+'</td>';
+  return c(a) + c(b) + '<td>'+money(a-b)+'</td>';
+}
 function scoreTable(res){
-  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th><th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
+  let h = '<thead><tr><th class="l">Layer</th><th>Evidence gate</th><th>Present value at year '+G.entry+'</th><th>'+(isB()?'Break-even multiple':'Break-even premium')+'</th><th>Headroom</th><th>Return on cash (IRR)</th><th>Cash payback</th><th>Debt</th>'+(isV()?'<th>Value if owner keeps savings (pass-through 0)</th><th>Value if competition takes savings (pass-through 1)</th><th>Value at stake in pricing power</th><th>Peak stranded value, % of capex (not a cash item)</th>':'')+'<th>Flags</th><th class="l">Read</th></tr></thead><tbody>';
   res.forEach((o,i) => {
     const L = layers[i];
     const irr = isNaN(o.irr) ? (o.npv<0 ? 'below −50%' : 'n/a') : pct(o.irr*100,1);
@@ -320,7 +348,7 @@ function scoreTable(res){
       + '<td class="'+(o.npv<0?'neg':'pos')+'">'+money(o.npv)+'</td>'
       + '<td>'+beText(o)+'</td>'
       + hrText(o)
-      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td><td>'+fl+'</td>'
+      + '<td>'+irr+'</td><td>'+pb+'</td><td>'+debt+'</td>'+(isV()?ptCells(L)+'<td>'+pct(o.strandedPeakPct)+'</td>':'')+'<td>'+fl+'</td>'
       + '<td class="l"><span class="chip '+binClass(o)+'">'+o.bin+'</span></td></tr>';
   });
   h += '</tbody>';
@@ -371,7 +399,7 @@ function tornado(){
   });
   s += '<line x1="'+cx+'" x2="'+cx+'" y1="'+m.t+'" y2="'+(Hh-m.b)+'" stroke="var(--ink)" stroke-width="1.2"/></svg>';
   s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end.</div>';
-  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.</div>';
+  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.'+(isV()?' Unit-cost decline moves by \u00b13 points (a negative value means unit costs rise); pass-through by \u00b10.25, clamped to 0\u20131, so it can be one-sided at the ends.':'')+'</div>';
   $('tornado').innerHTML = s;
 }
 
@@ -441,7 +469,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res); buildNote();
+  quadChart(res); scoreTable(res); timingNote(res); buildNote(); updateEffDrift();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -479,6 +507,9 @@ function bind(){
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
   document.querySelectorAll('#defSwitch button').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
+  document.querySelectorAll('#capexSwitch button').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
+  // The example only has an effect in Vintage mode, so it switches that mode on.
+  $('ucdExample').addEventListener('click', () => { layers.forEach((L,i) => { L.unitCostDecline = UCD_EXAMPLE[i]; }); G.capexModel = 'vintage'; refreshInputsFromState(); update(); });
   $('ph1').addEventListener('change', onPhaseBounds); $('ph2').addEventListener('change', onPhaseBounds);
   $('arch_rail').addEventListener('click', () => setProfile({life:25, drift:-6, margin:35, debt:60, buildYears:5, evidence:4}));
   $('leadlag').addEventListener('click', () => { layers.forEach((L,i) => { L.offset = LEAD_LAG_EXAMPLE[i]; }); refreshInputsFromState(); save(); renderResults(); });
@@ -489,7 +520,7 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
-    G = Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, phases:DEFAULT_PHASES.slice()}); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
+    G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
     syncDriverInputs(); buildInputs(); update();
   });
 }

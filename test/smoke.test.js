@@ -143,3 +143,33 @@ test('timing chart: one path per layer plus the end-demand line, with neutral la
   assert.ok(/Services and integration — lags by 2 years/.test(after), after);
   win.close();
 });
+
+test('capex model toggle and the unit-cost-decline example', () => {
+  const { doc, win, errors } = load();
+  const pressed = () => doc.querySelector('#capexSwitch button[aria-pressed="true"]').dataset.c;
+  const heads = () => [...doc.querySelectorAll('#score thead th')].map(th => th.textContent);
+  assert.equal(pressed(), D.DEFAULT_CAPEX);
+  assert.ok(!heads().some(h => /stranded|pass-through|pricing power/i.test(h)));
+  assert.equal(doc.querySelector('#phaseTable small.eff').textContent, '');
+  assert.ok(doc.querySelector('#inputs input[data-k="unitCostDecline"]').disabled, 'decline input is inactive in sustaining mode');
+  click(win, doc.querySelector('#capexSwitch [data-c="vintage"]'));
+  assert.equal(pressed(), 'vintage');
+  assert.ok(heads().some(h => /Peak stranded value/.test(h)));
+  assert.ok(!doc.querySelector('#inputs input[data-k="unitCostDecline"]').disabled);
+  assert.ok(doc.getElementById('tornado').textContent.includes('Unit-cost decline'));
+  assert.ok(doc.getElementById('tornado').textContent.includes('Pass-through to prices'));
+  for (const h of ['pass-through 0', 'pass-through 1', 'Value at stake in pricing power', 'not a cash item']) assert.ok(heads().some(x => x.includes(h)), h);
+  assert.ok(!doc.querySelector('#inputs input[data-k="passThrough"]').disabled);
+  assert.ok(/^effective /.test(doc.querySelector('#phaseTable small.eff').textContent));
+  assert.equal(doc.getElementById('effNote').hidden, false);
+  click(win, doc.querySelector('#capexSwitch [data-c="sustaining"]'));
+  click(win, doc.getElementById('ucdExample'));
+  assert.equal(pressed(), 'vintage', 'the example switches on vintage cohorts');
+  assert.deepEqual([...doc.querySelectorAll('#inputs input[data-k="unitCostDecline"]')].map(i => Number(i.value)), D.UCD_EXAMPLE);
+  assert.ok(/invented round numbers, not data/.test(doc.body.textContent));
+  click(win, doc.getElementById('reset'));
+  assert.equal(pressed(), D.DEFAULT_CAPEX);
+  assert.deepEqual(verdicts(doc), fx.layers.map(l => l.bin));
+  assert.deepEqual(errors, []);
+  win.close();
+});

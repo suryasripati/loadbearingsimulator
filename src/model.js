@@ -27,6 +27,48 @@ function buildStartOf(L){
   const B = Math.max(1, Math.round(L.buildYears));
   return Math.max(0, Math.min(H - B, Math.round(L.buildStart || 0)));
 }
+// Vintage cohorts (opt-in). Assumptions: replacement happens on time, so capacity stays at 100% after the initial
+// build; replacement timing uses asset life rounded to whole years; debt and the Definition A entry price cover the
+// initial build only (replacement spend before the entry year is not priced).
+// Unit-cost decline lowers the owner's replacement cost. Competition passes a share of it (passThrough, 0 to 1) to
+// customers as lower prices; that erosion is routed through share drift (see passThroughFactor), so drift covers
+// other commoditisation and passThrough covers erosion caused by cheaper capacity.
+// Stranded value is a diagnostic, not a cash item: the cash effect of cheaper capacity already comes through revenue,
+// so deducting stranded value as well would double count. For each cohort in use at year t,
+// unamortised cost (spend x remaining life / life) x (1 - (1 - decline)^(t - t0)), the gap between book value and
+// what the same capacity would cost to buy now.
+// Yearly price-erosion factor from cheaper capacity, used only in Vintage mode. passThrough is the share of the
+// unit-cost decline that competition passes to customers (0 = owner keeps all the savings, 1 = customers get all).
+// Default 0.5 is a placeholder with no view behind it, unsourced.
+function passThroughFactor(L, G){
+  if (G.capexModel !== 'vintage') return 1;
+  const pt = Math.max(0, Math.min(1, L.passThrough === undefined ? 0.5 : L.passThrough));
+  return 1 - pt * (L.unitCostDecline || 0) / 100;
+}
+// Effective share drift in % a year for a given phase drift, after pass-through (equals the phase drift outside Vintage mode).
+function effectiveDrift(drift, L, G){ return ((1 + drift / 100) * passThroughFactor(L, G) - 1) * 100; }
+function vintageSchedule(L, G, build){
+  if (G.capexModel !== 'vintage') return null;
+  const d = (L.unitCostDecline || 0) / 100;
+  const life = Math.max(1, Math.round(L.life));
+  const cohorts = [];
+  for (let t = 0; t <= H; t++) if (build[t] > 0) cohorts.push({ t0: t, spend: build[t], replacement: false });
+  const repl = new Array(H + 1).fill(0);
+  for (let k = 0; k < cohorts.length; k++){
+    const c = cohorts[k], tr = c.t0 + life;
+    if (tr > H) continue;
+    const spend = c.spend * Math.pow(1 - d, life);
+    repl[tr] += spend;
+    cohorts.push({ t0: tr, spend: spend, replacement: true });
+  }
+  const stranded = new Array(H + 1).fill(0);
+  for (let t = 0; t <= H; t++) for (const c of cohorts){
+    if (t < c.t0 || t >= c.t0 + life) continue;
+    stranded[t] += c.spend * (c.t0 + life - t) / life * (1 - Math.pow(1 - d, t - c.t0));
+  }
+  return { repl, cohorts, stranded, peak: Math.max.apply(null, stranded), life,
+    normSust: L.capex * Math.pow(1 - d, H) / L.life };
+}
 function npvOf(cf, r){ let s = 0; for (let t = 0; t < cf.length; t++) s += cf[t] / Math.pow(1 + r, t); return s; }
 function irrOf(cf){
   let lo = -0.5, hi = 1.5;
@@ -49,19 +91,27 @@ function runLayer(L, G){
   const buildEnd = S + B; // first year after the build
   const years = []; for (let t = 0; t <= H; t++) years.push(t);
   const build = years.map(t => t >= S && t < buildEnd ? L.capex / B : 0);
-  const sust  = years.map(t => t >= buildEnd ? L.capex / L.life : 0);
+  // Capex model. "sustaining" (v0.1, default): after the build, sustaining spend = build capex / asset life each year.
+  // "vintage" (opt-in): each year's build spend is a cohort, replaced at end of life at the same capacity and later
+  // prices, original spend x (1 - unit-cost decline)^life. Replacement after year 15 is not charged.
+  const vin = vintageSchedule(L, G, build);
+  const sust  = vin ? vin.repl : years.map(t => t >= buildEnd ? L.capex / L.life : 0);
   // Capacity limit (assumption, unsourced): capacity scales linearly with build spend, so the layer can serve at most
   // K(t) = cumulative build spend through t / total build capex of full adoption. A first-order stand-in for the
   // utilisation backlog item, to be refined by vintage capex in Drop 2.
   let spent = 0;
   const cap = years.map(t => { spent += build[t]; return L.capex > 0 ? Math.min(1, spent / L.capex) : 1; });
   // Share compounds by the drift of the phase each year falls in. With one constant drift this is (1 + drift)^t.
+  // In Vintage mode each year also carries price erosion from cheaper capacity: (1 - passThrough x unit-cost decline).
+  const pf = passThroughFactor(L, G);
   const shareMult = [1];
-  for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100));
+  for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100) * pf);
   const rev   = years.map(t => G.pool * Math.min(layerAdoption(t, L, G), cap[t]) * (L.share / 100) * shareMult[t]);
   const ocf   = rev.map((x, t) => x * phaseVal(L.marginP, L.margin, t, bounds) / 100);
   const opsNet = years.map(t => ocf[t] - sust[t]);
-  const tv = G.tv * Math.max(0, opsNet[H]);
+  // Terminal value: v0.1 uses year-15 cash after sustaining spend. Vintage mode uses a normalised sustaining spend,
+  // capex x (1 - decline)^15 / life, instead of the lumpy year-15 replacement; at decline 0 this equals capex / life.
+  const tv = vin ? G.tv * Math.max(0, ocf[H] - vin.normSust) : G.tv * Math.max(0, opsNet[H]);
 
   // Entry year e: the investor owns cash flows from e onward, valued in year-e terms.
   const disc = (t) => Math.pow(1 + r, t - e);
@@ -117,7 +167,9 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+  return { years, rev, ocf, opsNet, build, sust, cap, capexModel: vin ? 'vintage' : 'sustaining',
+    cohorts: vin ? vin.cohorts : null, stranded: vin ? vin.stranded : null,
+    strandedPeakPct: vin ? vin.peak / L.capex * 100 : null, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
 }
 // NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).
@@ -156,6 +208,11 @@ function sensItems(G){
     {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
     {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
   ];
+  if (G.capexModel === 'vintage'){
+    items.push({id:'decline', n:'Unit-cost decline (\u00b13 points)', lab:'\u00b13 points', L:(L,k)=>{ L.unitCostDecline=(L.unitCostDecline||0)+k; }, lo:-3, hi:3});
+    const pt0 = L0pt => (L0pt === undefined ? 0.5 : L0pt);
+    items.push({id:'passThrough', n:'Pass-through to prices (\u00b10.25)', lab:'\u00b10.25, clamped to 0\u20131', L:(L,k)=>{ L.passThrough=Math.max(0, Math.min(1, pt0(L.passThrough)+k)); }, lo:0.25, hi:-0.25});
+  }
   items.push(G.entryDef === 'B'
     ? {id:'mult', n:'Entry multiple', lab:'±25%', g:(g,k)=>{ g.mult*=k; }, lo:1.25, hi:0.75}
     : {id:'premium', n:'Entry premium', lab:'±25 points', g:(g,k)=>{ g.premium+=k; }, lo:25, hi:-25});
@@ -191,4 +248,4 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
+if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };

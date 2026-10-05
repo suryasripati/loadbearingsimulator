@@ -102,6 +102,19 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 
 ## Drop 2
 
+### Built: step 1, vintage capex (opt-in)
+- `G.capexModel`: `sustaining` (v0.1, default) or `vintage`. Default outputs and the v0.1 fixture are unchanged; legacy mode ignores `unitCostDecline` and `passThrough`.
+- Cohorts: each year's build spend; replaced at t0 + life (life rounded to whole years) at spend x (1 - decline)^life; replacement after year 15 is not charged. Replacement spend sits in the sustaining-spend array, so it is never marked up by the entry premium.
+- Terminal value in vintage mode: G.tv x max(0, year-15 operating cash - capex x (1 - decline)^15 / life). Year-15 operating cash already reflects pass-through.
+- Assumptions to keep labelled: replacement happens on time, so capacity stays at 100% after the initial build; the Definition A entry price covers initial build spend only (replacement before the entry year is not priced); debt covers the initial build only.
+- `unitCostDecline` defaults to 0 for every layer. `passThrough` defaults to 0.5: no view, placeholder, unsourced. Share multiplier each year = (1 + phase drift) x (1 - passThrough x decline). Drift covers other commoditisation; passThrough covers erosion caused by cheaper capacity.
+- Stranded value: per cohort in use at t, spend x remaining life / life x (1 - (1 - decline)^(t - t0)); peak over the horizon as % of build capex. A diagnostic, not a cash item: the cash effect comes through revenue, and charging both would double count.
+- Scorecard (vintage): present value at passThrough 0 and 1 and the gap, "value at stake in pricing power". Bounds, not forecasts.
+- Sensitivity (vintage): unit-cost decline +/-3 points; passThrough +/-0.25, clamped to 0-1.
+- "Load unit-cost-decline example" sets invented round numbers (chips 10, data centres 5, models 20, applications 0, services 0 % a year) and switches on vintage mode. Not data.
+- Even at decline 0, vintage differs from sustaining spend for any layer whose build years differ from its asset life: replacement arrives in lumps at end of life rather than as capex / life every year from the end of the build.
+
+
 ### 1. Vintage capex
 - Each year's capex creates a cohort with its own asset life. Replacement is scheduled at end of life. Add `unitCostDecline` (percent per year, placeholder default, labelled unsourced): newer cohorts cost less per unit of output, so earlier cohorts can be stranded.
 - Replace the sustaining-spend shortcut. Keep it behind a legacy switch for regression.
