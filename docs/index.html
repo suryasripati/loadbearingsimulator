@@ -90,6 +90,9 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 .reset{margin-left:8px;border-color:var(--hair)}
 .eff{display:block;font-size:11px;color:var(--cap);text-align:right}
 #score td.l{min-width:190px}
+.frag td.frag-n{white-space:nowrap}
+.frag td:nth-child(2){min-width:160px}
+.frag td:last-child{min-width:320px;line-height:1.45}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
 #quad .dot{cursor:pointer}
@@ -137,7 +140,6 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <p class="hint">Click any layer name or dot to see its detail.</p>
     <p class="muted" style="font-size:13px;margin-bottom:8px">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag.</p>
     <div id="quad"></div>
-    <div class="notice" id="timingNote" hidden></div>
   </div>
 </div>
 
@@ -218,7 +220,11 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
       <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
     </div>
-    <div class="notice" id="buildNote"></div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <h3>Verdict fragility</h3>
+    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted.</p>
+    <div id="fragility"></div>
   </div>
 </section>
 
@@ -248,7 +254,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <ul style="margin:0;padding-left:18px">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
-      <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
+      <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. Caveat: pass-through lowers a layer’s revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; price elasticity is not modelled. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
       <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
@@ -512,6 +518,50 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
+// Verdict fragility: which tested shocks change a layer's verdict (bin). The shock set is a display choice, not
+// evidence about how far inputs might move. A shock that would leave the inputs unchanged (for example pass-through
+// already at 0, or no room to start the build later) is not tested and not counted.
+const PT_DEFAULT = 0.5;
+function fragilityShocks(L, G){
+  const vintage = G.capexModel === 'vintage';
+  const pt = L.passThrough === undefined ? PT_DEFAULT : L.passThrough;
+  const life = (k) => Math.max(1, L.life * k);
+  const list = [
+    {id:'offset-late', group:'timing', n:'Timing offset 2 years later', L:{offset:(L.offset || 0) + 2}},
+    {id:'offset-early', group:'timing', n:'Timing offset 2 years earlier', L:{offset:(L.offset || 0) - 2}},
+    {id:'build-late', group:'build', n:'Build starts 2 years later', L:{buildStart:buildStartOf(L) + BUILD_SHIFT},
+      skip: buildStartOf(Object.assign({}, L, {buildStart:buildStartOf(L) + BUILD_SHIFT})) === buildStartOf(L)},
+    {id:'drift-down', group:'drift', n:'Share drift 3 points lower', L:{driftP:shiftDrift(L, -3), drift:(L.drift || 0) - 3}},
+    {id:'drift-up', group:'drift', n:'Share drift 3 points higher', L:{driftP:shiftDrift(L, 3), drift:(L.drift || 0) + 3}},
+    {id:'scale-down', group:'scale', n:'Scale 25% lower', L:{share:L.share * 0.75}},
+    {id:'scale-up', group:'scale', n:'Scale 25% higher', L:{share:L.share * 1.25}},
+    {id:'disc-up', group:'disc', n:'Discount rate 25% higher', G:{disc:G.disc * 1.25}},
+    {id:'disc-down', group:'disc', n:'Discount rate 25% lower', G:{disc:G.disc * 0.75}},
+    {id:'life-down', group:'life', n:'Asset life 25% shorter', L:{life:life(0.75)}},
+    {id:'life-up', group:'life', n:'Asset life 25% longer', L:{life:life(1.25)}}
+  ];
+  // Keeps the information of the earlier timing note: when an offset is set, test the layer at offset 0.
+  if ((L.offset || 0) !== 0) list.push({id:'offset-zero', group:'timing', n:'Timing offset set to 0', L:{offset:0}});
+  if (vintage){
+    list.push({id:'pt-0', group:'passThrough', n:'Pass-through 0 (owner keeps savings)', L:{passThrough:0}, skip: pt === 0});
+    list.push({id:'pt-1', group:'passThrough', n:'Pass-through 1 (competition takes savings)', L:{passThrough:1}, skip: pt === 1});
+    list.push({id:'decline-down', group:'decline', n:'Unit-cost decline 3 points lower', L:{unitCostDecline:(L.unitCostDecline || 0) - 3}});
+    list.push({id:'decline-up', group:'decline', n:'Unit-cost decline 3 points higher', L:{unitCostDecline:(L.unitCostDecline || 0) + 3}});
+  }
+  return list.filter(s => !s.skip);
+}
+function shiftDrift(L, k){ return Array.isArray(L.driftP) ? L.driftP.map(v => v + k) : undefined; }
+function verdictFragility(L, G){
+  const base = runLayer(L, G);
+  const results = fragilityShocks(L, G).map(s => {
+    const l = Object.assign({}, L, s.L || {}), g = Object.assign({}, G, s.G || {});
+    if (l.driftP === undefined) delete l.driftP;
+    const o = runLayer(l, g);
+    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flips: o.bin !== base.bin };
+  });
+  const flips = results.filter(r => r.flips);
+  return { bin: base.bin, npv: base.npv, results, flips, n: flips.length, m: results.length };
+}
 
 // Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
 // Defaults are neutral on timing (offset 0, steepness 1, build starts in year 0) and on phases (all three equal the v0.1 constant),
@@ -732,7 +782,7 @@ function updateEffDrift(){
   $('effNote').hidden = !isV();
 }
 function markSel(){
-  document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
+  document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr, #fragility tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
   document.querySelectorAll('button[data-sel]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.sel===sel ? 'true' : 'false'));
 }
 function onLayerInput(e){
@@ -1011,26 +1061,29 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res); buildNote(); updateEffDrift();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
 }
-// Shown whenever any offset is non-zero: layers whose verdict changes when their own offset is set to 0.
-function timingNote(res){
-  const el = $('timingNote');
-  if(layers.every(L => L.offset===0)){ el.hidden = true; return; }
-  const dep = layers.filter((L,i) => runLayer(Object.assign({}, L, {offset:0}), G).bin !== res[i].bin).map(L => L.name);
-  el.hidden = false;
-  el.innerHTML = dep.length
-    ? '<b>Verdict depends on the timing offset for: '+dep.join(', ')+'.</b> Set to 0, the verdict changes. Offsets are your judgement, not data.'
-    : 'Timing offsets are set, but no layer’s verdict changes when its offset is set to 0.';
-}
-// Always visible: exposes the build-timing assumption (v0.1 fixed every build at year 0 without saying so).
-function buildNote(){
-  const dep = layers.filter(L => { const v = verdictIfBuildLater(L, G); return v.shifted > 0 && v.later !== v.now; }).map(L => L.name);
-  $('buildNote').innerHTML = '<b>Verdict changes if the build starts two years later for: '+(dep.length ? dep.join(', ') : 'none')+'.</b> '
-    + 'The two-year shift is a display choice, not evidence about typical delays. Build start is your judgement; the default is year 0.';
+// Verdict fragility panel: one row per layer listing the tested shocks that change its verdict. It folds in the two
+// earlier notes: the summary lines keep "timing offset set to 0" (when any offset is set) and "build starts two
+// years later" (always). The shock set is a display choice.
+function fragilityPanel(){
+  const fr = layers.map(L => verdictFragility(L, G));
+  const names = (id) => layers.filter((L,i) => fr[i].results.some(r => r.id===id && r.flips)).map(L => L.name);
+  const list = (a) => a.length ? a.join(', ') : 'none';
+  let h = '<p style="margin:0 0 6px"><b>Verdict changes if the build starts two years later for: '+list(names('build-late'))+'.</b>';
+  if(layers.some(L => L.offset!==0)) h += '<br><b>Verdict depends on the timing offset (set to 0) for: '+list(names('offset-zero'))+'.</b> Offsets are your judgement, not data.';
+  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Flips under</th><th class="l">Shocks that change the verdict (new verdict)</th></tr></thead><tbody>';
+  fr.forEach((f,i) => {
+    const L = layers[i];
+    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td><td class="l"><span class="chip '+binClass(f)+'">'+f.bin+'</span></td>'
+      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks</td><td class="l" style="white-space:normal">'
+      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  $('fragility').innerHTML = h;
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }

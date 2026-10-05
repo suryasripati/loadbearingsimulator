@@ -190,7 +190,7 @@ function updateEffDrift(){
   $('effNote').hidden = !isV();
 }
 function markSel(){
-  document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
+  document.querySelectorAll('#inputs tbody tr, #phaseTable tbody tr, #fragility tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i===sel));
   document.querySelectorAll('button[data-sel]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.sel===sel ? 'true' : 'false'));
 }
 function onLayerInput(e){
@@ -469,26 +469,29 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res); buildNote(); updateEffDrift();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
 }
-// Shown whenever any offset is non-zero: layers whose verdict changes when their own offset is set to 0.
-function timingNote(res){
-  const el = $('timingNote');
-  if(layers.every(L => L.offset===0)){ el.hidden = true; return; }
-  const dep = layers.filter((L,i) => runLayer(Object.assign({}, L, {offset:0}), G).bin !== res[i].bin).map(L => L.name);
-  el.hidden = false;
-  el.innerHTML = dep.length
-    ? '<b>Verdict depends on the timing offset for: '+dep.join(', ')+'.</b> Set to 0, the verdict changes. Offsets are your judgement, not data.'
-    : 'Timing offsets are set, but no layer’s verdict changes when its offset is set to 0.';
-}
-// Always visible: exposes the build-timing assumption (v0.1 fixed every build at year 0 without saying so).
-function buildNote(){
-  const dep = layers.filter(L => { const v = verdictIfBuildLater(L, G); return v.shifted > 0 && v.later !== v.now; }).map(L => L.name);
-  $('buildNote').innerHTML = '<b>Verdict changes if the build starts two years later for: '+(dep.length ? dep.join(', ') : 'none')+'.</b> '
-    + 'The two-year shift is a display choice, not evidence about typical delays. Build start is your judgement; the default is year 0.';
+// Verdict fragility panel: one row per layer listing the tested shocks that change its verdict. It folds in the two
+// earlier notes: the summary lines keep "timing offset set to 0" (when any offset is set) and "build starts two
+// years later" (always). The shock set is a display choice.
+function fragilityPanel(){
+  const fr = layers.map(L => verdictFragility(L, G));
+  const names = (id) => layers.filter((L,i) => fr[i].results.some(r => r.id===id && r.flips)).map(L => L.name);
+  const list = (a) => a.length ? a.join(', ') : 'none';
+  let h = '<p style="margin:0 0 6px"><b>Verdict changes if the build starts two years later for: '+list(names('build-late'))+'.</b>';
+  if(layers.some(L => L.offset!==0)) h += '<br><b>Verdict depends on the timing offset (set to 0) for: '+list(names('offset-zero'))+'.</b> Offsets are your judgement, not data.';
+  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Flips under</th><th class="l">Shocks that change the verdict (new verdict)</th></tr></thead><tbody>';
+  fr.forEach((f,i) => {
+    const L = layers[i];
+    h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td><td class="l"><span class="chip '+binClass(f)+'">'+f.bin+'</span></td>'
+      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks</td><td class="l" style="white-space:normal">'
+      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  $('fragility').innerHTML = h;
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }

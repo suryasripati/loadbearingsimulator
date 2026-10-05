@@ -64,7 +64,7 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 - Per-layer `buildStart` (whole years, default 0, clamped so buildStart + buildYears <= 15). Build spend runs over buildStart to buildEnd - 1, where buildEnd = buildStart + buildYears; sustaining spend, debt repayment, payback and the DSCR check all start at buildEnd.
 - Capacity limit: see locked decision 11.
 - Life flag clock: payback minus max(entry year, build start) is compared with asset life, so idle years before any capital goes in do not count against the asset.
-- Always-visible line under the scorecard: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
+- Verdict fragility panel under the scorecard (replaces the separate offset and build-start notes; `verdictFragility` in the model): per layer, the tested shocks that change its verdict and "flips under N of M shocks". Shocks, a display choice: offset +/-2 years, build start +2 years, drift +/-3 points, scale +/-25%, discount rate +/-25%, asset life +/-25%, offset set to 0 when an offset is set, and in vintage mode pass-through 0 and 1 and decline +/-3 points. Shocks that would change nothing are not counted. Its summary line keeps: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
 
 ## Drop 1 (build first)
 
@@ -109,6 +109,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Assumptions to keep labelled: replacement happens on time, so capacity stays at 100% after the initial build; the Definition A entry price covers initial build spend only (replacement before the entry year is not priced); debt covers the initial build only.
 - `unitCostDecline` defaults to 0 for every layer. `passThrough` defaults to 0.5: no view, placeholder, unsourced. Share multiplier each year = (1 + phase drift) x (1 - passThrough x decline). Drift covers other commoditisation; passThrough covers erosion caused by cheaper capacity.
 - Stranded value: per cohort in use at t, spend x remaining life / life x (1 - (1 - decline)^(t - t0)); peak over the horizon as % of build capex. A diagnostic, not a cash item: the cash effect comes through revenue, and charging both would double count.
+- Caveat: pass-through lowers a layer's revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead. Not modelled (see backlog).
 - Scorecard (vintage): present value at passThrough 0 and 1 and the gap, "value at stake in pricing power". Bounds, not forecasts.
 - Sensitivity (vintage): unit-cost decline +/-3 points; passThrough +/-0.25, clamped to 0-1.
 - "Load unit-cost-decline example" sets invented round numbers (chips 10, data centres 5, models 20, applications 0, services 0 % a year) and switches on vintage mode. Not data.
@@ -133,6 +134,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Separate discount rate per layer.
 - Levered NPV using the debt terms.
 - Probability-weighted scenarios.
+- Price elasticity of demand: let lower prices from pass-through raise adoption or the value pool, so cheaper capacity can raise revenue as well as erode it. Needs a sourced elasticity or a clearly labelled assumption.
 
 ## Research behind the design (for the README and citations)
 Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets: The British Railway Mania of 1845 (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The Information-Technology Revolution and the Stock Market (NBER, 2000). From memory and unverified: Perez (2002) on installation and deployment phases. Verify before citing.

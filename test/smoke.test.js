@@ -27,6 +27,8 @@ function load(){
 }
 const heading = (doc) => doc.getElementById('detailTitle').textContent;
 const verdicts = (doc) => [...doc.querySelectorAll('#score tbody tr')].map(r => r.cells[r.cells.length - 1].textContent.trim());
+const panelText = (doc) => doc.getElementById('fragility').textContent;
+const hasOffsetLine = (doc) => /Verdict depends on the timing offset \(set to 0\) for: /.test(panelText(doc));
 const click = (win, el) => el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 
 // Every place that marks the selected layer must agree on the same index.
@@ -57,7 +59,7 @@ test('page loads from docs/index.html with no console errors', () => {
 test('default verdicts at neutral settings equal the v0.1 fixture bins', () => {
   const { doc, win } = load();
   assert.deepEqual(verdicts(doc), fx.layers.map(l => l.bin));
-  assert.equal(doc.getElementById('timingNote').hidden, true);
+  assert.ok(!hasOffsetLine(doc), 'no offset line while every offset is 0');
   win.close();
 });
 
@@ -77,7 +79,7 @@ test('all five ways of choosing a layer switch the Detail heading and highlight 
   win.close();
 });
 
-test('"Load lead/lag example" shows the timing note naming the layers whose verdict depends on their offset', () => {
+test('"Load lead/lag example" shows the offset line in the fragility panel naming the layers whose verdict depends on their offset', () => {
   const { doc, win } = load();
   const g = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES };
   const expected = D.DEFAULT_LAYERS
@@ -85,9 +87,7 @@ test('"Load lead/lag example" shows the timing note naming the layers whose verd
     .map(L => L.name);
   assert.ok(expected.length > 0, 'the example should move at least one verdict');
   click(win, doc.getElementById('leadlag'));
-  const note = doc.getElementById('timingNote');
-  assert.equal(note.hidden, false);
-  assert.ok(note.textContent.includes('Verdict depends on the timing offset for: ' + expected.join(', ') + '.'), note.textContent);
+  assert.ok(panelText(doc).includes('Verdict depends on the timing offset (set to 0) for: ' + expected.join(', ') + '.'), panelText(doc));
   win.close();
 });
 
@@ -102,19 +102,19 @@ test('Reset restores defaults', () => {
   assert.deepEqual([...doc.querySelectorAll('#inputs input[data-k="offset"]')].map(i => Number(i.value)), D.DEFAULT_LAYERS.map(L => L.offset));
   assert.equal(Number(doc.querySelector('#inputs input[data-i="0"][data-k="share"]').value), D.DEFAULT_LAYERS[0].share);
   assert.equal(doc.querySelector('#defSwitch [data-d="A"]').getAttribute('aria-pressed'), 'true');
-  assert.equal(doc.getElementById('timingNote').hidden, true);
+  assert.ok(!hasOffsetLine(doc));
   assert.deepEqual(verdicts(doc), fx.layers.map(l => l.bin));
   assertSelected(doc, 1);
   win.close();
 });
 
-test('build start column and the build-later line render', () => {
+test('build start column and the build-later line (in the fragility panel) render', () => {
   const { doc, win } = load();
   const heads = [...doc.querySelectorAll('#inputs thead th')].map(th => th.textContent);
   assert.ok(heads.includes('Build starts, year'));
   assert.equal(doc.querySelectorAll('#inputs input[data-k="buildStart"]').length, D.DEFAULT_LAYERS.length);
-  const note = doc.getElementById('buildNote');
-  assert.ok(!note.hidden && /Verdict changes if the build starts two years later for: /.test(note.textContent), note.textContent);
+  const note = doc.getElementById('fragility');
+  assert.ok(/Verdict changes if the build starts two years later for: /.test(note.textContent), note.textContent);
   const g = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES };
   const { verdictIfBuildLater } = require('../src/model.js');
   const expected = D.DEFAULT_LAYERS.filter(L => { const v = verdictIfBuildLater(L, g); return v.later !== v.now; }).map(L => L.name);
@@ -173,3 +173,36 @@ test('capex model toggle and the unit-cost-decline example', () => {
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('verdict fragility panel: one row per layer matching verdictFragility, in both capex modes', () => {
+  const { doc, win, errors } = load();
+  const { verdictFragility } = require('../src/model.js');
+  const check = (g) => {
+    const rows = [...doc.querySelectorAll('#fragility tbody tr')];
+    assert.equal(rows.length, D.DEFAULT_LAYERS.length);
+    rows.forEach((r, i) => {
+      const f = verdictFragility(layerFromInputs(doc, i), g);
+      assert.ok(r.textContent.includes('flips under ' + f.n + ' of ' + f.m + ' shocks'), r.textContent);
+      if (f.n === 0) assert.ok(r.textContent.includes('No tested shock changes the verdict'));
+      f.flips.forEach(x => assert.ok(r.textContent.includes(x.n + ' (' + x.bin + ')'), x.n));
+    });
+  };
+  const g = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES, capexModel: D.DEFAULT_CAPEX };
+  check(g);
+  assert.ok(!/Pass-through/.test(panelText(doc)), 'no vintage shocks in the default mode');
+  click(win, doc.getElementById('ucdExample'));
+  check({ ...g, capexModel: 'vintage' });
+  assert.ok(doc.querySelector('#fragility tbody tr.sel'), 'selected layer highlighted in the panel');
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+// Rebuild a layer object from the default layer plus the values currently in the input tables.
+function layerFromInputs(doc, i){
+  const L = { ...D.DEFAULT_LAYERS[i], driftP: D.DEFAULT_LAYERS[i].driftP.slice(), marginP: D.DEFAULT_LAYERS[i].marginP.slice() };
+  doc.querySelectorAll('#inputs input[data-i="' + i + '"], #phaseTable input[data-i="' + i + '"]').forEach(inp => {
+    const v = Number(inp.value);
+    if (inp.dataset.p === undefined) L[inp.dataset.k] = v; else L[inp.dataset.k][+inp.dataset.p] = v;
+  });
+  return L;
+}

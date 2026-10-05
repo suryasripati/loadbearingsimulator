@@ -488,3 +488,57 @@ test('pass-through: legacy mode ignores decline and pass-through', () => {
     for (const [d, pt] of [[20, 0], [20, 1], [-5, 0.5]]) assert.equal(runLayer({ ...L0, unitCostDecline: d, passThrough: pt }, GA).npv, base);
   }
 });
+
+/* ---------- Verdict fragility ---------- */
+const { verdictFragility } = require('../src/model.js');
+// Expected shocks written out independently of the model's list, then checked with direct runLayer calls.
+function expectedShocks(L, g){
+  const out = {
+    'offset-late': [{ ...L, offset: (L.offset || 0) + 2 }, g],
+    'offset-early': [{ ...L, offset: (L.offset || 0) - 2 }, g],
+    'drift-down': [{ ...L, driftP: L.driftP.map(v => v - 3) }, g],
+    'drift-up': [{ ...L, driftP: L.driftP.map(v => v + 3) }, g],
+    'scale-down': [{ ...L, share: L.share * 0.75 }, g],
+    'scale-up': [{ ...L, share: L.share * 1.25 }, g],
+    'disc-up': [L, { ...g, disc: g.disc * 1.25 }],
+    'disc-down': [L, { ...g, disc: g.disc * 0.75 }],
+    'life-down': [{ ...L, life: Math.max(1, L.life * 0.75) }, g],
+    'life-up': [{ ...L, life: L.life * 1.25 }, g]
+  };
+  if (buildStartOf({ ...L, buildStart: buildStartOf(L) + 2 }) !== buildStartOf(L)) out['build-late'] = [{ ...L, buildStart: buildStartOf(L) + 2 }, g];
+  if ((L.offset || 0) !== 0) out['offset-zero'] = [{ ...L, offset: 0 }, g];
+  if (g.capexModel === 'vintage') {
+    const pt = L.passThrough === undefined ? 0.5 : L.passThrough;
+    if (pt !== 0) out['pt-0'] = [{ ...L, passThrough: 0 }, g];
+    if (pt !== 1) out['pt-1'] = [{ ...L, passThrough: 1 }, g];
+    out['decline-down'] = [{ ...L, unitCostDecline: (L.unitCostDecline || 0) - 3 }, g];
+    out['decline-up'] = [{ ...L, unitCostDecline: (L.unitCostDecline || 0) + 3 }, g];
+  }
+  return out;
+}
+
+test('verdict fragility: every tested shock matches a direct model call, and N of M counts the flips', () => {
+  const configs = [];
+  for (const capexModel of ['sustaining', 'vintage']) for (const lead of [false, true]) for (const ucd of [false, true]) for (const s of [{}, D.SCEN.fast]) {
+    if (ucd && capexModel !== 'vintage') continue;
+    configs.push({ g: { ...GA, ...s, capexModel }, lead, ucd });
+  }
+  for (const { g, lead, ucd } of configs) D.DEFAULT_LAYERS.forEach((L0, i) => {
+    const L = { ...L0, offset: lead ? D.LEAD_LAG_EXAMPLE[i] : 0, unitCostDecline: ucd ? D.UCD_EXAMPLE[i] : 0 };
+    const f = verdictFragility(L, g), base = runLayer(L, g).bin, exp = expectedShocks(L, g);
+    assert.equal(f.bin, base);
+    assert.deepEqual(f.results.map(r => r.id).sort(), Object.keys(exp).sort());
+    for (const r of f.results) {
+      const direct = runLayer(exp[r.id][0], exp[r.id][1]);
+      assert.equal(r.bin, direct.bin, r.id);
+      assert.equal(r.flips, direct.bin !== base, r.id);
+    }
+    assert.equal(f.m, f.results.length);
+    assert.equal(f.n, f.results.filter(r => r.flips).length);
+  });
+});
+
+test('verdict fragility: the build shock is skipped when there is no room to start later', () => {
+  const L = { ...D.DEFAULT_LAYERS[1], buildStart: H - D.DEFAULT_LAYERS[1].buildYears };
+  assert.ok(!verdictFragility(L, GA).results.some(r => r.id === 'build-late'));
+});

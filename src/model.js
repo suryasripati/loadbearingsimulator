@@ -248,4 +248,48 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
+// Verdict fragility: which tested shocks change a layer's verdict (bin). The shock set is a display choice, not
+// evidence about how far inputs might move. A shock that would leave the inputs unchanged (for example pass-through
+// already at 0, or no room to start the build later) is not tested and not counted.
+const PT_DEFAULT = 0.5;
+function fragilityShocks(L, G){
+  const vintage = G.capexModel === 'vintage';
+  const pt = L.passThrough === undefined ? PT_DEFAULT : L.passThrough;
+  const life = (k) => Math.max(1, L.life * k);
+  const list = [
+    {id:'offset-late', group:'timing', n:'Timing offset 2 years later', L:{offset:(L.offset || 0) + 2}},
+    {id:'offset-early', group:'timing', n:'Timing offset 2 years earlier', L:{offset:(L.offset || 0) - 2}},
+    {id:'build-late', group:'build', n:'Build starts 2 years later', L:{buildStart:buildStartOf(L) + BUILD_SHIFT},
+      skip: buildStartOf(Object.assign({}, L, {buildStart:buildStartOf(L) + BUILD_SHIFT})) === buildStartOf(L)},
+    {id:'drift-down', group:'drift', n:'Share drift 3 points lower', L:{driftP:shiftDrift(L, -3), drift:(L.drift || 0) - 3}},
+    {id:'drift-up', group:'drift', n:'Share drift 3 points higher', L:{driftP:shiftDrift(L, 3), drift:(L.drift || 0) + 3}},
+    {id:'scale-down', group:'scale', n:'Scale 25% lower', L:{share:L.share * 0.75}},
+    {id:'scale-up', group:'scale', n:'Scale 25% higher', L:{share:L.share * 1.25}},
+    {id:'disc-up', group:'disc', n:'Discount rate 25% higher', G:{disc:G.disc * 1.25}},
+    {id:'disc-down', group:'disc', n:'Discount rate 25% lower', G:{disc:G.disc * 0.75}},
+    {id:'life-down', group:'life', n:'Asset life 25% shorter', L:{life:life(0.75)}},
+    {id:'life-up', group:'life', n:'Asset life 25% longer', L:{life:life(1.25)}}
+  ];
+  // Keeps the information of the earlier timing note: when an offset is set, test the layer at offset 0.
+  if ((L.offset || 0) !== 0) list.push({id:'offset-zero', group:'timing', n:'Timing offset set to 0', L:{offset:0}});
+  if (vintage){
+    list.push({id:'pt-0', group:'passThrough', n:'Pass-through 0 (owner keeps savings)', L:{passThrough:0}, skip: pt === 0});
+    list.push({id:'pt-1', group:'passThrough', n:'Pass-through 1 (competition takes savings)', L:{passThrough:1}, skip: pt === 1});
+    list.push({id:'decline-down', group:'decline', n:'Unit-cost decline 3 points lower', L:{unitCostDecline:(L.unitCostDecline || 0) - 3}});
+    list.push({id:'decline-up', group:'decline', n:'Unit-cost decline 3 points higher', L:{unitCostDecline:(L.unitCostDecline || 0) + 3}});
+  }
+  return list.filter(s => !s.skip);
+}
+function shiftDrift(L, k){ return Array.isArray(L.driftP) ? L.driftP.map(v => v + k) : undefined; }
+function verdictFragility(L, G){
+  const base = runLayer(L, G);
+  const results = fragilityShocks(L, G).map(s => {
+    const l = Object.assign({}, L, s.L || {}), g = Object.assign({}, G, s.G || {});
+    if (l.driftP === undefined) delete l.driftP;
+    const o = runLayer(l, g);
+    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flips: o.bin !== base.bin };
+  });
+  const flips = results.filter(r => r.flips);
+  return { bin: base.bin, npv: base.npv, results, flips, n: flips.length, m: results.length };
+}
+if (typeof module !== 'undefined') module.exports = { runLayer, verdictFragility, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
