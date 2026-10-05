@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+.env
+# Personal snapshot exports (may contain allocations). Keep these out of the repo.
+exports/
+*.snapshot.json

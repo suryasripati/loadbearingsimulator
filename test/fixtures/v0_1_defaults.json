@@ -1,0 +1,130 @@
+{
+  "version": "0.1.0",
+  "G": {
+    "pool": 1200,
+    "speed": 8,
+    "mid": 8,
+    "disc": 10,
+    "rd": 7,
+    "tv": 5,
+    "premium": 0
+  },
+  "layers": [
+    {
+      "id": "hw",
+      "input": {
+        "id": "hw",
+        "name": "Chips and accelerators",
+        "evidence": 3,
+        "share": 25,
+        "drift": -1,
+        "margin": 45,
+        "capex": 120,
+        "buildYears": 4,
+        "life": 8,
+        "debt": 10
+      },
+      "npv": 270.641159927497,
+      "breakEven": 258.72540678266074,
+      "irr": 0.25508436552449976,
+      "payback": 9,
+      "flags": [
+        "life"
+      ],
+      "bin": "Pays, but fragile"
+    },
+    {
+      "id": "dc",
+      "input": {
+        "id": "dc",
+        "name": "Data centres and power",
+        "evidence": 3,
+        "share": 15,
+        "drift": -2,
+        "margin": 45,
+        "capex": 220,
+        "buildYears": 5,
+        "life": 10,
+        "debt": 50
+      },
+      "npv": -56.1363307455843,
+      "breakEven": -30.596327751540798,
+      "irr": 0.06271365195392764,
+      "payback": 15,
+      "flags": [
+        "life",
+        "debt"
+      ],
+      "bin": "Useful, but capital does not earn its cost"
+    },
+    {
+      "id": "ml",
+      "input": {
+        "id": "ml",
+        "name": "Models",
+        "evidence": 3,
+        "share": 15,
+        "drift": -3,
+        "margin": 35,
+        "capex": 100,
+        "buildYears": 4,
+        "life": 4,
+        "debt": 10
+      },
+      "npv": -70.89614664265609,
+      "breakEven": -81.32968858554214,
+      "irr": 0.005883971136899313,
+      "payback": null,
+      "flags": [
+        "life",
+        "debt",
+        "tail"
+      ],
+      "bin": "Useful, but capital does not earn its cost"
+    },
+    {
+      "id": "ap",
+      "input": {
+        "id": "ap",
+        "name": "Applications",
+        "evidence": 3,
+        "share": 30,
+        "drift": 0,
+        "margin": 30,
+        "capex": 60,
+        "buildYears": 3,
+        "life": 5,
+        "debt": 0
+      },
+      "npv": 282.53009334433995,
+      "breakEven": 516.4069681973585,
+      "irr": 0.3113233036765105,
+      "payback": 8,
+      "flags": [
+        "life"
+      ],
+      "bin": "Pays, but fragile"
+    },
+    {
+      "id": "sv",
+      "input": {
+        "id": "sv",
+        "name": "Services and integration",
+        "evidence": 3,
+        "share": 15,
+        "drift": 0,
+        "margin": 15,
+        "capex": 15,
+        "buildYears": 2,
+        "life": 10,
+        "debt": 0
+      },
+      "npv": 79.35361189143609,
+      "breakEven": 554.2157020989188,
+      "irr": 0.3163271125996042,
+      "payback": 7,
+      "flags": [],
+      "bin": "Durable value"
+    }
+  ]
+}
