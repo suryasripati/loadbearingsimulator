@@ -107,3 +107,18 @@ test('Reset restores defaults', () => {
   assertSelected(doc, 1);
   win.close();
 });
+
+test('build start column and the build-later line render', () => {
+  const { doc, win } = load();
+  const heads = [...doc.querySelectorAll('#inputs thead th')].map(th => th.textContent);
+  assert.ok(heads.includes('Build starts, year'));
+  assert.equal(doc.querySelectorAll('#inputs input[data-k="buildStart"]').length, D.DEFAULT_LAYERS.length);
+  const note = doc.getElementById('buildNote');
+  assert.ok(!note.hidden && /Verdict changes if the build starts two years later for: /.test(note.textContent), note.textContent);
+  const g = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES };
+  const { verdictIfBuildLater } = require('../src/model.js');
+  const expected = D.DEFAULT_LAYERS.filter(L => { const v = verdictIfBuildLater(L, g); return v.later !== v.now; }).map(L => L.name);
+  assert.ok(note.textContent.includes(': ' + (expected.length ? expected.join(', ') : 'none') + '.'), note.textContent);
+  assert.ok(doc.getElementById('tornado').textContent.includes('Build start (two years later only; cannot start before year 0)'));
+  win.close();
+});

@@ -156,7 +156,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
 <section>
   <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Allocation is your own split, in any units.</p>
+  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</p>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
     <div class="seg" style="margin-top:12px;margin-bottom:0">
@@ -193,6 +193,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
       <b>Tail flag.</b> More than half the value arrives after year 15.
     </div>
+    <div class="notice" id="buildNote"></div>
   </div>
 </section>
 
@@ -201,7 +202,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <div class="seg" id="layerPick" role="group" aria-label="Choose a layer" style="margin-top:8px"></div>
   <div class="twocol">
     <div class="card"><h3>Cumulative cash to the investor</h3><p class="muted" style="font-size:13px">Includes your entry premium and sustaining spend. Excludes value beyond year 15.</p><div id="cashChart"></div></div>
-    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
+    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
   </div>
   <div class="card" style="margin-top:20px">
     <h3 id="heatTitle">When you enter and what you pay</h3>
@@ -221,9 +222,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <div class="card note">
     <ul style="margin:0;padding-left:18px">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
-      <li>Build capex is spread over the build years. After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
-      <li>Not yet modelled: margins and drift that respond to how full the built capacity is. Deferred until the sensitivity ranking shows it matters.</li>
+      <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until then, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>

@@ -35,7 +35,7 @@ Keep the model pure and testable. Keep the page dependency-free. If a library is
 - Adoption is an S-curve: `1 / (1 + exp(-k (t - mid)))` with `k = ln(81) / speed`, so `speed` is the years from 10% to 90%.
 - Layer revenue = value pool x adoption x share x `(1 + drift)^t`. Negative drift stands for commoditisation.
 - Operating cash = revenue x cash margin. No taxes, working capital or inflation.
-- Build capex is spread evenly over build years starting in year 0. After the build, sustaining spend each year = build capex / asset life (a depreciation-style proxy).
+- Build capex is spread evenly over build years starting in year 0 (now: starting in the layer's build start year, default 0). After the build, sustaining spend each year = build capex / asset life (a depreciation-style proxy).
 - Value beyond year 15 = terminal multiple x year-15 (operating cash minus sustaining spend), floored at 0, discounted from year 15.
 - Entry premium marks up build capex only. NPV is unlevered (owner-operator view). Debt drives only the debt flag.
 - Break-even premium solves for the premium that makes NPV zero. IRR uses the same cash flows including terminal value.
@@ -56,6 +56,13 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 7. Every change that touches model maths must keep the regression test green or update the fixture deliberately, with a note in the commit message.
 8. Default timing offsets are neutral (0). The default page must reproduce the v0.1 fixture; a test checks `src/defaults.js` against it.
 9. Any feature that demonstrates a verdict (example profiles, example offsets) must be opt-in and labelled as a placeholder. A placeholder must never carry a headline verdict by default.
+10. Default build start is year 0 for every layer, so defaults reproduce v0.1. As in decision 9, any feature that shows a verdict (examples, profiles, preset delays) must be opt-in and labelled as a placeholder.
+11. Capacity limit, an unsourced assumption: capacity share K(t) = cumulative build spend through t / total build capex, and revenue uses min(layer adoption, K(t)). Capacity is assumed to scale linearly with spend. It is a first-order version of the utilisation backlog item, to be refined by vintage capex in Drop 2. It must stay labelled as an assumption in the UI, README and here. Any uncapped version lives only in tests or scratch code.
+
+## Build start and capacity limit (built after drop 1)
+- Per-layer `buildStart` (whole years, default 0, clamped so buildStart + buildYears <= 15). Build spend runs over buildStart to buildEnd - 1, where buildEnd = buildStart + buildYears; sustaining spend, debt repayment, payback and the DSCR check all start at buildEnd.
+- Capacity limit: see locked decision 11.
+- Always-visible line under the scorecard: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
 
 ## Drop 1 (build first)
 

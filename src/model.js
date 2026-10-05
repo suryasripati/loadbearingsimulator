@@ -22,6 +22,11 @@ function phaseOf(t, bounds){
 function phaseVal(arr, constant, t, bounds){
   return Array.isArray(arr) && arr.length === 3 ? arr[phaseOf(t, bounds)] : constant;
 }
+// Build start year, whole years from 0, clamped so the build ends inside the horizon (buildStart + buildYears <= H).
+function buildStartOf(L){
+  const B = Math.max(1, Math.round(L.buildYears));
+  return Math.max(0, Math.min(H - B, Math.round(L.buildStart || 0)));
+}
 function npvOf(cf, r){ let s = 0; for (let t = 0; t < cf.length; t++) s += cf[t] / Math.pow(1 + r, t); return s; }
 function irrOf(cf){
   let lo = -0.5, hi = 1.5;
@@ -40,13 +45,20 @@ function runLayer(L, G){
   const M = G.mult || 0;
   const bounds = G.phases;
   const B = Math.max(1, Math.round(L.buildYears));
+  const S = buildStartOf(L);
+  const buildEnd = S + B; // first year after the build
   const years = []; for (let t = 0; t <= H; t++) years.push(t);
-  const build = years.map(t => t < B ? L.capex / B : 0);
-  const sust  = years.map(t => t >= B ? L.capex / L.life : 0);
+  const build = years.map(t => t >= S && t < buildEnd ? L.capex / B : 0);
+  const sust  = years.map(t => t >= buildEnd ? L.capex / L.life : 0);
+  // Capacity limit (assumption, unsourced): capacity scales linearly with build spend, so the layer can serve at most
+  // K(t) = cumulative build spend through t / total build capex of full adoption. A first-order stand-in for the
+  // utilisation backlog item, to be refined by vintage capex in Drop 2.
+  let spent = 0;
+  const cap = years.map(t => { spent += build[t]; return L.capex > 0 ? Math.min(1, spent / L.capex) : 1; });
   // Share compounds by the drift of the phase each year falls in. With one constant drift this is (1 + drift)^t.
   const shareMult = [1];
   for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100));
-  const rev   = years.map(t => G.pool * layerAdoption(t, L, G) * (L.share / 100) * shareMult[t]);
+  const rev   = years.map(t => G.pool * Math.min(layerAdoption(t, L, G), cap[t]) * (L.share / 100) * shareMult[t]);
   const ocf   = rev.map((x, t) => x * phaseVal(L.marginP, L.margin, t, bounds) / 100);
   const opsNet = years.map(t => ocf[t] - sust[t]);
   const tv = G.tv * Math.max(0, opsNet[H]);
@@ -76,18 +88,18 @@ function runLayer(L, G){
   const npv = npvOf(cfFromE, r);
   const irr = irrOf(cfFromE);
   let cum = 0, payback = null; const cumArr = [];
-  for (let t = 0; t <= H; t++){ cum += cf[t]; cumArr.push(cum); if (payback === null && t >= e && cum >= 0 && t >= B) payback = t; }
+  for (let t = 0; t <= H; t++){ cum += cf[t]; cumArr.push(cum); if (payback === null && t >= e && cum >= 0 && t >= buildEnd) payback = t; }
   // debt: describes how the layer itself is financed, so it runs on the layer's full timeline whatever the entry year.
   const D = (L.debt / 100) * L.capex, rd = G.rd / 100;
-  let bal = 0, cumCash = 0, minCum = 0, minDSCR = Infinity; const ds = [];
+  let bal = 0, cumCash = 0, minCum = 0, minDSCR = Infinity; const ds = [], draws = [], repays = [];
   for (let t = 0; t <= H; t++){
     const draw = build[t] * (L.debt / 100);
     const interest = rd * bal;
-    const repay = (t >= B && t < B + AMORT) ? D / AMORT : 0;
+    const repay = (t >= buildEnd && t < buildEnd + AMORT) ? D / AMORT : 0;
     bal = bal + draw - repay;
-    const service = interest + repay; ds.push(service);
+    const service = interest + repay; ds.push(service); draws.push(draw); repays.push(repay);
     cumCash += opsNet[t] - service; if (cumCash < minCum) minCum = cumCash;
-    if (t >= B && service > 0.0001) minDSCR = Math.min(minDSCR, opsNet[t] / service);
+    if (t >= buildEnd && service > 0.0001) minDSCR = Math.min(minDSCR, opsNet[t] / service);
   }
   const hasDebt = L.debt > 0;
   const flags = [];
@@ -103,7 +115,7 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
 }
 // NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).
@@ -114,6 +126,13 @@ function heatmap(L, G, entries, prices){
 // Sensitivity of NPV to one-at-a-time shocks. Shock sizes differ by input: drift moves in points, timing offset
 // in years, the entry premium in points, everything else by 25%. Bars are not like-for-like across inputs.
 const OFFSET_SHOCK = 2;
+// Two-year build delay used by the sensitivity bar and the "verdict changes if the build starts later" line.
+// A display choice, not evidence about typical delays.
+const BUILD_SHIFT = 2;
+function verdictIfBuildLater(L, G){
+  const later = Object.assign({}, L, { buildStart: buildStartOf(L) + BUILD_SHIFT });
+  return { now: runLayer(L, G).bin, later: runLayer(later, G).bin, shifted: buildStartOf(later) - buildStartOf(L) };
+}
 const withLayer = (L, f) => {
   const c = Object.assign({}, L);
   if (Array.isArray(L.driftP)) c.driftP = L.driftP.slice();
@@ -151,6 +170,13 @@ function sensitivity(L, G){
     const a = run(it.lo), b = run(it.hi);
     one[it.id] = {id:it.id, n:it.n, lab:it.lab, bad:Math.min(a,b), good:Math.max(a,b), swing:Math.abs(b-a)};
   }
+  // Build start: two years later only, because the build cannot start before year 0. One-sided by design.
+  const later = withLayer(L, x => { x.buildStart = buildStartOf(L) + BUILD_SHIFT; });
+  const shift = buildStartOf(later) - buildStartOf(L);
+  const bs = runLayer(later, G).npv;
+  one.buildStart = {id:'buildStart', n:'Build start (two years later only; cannot start before year 0)', oneSided:true,
+    lab:shift === BUILD_SHIFT ? '+'+BUILD_SHIFT+' years, one-sided' : shift > 0 ? '+'+shift+' year'+(shift>1?'s':'')+' (end of horizon), one-sided' : 'no room to delay, one-sided',
+    bad:Math.min(base, bs), good:Math.max(base, bs), swing:Math.abs(bs - base)};
   const rows = [];
   rows.push(Object.assign({}, one.pool, {id:'scale', n:'Scale (pool, share or margin)', lab:'±25%', members:['pool','share','margin']}));
   const midYears = 0.25 * G.mid;
@@ -163,4 +189,4 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, H };
+if (typeof module !== 'undefined') module.exports = { runLayer, adoption, layerAdoption, phaseOf, heatmap, sensitivity, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };

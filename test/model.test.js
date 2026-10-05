@@ -252,3 +252,80 @@ test('timing check: with the lead/lag example, setting a layer offset back to 0 
     assert.equal(runLayer({ ...led, offset: 0 }, DEFAULT_RUN_G).bin, fx.layers[i].bin);
   });
 });
+
+/* ---------- Build start and capacity limit ---------- */
+const { verdictIfBuildLater, buildStartOf } = require('../src/model.js');
+const GA = { ...D.DEFAULT_G, entryDef: 'A', entry: 0, phases: D.DEFAULT_PHASES };
+
+test('build start: defaults (build start 0) still reproduce the v0.1 fixture exactly', () => {
+  D.DEFAULT_LAYERS.forEach((L, i) => {
+    assert.equal(L.buildStart, 0);
+    const o = runLayer(L, GA), row = fx.layers[i];
+    near(o.npv, row.npv, 1e-6); near(o.breakEven, row.breakEven, 1e-6); near(o.irr, row.irr, 1e-6);
+    assert.equal(o.payback, row.payback); assert.deepEqual(o.flags, row.flags); assert.equal(o.bin, row.bin);
+  });
+});
+
+test('build start: NPV is zero at the break-even price for build starts 0, 2, 4 under both definitions and entry years 0 and 3', () => {
+  let checked = 0;
+  for (const L0 of D.DEFAULT_LAYERS) for (const bs of [0, 2, 4]) for (const entry of [0, 3]) {
+    const L = { ...L0, buildStart: bs };
+    const a = runLayer(L, { ...GA, entry });
+    if (isFinite(a.breakEven)) { near(runLayer(L, { ...GA, entry, premium: a.breakEven }).npv, 0, 1e-6); checked++; }
+    const gB = { ...GA, entryDef: 'B', entry };
+    const b = runLayer(L, gB);
+    if (b.bMeaningful) { near(runLayer(L, { ...gB, mult: b.breakEvenM }).npv, 0, 1e-6); checked++; }
+  }
+  assert.ok(checked >= 40, 'checked ' + checked);
+});
+
+test('build start: build spend runs from build start for build years and sums to total capex', () => {
+  for (const L0 of D.DEFAULT_LAYERS) for (const bs of [0, 3, 6, 50]) {
+    const L = { ...L0, buildStart: bs }, o = runLayer(L, GA), S = buildStartOf(L);
+    near(o.build.reduce((a, b) => a + b, 0), L.capex, 1e-9);
+    o.build.forEach((v, t) => assert.equal(v > 0, t >= S && t < S + L.buildYears));
+    assert.ok(o.buildEnd <= H, 'build ends inside the horizon');
+    o.sust.forEach((v, t) => assert.equal(v > 0, t >= o.buildEnd));
+  }
+});
+
+test('build start: debt draws follow the build and repayment starts when the build ends', () => {
+  const L = { ...D.DEFAULT_LAYERS[1], buildStart: 3 }, o = runLayer(L, GA);
+  const debt = L.debt / 100 * L.capex;
+  o.draws.forEach((v, t) => near(v, o.build[t] * L.debt / 100, 1e-12));
+  o.repays.forEach((v, t) => assert.equal(v > 0, t >= o.buildEnd && t < o.buildEnd + 8));
+  near(o.repays.reduce((a, b) => a + b, 0), debt * Math.min(8, H + 1 - o.buildEnd) / 8, 1e-9);
+  assert.ok(o.ds.slice(0, 3).every(v => v === 0), 'no debt service before the build starts');
+});
+
+test('capacity limit: with the cap, data centres NPV is not monotonic in build start', () => {
+  const npv = [0, 2, 4, 6, 8].map(bs => runLayer({ ...D.DEFAULT_LAYERS[1], buildStart: bs }, GA).npv);
+  const rising = npv.every((v, i) => i === 0 || v > npv[i - 1]);
+  assert.ok(!rising, 'NPV by build start: ' + npv.map(v => v.toFixed(0)).join(', '));
+  assert.ok(npv[4] < npv[3], 'a late enough build loses value');
+});
+
+test('capacity limit: the cap never raises revenue above the uncapped value', () => {
+  for (const L0 of D.DEFAULT_LAYERS) for (const bs of [0, 2, 5, 8]) for (const s of Object.values(D.SCEN)) for (const off of [-3, 0, 3]) {
+    const L = { ...L0, buildStart: bs, offset: off }, g = { ...GA, ...s }, o = runLayer(L, g);
+    o.rev.forEach((r, t) => {
+      const uncapped = g.pool * require('../src/model.js').layerAdoption(t, L, g) * (L.share / 100) * Math.pow(1 + L0.driftP[0] / 100, t);
+      assert.ok(r <= uncapped + 1e-9);
+    });
+  }
+});
+
+test('build-later check: shifts the build two years and reports the verdict at the new start', () => {
+  const v = verdictIfBuildLater(D.DEFAULT_LAYERS[0], GA);
+  assert.equal(v.shifted, 2);
+  assert.equal(v.now, runLayer(D.DEFAULT_LAYERS[0], GA).bin);
+  assert.equal(v.later, runLayer({ ...D.DEFAULT_LAYERS[0], buildStart: 2 }, GA).bin);
+});
+
+test('sensitivity: the build-start bar is one-sided (two years later only)', () => {
+  const s = sensitivity(D.DEFAULT_LAYERS[1], GA);
+  const b = s.rows.find(r => r.id === 'buildStart');
+  assert.ok(b && b.oneSided);
+  const later = runLayer({ ...D.DEFAULT_LAYERS[1], buildStart: 2 }, GA).npv;
+  near(b.bad, Math.min(s.base, later), 1e-9); near(b.good, Math.max(s.base, later), 1e-9);
+});

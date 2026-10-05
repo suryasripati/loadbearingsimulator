@@ -102,6 +102,7 @@ const COLS = [
   ['offset','Timing offset, years (− leads, + lags)',-5,5,0.5],
   ['steepness','Curve steepness (1 = same as demand)',0.25,4,0.25],
   ['capex','Build capex, $B',1,2000,5],
+  ['buildStart','Build starts, year',0,H-1,1],
   ['buildYears','Build years',1,10,1],
   ['life','Asset life, years',1,40,1],
   ['debt','Debt, % of build',0,100,5],
@@ -154,6 +155,11 @@ function onLayerInput(e){
   if(!isFinite(v)) return;
   v = clamp(v, col[2], col[3]);
   if(p===undefined) layers[i][k] = v; else layers[i][k][+p] = v;
+  // Keep the build inside the horizon (the model clamps the same way); show the clamped value.
+  if(k==='buildStart' || k==='buildYears'){
+    const L = layers[i], bs = buildStartOf(L);
+    if(bs !== L.buildStart){ L.buildStart = bs; const f = document.querySelector('#inputs input[data-i="'+i+'"][data-k="buildStart"]'); if(f) f.value = bs; }
+  }
   save(); renderResults();
 }
 function refreshInputsFromState(){
@@ -342,7 +348,7 @@ function tornado(){
   });
   s += '<line x1="'+cx+'" x2="'+cx+'" y1="'+m.t+'" y2="'+(Hh-m.b)+'" stroke="var(--ink)" stroke-width="1.2"/></svg>';
   s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end.</div>';
-  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like.</div>';
+  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.</div>';
   $('tornado').innerHTML = s;
 }
 
@@ -412,7 +418,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res);
+  quadChart(res); scoreTable(res); timingNote(res); buildNote();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -426,6 +432,12 @@ function timingNote(res){
   el.innerHTML = dep.length
     ? '<b>Verdict depends on the timing offset for: '+dep.join(', ')+'.</b> Set to 0, the verdict changes. Offsets are your judgement, not data.'
     : 'Timing offsets are set, but no layer’s verdict changes when its offset is set to 0.';
+}
+// Always visible: exposes the build-timing assumption (v0.1 fixed every build at year 0 without saying so).
+function buildNote(){
+  const dep = layers.filter(L => { const v = verdictIfBuildLater(L, G); return v.shifted > 0 && v.later !== v.now; }).map(L => L.name);
+  $('buildNote').innerHTML = '<b>Verdict changes if the build starts two years later for: '+(dep.length ? dep.join(', ') : 'none')+'.</b> '
+    + 'The two-year shift is a display choice, not evidence about typical delays. Build start is your judgement; the default is year 0.';
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }

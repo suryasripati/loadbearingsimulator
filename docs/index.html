@@ -156,7 +156,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
 <section>
   <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Allocation is your own split, in any units.</p>
+  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</p>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
     <div class="seg" style="margin-top:12px;margin-bottom:0">
@@ -193,6 +193,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
       <b>Tail flag.</b> More than half the value arrives after year 15.
     </div>
+    <div class="notice" id="buildNote"></div>
   </div>
 </section>
 
@@ -201,7 +202,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <div class="seg" id="layerPick" role="group" aria-label="Choose a layer" style="margin-top:8px"></div>
   <div class="twocol">
     <div class="card"><h3>Cumulative cash to the investor</h3><p class="muted" style="font-size:13px">Includes your entry premium and sustaining spend. Excludes value beyond year 15.</p><div id="cashChart"></div></div>
-    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
+    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
   </div>
   <div class="card" style="margin-top:20px">
     <h3 id="heatTitle">When you enter and what you pay</h3>
@@ -221,9 +222,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <div class="card note">
     <ul style="margin:0;padding-left:18px">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
-      <li>Build capex is spread over the build years. After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
+      <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
-      <li>Not yet modelled: margins and drift that respond to how full the built capacity is. Deferred until the sensitivity ranking shows it matters.</li>
+      <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until then, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
@@ -258,6 +260,11 @@ function phaseOf(t, bounds){
 function phaseVal(arr, constant, t, bounds){
   return Array.isArray(arr) && arr.length === 3 ? arr[phaseOf(t, bounds)] : constant;
 }
+// Build start year, whole years from 0, clamped so the build ends inside the horizon (buildStart + buildYears <= H).
+function buildStartOf(L){
+  const B = Math.max(1, Math.round(L.buildYears));
+  return Math.max(0, Math.min(H - B, Math.round(L.buildStart || 0)));
+}
 function npvOf(cf, r){ let s = 0; for (let t = 0; t < cf.length; t++) s += cf[t] / Math.pow(1 + r, t); return s; }
 function irrOf(cf){
   let lo = -0.5, hi = 1.5;
@@ -276,13 +283,20 @@ function runLayer(L, G){
   const M = G.mult || 0;
   const bounds = G.phases;
   const B = Math.max(1, Math.round(L.buildYears));
+  const S = buildStartOf(L);
+  const buildEnd = S + B; // first year after the build
   const years = []; for (let t = 0; t <= H; t++) years.push(t);
-  const build = years.map(t => t < B ? L.capex / B : 0);
-  const sust  = years.map(t => t >= B ? L.capex / L.life : 0);
+  const build = years.map(t => t >= S && t < buildEnd ? L.capex / B : 0);
+  const sust  = years.map(t => t >= buildEnd ? L.capex / L.life : 0);
+  // Capacity limit (assumption, unsourced): capacity scales linearly with build spend, so the layer can serve at most
+  // K(t) = cumulative build spend through t / total build capex of full adoption. A first-order stand-in for the
+  // utilisation backlog item, to be refined by vintage capex in Drop 2.
+  let spent = 0;
+  const cap = years.map(t => { spent += build[t]; return L.capex > 0 ? Math.min(1, spent / L.capex) : 1; });
   // Share compounds by the drift of the phase each year falls in. With one constant drift this is (1 + drift)^t.
   const shareMult = [1];
   for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100));
-  const rev   = years.map(t => G.pool * layerAdoption(t, L, G) * (L.share / 100) * shareMult[t]);
+  const rev   = years.map(t => G.pool * Math.min(layerAdoption(t, L, G), cap[t]) * (L.share / 100) * shareMult[t]);
   const ocf   = rev.map((x, t) => x * phaseVal(L.marginP, L.margin, t, bounds) / 100);
   const opsNet = years.map(t => ocf[t] - sust[t]);
   const tv = G.tv * Math.max(0, opsNet[H]);
@@ -312,18 +326,18 @@ function runLayer(L, G){
   const npv = npvOf(cfFromE, r);
   const irr = irrOf(cfFromE);
   let cum = 0, payback = null; const cumArr = [];
-  for (let t = 0; t <= H; t++){ cum += cf[t]; cumArr.push(cum); if (payback === null && t >= e && cum >= 0 && t >= B) payback = t; }
+  for (let t = 0; t <= H; t++){ cum += cf[t]; cumArr.push(cum); if (payback === null && t >= e && cum >= 0 && t >= buildEnd) payback = t; }
   // debt: describes how the layer itself is financed, so it runs on the layer's full timeline whatever the entry year.
   const D = (L.debt / 100) * L.capex, rd = G.rd / 100;
-  let bal = 0, cumCash = 0, minCum = 0, minDSCR = Infinity; const ds = [];
+  let bal = 0, cumCash = 0, minCum = 0, minDSCR = Infinity; const ds = [], draws = [], repays = [];
   for (let t = 0; t <= H; t++){
     const draw = build[t] * (L.debt / 100);
     const interest = rd * bal;
-    const repay = (t >= B && t < B + AMORT) ? D / AMORT : 0;
+    const repay = (t >= buildEnd && t < buildEnd + AMORT) ? D / AMORT : 0;
     bal = bal + draw - repay;
-    const service = interest + repay; ds.push(service);
+    const service = interest + repay; ds.push(service); draws.push(draw); repays.push(repay);
     cumCash += opsNet[t] - service; if (cumCash < minCum) minCum = cumCash;
-    if (t >= B && service > 0.0001) minDSCR = Math.min(minDSCR, opsNet[t] / service);
+    if (t >= buildEnd && service > 0.0001) minDSCR = Math.min(minDSCR, opsNet[t] / service);
   }
   const hasDebt = L.debt > 0;
   const flags = [];
@@ -339,7 +353,7 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+  return { years, rev, ocf, opsNet, build, sust, cap, buildStart: S, buildEnd, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
 }
 // NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).
@@ -350,6 +364,13 @@ function heatmap(L, G, entries, prices){
 // Sensitivity of NPV to one-at-a-time shocks. Shock sizes differ by input: drift moves in points, timing offset
 // in years, the entry premium in points, everything else by 25%. Bars are not like-for-like across inputs.
 const OFFSET_SHOCK = 2;
+// Two-year build delay used by the sensitivity bar and the "verdict changes if the build starts later" line.
+// A display choice, not evidence about typical delays.
+const BUILD_SHIFT = 2;
+function verdictIfBuildLater(L, G){
+  const later = Object.assign({}, L, { buildStart: buildStartOf(L) + BUILD_SHIFT });
+  return { now: runLayer(L, G).bin, later: runLayer(later, G).bin, shifted: buildStartOf(later) - buildStartOf(L) };
+}
 const withLayer = (L, f) => {
   const c = Object.assign({}, L);
   if (Array.isArray(L.driftP)) c.driftP = L.driftP.slice();
@@ -387,6 +408,13 @@ function sensitivity(L, G){
     const a = run(it.lo), b = run(it.hi);
     one[it.id] = {id:it.id, n:it.n, lab:it.lab, bad:Math.min(a,b), good:Math.max(a,b), swing:Math.abs(b-a)};
   }
+  // Build start: two years later only, because the build cannot start before year 0. One-sided by design.
+  const later = withLayer(L, x => { x.buildStart = buildStartOf(L) + BUILD_SHIFT; });
+  const shift = buildStartOf(later) - buildStartOf(L);
+  const bs = runLayer(later, G).npv;
+  one.buildStart = {id:'buildStart', n:'Build start (two years later only; cannot start before year 0)', oneSided:true,
+    lab:shift === BUILD_SHIFT ? '+'+BUILD_SHIFT+' years, one-sided' : shift > 0 ? '+'+shift+' year'+(shift>1?'s':'')+' (end of horizon), one-sided' : 'no room to delay, one-sided',
+    bad:Math.min(base, bs), good:Math.max(base, bs), swing:Math.abs(bs - base)};
   const rows = [];
   rows.push(Object.assign({}, one.pool, {id:'scale', n:'Scale (pool, share or margin)', lab:'±25%', members:['pool','share','margin']}));
   const midYears = 0.25 * G.mid;
@@ -401,7 +429,7 @@ function sensitivity(L, G){
 }
 
 // Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
-// Defaults are neutral on timing (offset 0, steepness 1) and on phases (all three equal the v0.1 constant),
+// Defaults are neutral on timing (offset 0, steepness 1, build starts in year 0) and on phases (all three equal the v0.1 constant),
 // so the default page reproduces the v0.1 results. Anything that demonstrates a verdict must be opt-in.
 const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
 const DEFAULT_DEF = 'A';
@@ -410,11 +438,11 @@ const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mi
 const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
 const ph = (v) => [v, v, v];
 const DEFAULT_LAYERS = [
-  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:0, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildYears:4, life:8,  debt:10, alloc:20},
-  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:0, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildYears:5, life:10, debt:50, alloc:20},
-  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0, steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildYears:4, life:4,  debt:10, alloc:20},
-  {id:'ap', name:'Applications',           evidence:3, share:30, offset:0, steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildYears:3, life:5,  debt:0,  alloc:20},
-  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:0, steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildYears:2, life:10, debt:0,  alloc:20}
+  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:0, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildStart:0, buildYears:4, life:8,  debt:10, alloc:20},
+  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:0, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildStart:0, buildYears:5, life:10, debt:50, alloc:20},
+  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0, steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildStart:0, buildYears:4, life:4,  debt:10, alloc:20},
+  {id:'ap', name:'Applications',           evidence:3, share:30, offset:0, steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildStart:0, buildYears:3, life:5,  debt:0,  alloc:20},
+  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:0, steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildStart:0, buildYears:2, life:10, debt:0,  alloc:20}
 ];
 // Opt-in example only, loaded by the "Load lead/lag example" button. A placeholder, not data:
 // infrastructure leads end demand, applications and services lag (years, in DEFAULT_LAYERS order).
@@ -524,6 +552,7 @@ const COLS = [
   ['offset','Timing offset, years (− leads, + lags)',-5,5,0.5],
   ['steepness','Curve steepness (1 = same as demand)',0.25,4,0.25],
   ['capex','Build capex, $B',1,2000,5],
+  ['buildStart','Build starts, year',0,H-1,1],
   ['buildYears','Build years',1,10,1],
   ['life','Asset life, years',1,40,1],
   ['debt','Debt, % of build',0,100,5],
@@ -576,6 +605,11 @@ function onLayerInput(e){
   if(!isFinite(v)) return;
   v = clamp(v, col[2], col[3]);
   if(p===undefined) layers[i][k] = v; else layers[i][k][+p] = v;
+  // Keep the build inside the horizon (the model clamps the same way); show the clamped value.
+  if(k==='buildStart' || k==='buildYears'){
+    const L = layers[i], bs = buildStartOf(L);
+    if(bs !== L.buildStart){ L.buildStart = bs; const f = document.querySelector('#inputs input[data-i="'+i+'"][data-k="buildStart"]'); if(f) f.value = bs; }
+  }
   save(); renderResults();
 }
 function refreshInputsFromState(){
@@ -764,7 +798,7 @@ function tornado(){
   });
   s += '<line x1="'+cx+'" x2="'+cx+'" y1="'+m.t+'" y2="'+(Hh-m.b)+'" stroke="var(--ink)" stroke-width="1.2"/></svg>';
   s += '<div class="legend">Centre line is today’s present value at year '+G.entry+' of '+money(base)+'. Red is the worse end of each move, green the better end.</div>';
-  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like.</div>';
+  s += '<div class="legend"><b>Shock sizes:</b> '+rows.map(r => r.n+' '+r.lab).join('; ')+'. Drift moves in points, the offset in years and the premium in points; the others move by 25%, so bar lengths are not like-for-like. The build-start bar is one-sided: it moves the build two years later only, because a build cannot start before year 0.</div>';
   $('tornado').innerHTML = s;
 }
 
@@ -834,7 +868,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); timingNote(res);
+  quadChart(res); scoreTable(res); timingNote(res); buildNote();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -848,6 +882,12 @@ function timingNote(res){
   el.innerHTML = dep.length
     ? '<b>Verdict depends on the timing offset for: '+dep.join(', ')+'.</b> Set to 0, the verdict changes. Offsets are your judgement, not data.'
     : 'Timing offsets are set, but no layer’s verdict changes when its offset is set to 0.';
+}
+// Always visible: exposes the build-timing assumption (v0.1 fixed every build at year 0 without saying so).
+function buildNote(){
+  const dep = layers.filter(L => { const v = verdictIfBuildLater(L, G); return v.shifted > 0 && v.later !== v.now; }).map(L => L.name);
+  $('buildNote').innerHTML = '<b>Verdict changes if the build starts two years later for: '+(dep.length ? dep.join(', ') : 'none')+'.</b> '
+    + 'The two-year shift is a display choice, not evidence about typical delays. Build start is your judgement; the default is year 0.';
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }
