@@ -8,13 +8,16 @@ A scenario tool for one question: if a technology works the way you expect, whic
 
 ## What it does
 
-The page has three view modes, chosen in the header and remembered in your browser and in the address (`#basic`, `#advanced`, `#analyst`). Modes only change what is shown; every input is kept, and results are identical in every mode.
+The page title is "AI Stack: Load Bearing Simulator" (the prefix is a case name that a later case library can replace). It has three view modes, chosen in the header and remembered in your browser and in the address (`#basic`, `#advanced`, `#analyst`). Modes only change what is shown; every input is kept, and results are identical in every mode.
 
-- **Basic** (default on first visit): key figures, the technology scenario with entry premium and discount rate, the quadrant chart, a short layer table (demand evidence, share, cash margin, build capex, asset life, your allocation) and a short scorecard (present value, headroom, verdict).
-- **Advanced** adds the entry heatmap, cumulative cash, what moves the answer most, your allocation across scenarios, the scorecard's break-even, IRR, payback and flags columns, and "Show evidence +" notes.
-- **Analyst** adds every other assumption (drift, build years and start, debt, timing offset, steepness, unit-cost decline, pass-through), phases, the capex model, entry definition and year, debt interest, the terminal multiple, the verdict fragility panel, the example buttons and snapshots.
+- **First screen (all modes)**, sized to fit 1440x800 and 1280x720 without scrolling: four key figures, then three cards: Technology scenario (adoption speed and midpoint, value pool, entry premium, discount rate), Where each layer lands (the quadrant), and a compact layer scorecard (verdict, present value, headroom, and your allocation, editable).
+- **Basic** is the first screen only.
+- **Advanced** adds, in order: the detailed scorecard (break-even, IRR, payback, flags); a layer selector with cumulative cash and what moves the answer most; then the entry heatmap and your allocation across scenarios.
+- **Analyst** adds Timing and Money assumptions (entry, financing, capex model) after the first screen, then everything in Advanced, then layer assumptions, phases, verdict fragility and snapshots.
 
-Four key figures sit at the top of every mode, all read from existing model outputs: layers that earn their cost, the tightest layer (lowest headroom), the share of your allocation in layers that do not earn their cost (labelled when it is still the placeholder equal split), and layers whose verdict flips under a tested shock. Each has a text status (Stable, Watch, Fragile) and an info note. In Basic and Advanced, a line says when any Analyst-only setting differs from its default, links to Analyst, and offers "Reset to simple defaults", which resets only those settings (never your allocation or snapshots).
+Explanations sit in info notes (the small "i" buttons) beside card titles and inputs; they open on hover, keyboard focus or tap, close with Esc, and stay on screen. "Behind the tool" in the header opens the full "how it works and where it is weak" note and the research list.
+
+Four key figures sit at the top: layers that earn their cost, the tightest layer (lowest headroom), the share of your allocation in layers below cost (labelled while it is still the placeholder equal split), and layers whose verdict flips under a tested shock. Each has a text status (Stable, Watch, Fragile). In Basic and Advanced, a line says when any Analyst-only setting differs from its default, links to Analyst, and offers "Reset to simple defaults", which resets only those settings (never your allocation or snapshots).
 
 Details by feature:
 

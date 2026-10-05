@@ -2,6 +2,8 @@
 // maths: everything here reads existing model outputs (runLayer, verdictFragility). Modes only change what is
 // shown, never an input or a result. CommonJS export for tests; stripped by the build and inlined before the UI.
 
+// Case name shown before the title ("AI Stack: Load Bearing Simulator"); a later case library can replace it.
+const CASE_NAME = 'AI Stack';
 const MODES = ['basic', 'advanced', 'analyst'];
 const MODE_LABELS = { basic: 'Basic', advanced: 'Advanced', analyst: 'Analyst' };
 function modeLevel(m){ return MODES.indexOf(m); }
@@ -40,11 +42,11 @@ function kpiTiles(layers, G){
   return { earn, tight, alloc, flips };
 }
 
-// Analyst-only settings (not editable in Basic or Advanced) that differ from their defaults. Basic-editable inputs
-// (scenario, premium, discount rate, evidence, share, a single cash margin, capex, asset life, allocation) never count.
+// Analyst-only settings (not editable in Basic or Advanced) that differ from their defaults. Inputs editable on the
+// first screen (adoption speed and midpoint, value pool, entry premium, discount rate, my allocation) never count.
 const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entry year'], ['mult', 'Entry multiple'], ['rd', 'Interest on debt'],
   ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model']];
-const ANALYST_LAYER_KEYS = [['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
+const ANALYST_LAYER_KEYS = [['evidence', 'demand evidence'], ['share', 'share of pool'], ['capex', 'build capex'], ['life', 'asset life'], ['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
   ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
 const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 function analystDiffs(G, layers){
@@ -57,12 +59,11 @@ function analystDiffs(G, layers){
     if (!def) return;
     ANALYST_LAYER_KEYS.forEach(([k, label]) => { if (L[k] !== def[k]) out.push({ scope: L.id, key: k, label: L.name + ': ' + label }); });
     if (!sameArr(L.driftP, def.driftP)) out.push({ scope: L.id, key: 'driftP', label: L.name + ': share drift' });
-    if (!L.marginP.every(v => v === L.marginP[0])) out.push({ scope: L.id, key: 'marginP', label: L.name + ': cash margin varies by phase' });
+    if (!sameArr(L.marginP, def.marginP)) out.push({ scope: L.id, key: 'marginP', label: L.name + ': cash margin' + (L.marginP.every(v => v === L.marginP[0]) ? '' : ' (varies by phase)') });
   });
   return out;
 }
-// Reset only the analyst-only settings. Never touches Basic inputs, allocations or snapshots. A cash margin that
-// varies by phase collapses to its first-phase value (the value Basic shows and edits).
+// Reset only the analyst-only settings. Never touches first-screen inputs, allocations or snapshots.
 function resetAnalyst(G, layers){
   const d = modeDeps();
   const g = Object.assign({}, G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() });
@@ -72,10 +73,22 @@ function resetAnalyst(G, layers){
     if (!def) return o;
     ANALYST_LAYER_KEYS.forEach(([k]) => { o[k] = def[k]; });
     o.driftP = def.driftP.slice();
-    o.marginP = [L.marginP[0], L.marginP[0], L.marginP[0]];
+    o.marginP = def.marginP.slice();
     return o;
   });
   return { G: g, layers: ls };
 }
 
-if (typeof module !== 'undefined') module.exports = { MODES, MODE_LABELS, modeLevel, modeFromHash, kpiTiles, analystDiffs, resetAnalyst };
+// Info-tip placement, collision-aware: prefer below the icon, aligned to its left edge; flip to align right (leftwards)
+// near the right edge; flip above near the bottom; then clamp inside the viewport with a margin (8px).
+function placeTip(anchor, tip, vp, margin, gap){
+  const m = margin === undefined ? 8 : margin, g = gap === undefined ? 6 : gap;
+  let left = anchor.left, placement = 'below';
+  if (left + tip.width > vp.width - m) left = anchor.right - tip.width;
+  left = Math.max(m, Math.min(left, vp.width - m - tip.width));
+  let top = anchor.bottom + g;
+  if (top + tip.height > vp.height - m) { top = anchor.top - g - tip.height; placement = 'above'; }
+  top = Math.max(m, Math.min(top, vp.height - m - tip.height));
+  return { left, top, placement };
+}
+if (typeof module !== 'undefined') module.exports = { CASE_NAME, placeTip, MODES, MODE_LABELS, modeLevel, modeFromHash, kpiTiles, analystDiffs, resetAnalyst };

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Load Bearing Simulator</title>
+<title>AI Stack: Load Bearing Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
@@ -157,115 +157,196 @@ details.evidence{margin-top:8px}
 details.evidence > summary{font-size:13px;color:var(--copper);font-weight:700}
 section > h2::after{content:"";display:block;width:48px;height:3px;background:var(--copper);margin-top:6px}
 .foot{max-width:1120px;margin:0 auto;padding:18px 20px 32px;font-size:12.5px;color:var(--cap);border-top:1px solid var(--hair)}
+
+/* ---------- Stage 1.5 layout ---------- */
+.wrap{max-width:1360px;padding:10px 20px 28px}
+.tb-in{max-width:1360px}
+.tb-name{font-size:18px}
+.pill.behind{border-color:var(--copper);background:var(--tint)}
+.intro{margin:4px 0 0;font-size:14px;line-height:1.4;max-width:none}
+/* Info tips: positioned by JS (fixed, collision-aware); shown on hover, focus or tap; Esc closes. */
+.tip{display:none;position:fixed;top:0;left:0;z-index:60;width:max-content;max-width:min(320px,calc(100vw - 16px));background:var(--card);color:var(--body);border:1px solid var(--hair);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 4px 14px rgba(0,0,0,.18);font-weight:400;text-align:left;white-space:normal}
+.tip.open{display:block}
+.tipwrap:hover .tip,.tipwrap:focus-within .tip,.tipwrap button[aria-expanded="true"] + .tip{display:none}
+.tip.open{display:block !important}
+.ctitle{display:flex;align-items:center;gap:6px;margin:0 0 6px}
+h2.ctitle{font-size:17px}
+h3.ctitle{font-size:15px}
+section > h2.ctitle::after{display:none}
+section{margin-top:18px}
+/* KPI tiles: compact, target 84px or less */
+.kpis{gap:10px;margin-top:8px}
+.tile{display:grid;grid-template-columns:1fr auto;grid-template-areas:"big chip" "sub sub" "lab lab";align-items:center;gap:1px 8px;padding:8px 12px;max-height:84px;overflow:hidden}
+.tile .big{grid-area:big;font-size:22px;line-height:1.1}
+.tile .status{grid-area:chip;justify-self:end}
+.tile .sub,.tile .lab{font:12.5px/1.3 Arial,"Helvetica Neue",sans-serif;font-weight:400;color:var(--cap)}
+.tile .sub{grid-area:sub;color:var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .lab{grid-area:lab;display:flex;align-items:center;gap:6px;min-width:0}
+.tile .lab > span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notice.slim{margin:8px 0 0;padding:6px 10px;font-size:13px}
+/* First screen: three cards */
+.first{display:grid;grid-template-columns:minmax(240px,270px) minmax(0,1fr) minmax(0,1.2fr);gap:12px;margin-top:10px;align-items:start}
+.first .card,.row2 .card{padding:12px 14px}
+.first > *,.row2 > *,.twocol > *{min-width:0}
+@media (max-width:980px){.first{grid-template-columns:1fr 1fr}.first #liteCard{grid-column:1 / -1}}
+@media (max-width:700px){.first{grid-template-columns:1fr}}
+.seg.compact{gap:4px;margin-bottom:6px;align-items:center}
+.seg.compact button{padding:2px 10px;font-size:12.5px}
+.cctl{margin-bottom:4px}
+.cctl-h{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink);font-weight:700}
+.cctl-h output{margin-left:auto;font-weight:400;color:var(--body)}
+.cctl input[type=range]{display:block;margin:0;height:18px}
+#quad svg{max-height:min(330px,46vh);width:100%}
+table.lite{font-size:12.5px}
+table.lite th,table.lite td{padding:5px 6px}
+table.lite td.v{white-space:normal;min-width:96px}
+table.lite td.l .rowname{white-space:normal;text-align:left;font-size:12.5px;line-height:1.25}
+table.lite th{white-space:normal;line-height:1.2}
+table.lite td.v .chip{font-size:11px;line-height:1.25}
+table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3px 4px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);text-align:right}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:18px}
+@media (max-width:860px){.row2{grid-template-columns:1fr}}
+.pickrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.pickrow h2{margin:0}
+.pickrow .seg{margin:0}
+.twocol.small #heat svg{max-height:340px}
+.twocol.small table{font-size:12.5px}
+/* Modal */
+.modal-back{position:fixed;inset:0;background:rgba(10,15,30,.45);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) 16px 24px;overflow:auto}
+.modal-back[hidden]{display:none}
+.modal{background:var(--card);color:var(--body);border:1px solid var(--hair);border-radius:8px;max-width:760px;width:100%;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.modal:focus{outline:none}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.modal-head h2{font-size:19px}
+.modal ul.note{margin:0;padding-left:18px;font-size:13.5px}
+.modal ul.note li{margin-bottom:6px}
+.foot{max-width:1360px}
+@media (max-width:600px){
+  .tb-in{flex-wrap:wrap;row-gap:6px}
+  .tb-title{flex-wrap:wrap;row-gap:0}
+  .tb-sub{white-space:normal;flex-basis:100%;font-size:13px}
+  .tb-right{flex-wrap:wrap;gap:6px}
+  .pill{white-space:nowrap}
+  .modes button{padding:4px 10px}
+  .tile{max-height:none}
+  .tile .lab > span:first-child,.tile .sub{white-space:normal;overflow:visible}
+}
 </style>
 </head>
 <body data-mode="basic">
 <header class="topbar">
   <div class="tb-in">
-    <div class="tb-title"><h1 class="tb-name">Load Bearing Simulator</h1><span class="tb-sub">Capture Map &amp; Who gets paid?</span></div>
+    <div class="tb-title"><h1 class="tb-name"><span id="caseName">AI Stack</span>: Load Bearing Simulator</h1><span class="tb-sub">Which layers carry the weight, and who gets paid?</span></div>
     <div class="tb-right">
       <div class="modes" id="modeSwitch" role="group" aria-label="View mode">
         <button data-mode-btn="basic" aria-pressed="true">Basic</button><button data-mode-btn="advanced" aria-pressed="false">Advanced</button><button data-mode-btn="analyst" aria-pressed="false">Analyst</button>
       </div>
-      <span class="tipwrap"><button class="pill" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip tip-r" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
+      <span class="tipwrap"><button class="pill" type="button" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
+      <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
     </div>
   </div>
 </header>
-<div class="wrap">
+<main class="wrap">
 
-<p class="dek intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
+<p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
 
 <section class="kpis" id="kpis" aria-label="Key figures"></section>
-<div class="notice" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
+<div class="notice slim" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
 
-<div class="hero">
-  <div class="stack">
+<div class="first">
   <div class="card" id="drivers">
-    <h2>Technology scenario</h2>
-    <p class="muted" style="font-size:13px">Applies to every layer at once.</p>
-    <div class="seg" id="scen">
-      <button data-s="slow" aria-pressed="false">Slow adoption</button>
+    <h2 class="ctitle"><span>Technology scenario</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Technology scenario" aria-expanded="false" aria-controls="tip2">i</button><span class="tip" role="tooltip" id="tip2">Applies to every layer at once. Pick a preset or move the sliders.</span></span></h2>
+    <div class="seg compact" id="scen">
+      <button data-s="slow" aria-pressed="false">Slow</button>
       <button data-s="base" aria-pressed="false">Base</button>
-      <button data-s="fast" aria-pressed="false">Fast adoption</button>
+      <button data-s="fast" aria-pressed="false">Fast</button>
     </div>
-    <div class="ctl"><label for="g_speed">Adoption speed <output id="o_speed"></output></label>
-      <input type="range" id="g_speed" min="3" max="20" step="0.5"><small>Years to go from 10% to 90% of full adoption.</small></div>
-    <div class="ctl"><label for="g_mid">Adoption midpoint <output id="o_mid"></output></label>
-      <input type="range" id="g_mid" min="2" max="14" step="0.5"><small>Year in which adoption reaches half of its full level.</small></div>
-    <div class="ctl"><label for="g_pool">Value pool at full adoption <output id="o_pool"></output></label>
-      <input type="range" id="g_pool" min="200" max="3000" step="50"><small>Yearly revenue, all layers combined. Scale of applications lives here.</small></div>
-    <div class="ctl" id="ctl_prem"><label for="g_prem">Entry premium over build cost <output id="o_prem"></output></label>
-      <input type="range" id="g_prem" min="-50" max="300" step="5"><small>0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</small></div>
-    <div class="ctl"><label for="g_disc">Discount rate <output id="o_disc"></output></label>
-      <input type="range" id="g_disc" min="5" max="20" step="0.5"><small>The return you need to be paid for the risk.</small></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_speed">Adoption speed</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption speed" aria-expanded="false" aria-controls="tip3">i</button><span class="tip" role="tooltip" id="tip3">Years to go from 10% to 90% of full adoption.</span></span><output id="o_speed"></output></div><input type="range" id="g_speed"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_mid">Adoption midpoint</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption midpoint" aria-expanded="false" aria-controls="tip4">i</button><span class="tip" role="tooltip" id="tip4">Year in which adoption reaches half of its full level.</span></span><output id="o_mid"></output></div><input type="range" id="g_mid"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_pool">Value pool</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value pool" aria-expanded="false" aria-controls="tip5">i</button><span class="tip" role="tooltip" id="tip5">Yearly revenue, all layers combined. Scale of applications lives here.</span></span><output id="o_pool"></output></div><input type="range" id="g_pool"></div>
+    <div class="cctl" id="ctl_prem"><div class="cctl-h"><label for="g_prem">Entry premium</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry premium" aria-expanded="false" aria-controls="tip6">i</button><span class="tip" role="tooltip" id="tip6">0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</span></span><output id="o_prem"></output></div><input type="range" id="g_prem"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_disc">Discount rate</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Discount rate" aria-expanded="false" aria-controls="tip7">i</button><span class="tip" role="tooltip" id="tip7">The return you need to be paid for the risk.</span></span><output id="o_disc"></output></div><input type="range" id="g_disc"></div>
   </div>
-  <div class="card" id="timing" data-min="analyst">
-    <h2>Timing: layers against end demand</h2>
-    <p class="muted" style="font-size:13px">Each layer's revenue follows the end-demand curve, shifted earlier (leads) or later (lags) by its timing offset and made steeper or flatter. Set offsets and steepness in the layer table.</p>
-    <div id="adoptChart"></div>
-  </div>
-  </div>
-
-  <div class="card">
-    <h2>Where each layer lands</h2>
-    <p class="hint">Click any layer name or dot to see its detail.</p>
-    <p class="muted" style="font-size:13px;margin-bottom:8px">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag.</p>
+  <div class="card" id="quadCard">
+    <h2 class="ctitle"><span>Where each layer lands</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Where each layer lands" aria-expanded="false" aria-controls="tip8">i</button><span class="tip" role="tooltip" id="tip8">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag. Click any layer name or dot to see its detail.</span></span></h2>
     <div id="quad"></div>
-    <div class="notice" id="lowShare" hidden></div>
+    <div class="notice slim" id="lowShare" hidden></div>
+  </div>
+  <div class="card" id="liteCard">
+    <h2 class="ctitle"><span>Layer scorecard</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Layer scorecard" aria-expanded="false" aria-controls="tip9">i</button><span class="tip" role="tooltip" id="tip9">Verdict, present value at your entry year and headroom (the break-even price minus what you pay) for each layer. My allocation is your own split, in any units; it sets the dot sizes and the allocation figure. Click a layer name to select it.</span></span></h2>
+    <div class="scroll"><table id="scoreLite" class="lite" aria-label="Layer scorecard"></table></div>
   </div>
 </div>
 
-<section data-min="analyst">
-  <h2>Money assumptions</h2>
-  <div class="card twocol">
-    <div>
-      <h3>Entry</h3>
-      <div class="seg" id="defSwitch" role="group" aria-label="Entry price definition">
-        <button data-d="A" aria-pressed="false">Premium over build cost</button>
-        <button data-d="B" aria-pressed="false">Multiple of forward cash</button>
-      </div>
-      <div class="ctl"><label for="g_entry">Entry year <output id="o_entry"></output></label>
-        <input type="range" id="g_entry" min="0" max="10" step="1"><small>You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</small></div>
-      <div class="ctl" id="ctl_mult" hidden><label for="g_mult">Entry multiple of next-year operating cash <output id="o_mult"></output></label>
-        <input type="range" id="g_mult" min="0" max="60" step="0.5"><small>Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</small></div>
-      <p class="legend" id="defNote" style="margin-top:0"></p>
+<div class="row2" data-min="analyst">
+  <div class="card" id="timing">
+    <h2 class="ctitle"><span>Timing: layers against end demand</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Timing: layers against end demand" aria-expanded="false" aria-controls="tip10">i</button><span class="tip" role="tooltip" id="tip10">Each layer's revenue follows the end-demand curve, shifted earlier (leads) or later (lags) by its timing offset and made steeper or flatter. Set offsets and steepness in the layer table. <span id="adoptCaption"></span></span></span></h2>
+    <div id="adoptChart"></div>
+  </div>
+  <div class="card" id="moneyCard">
+    <h2 class="ctitle"><span>Money assumptions</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Money assumptions" aria-expanded="false" aria-controls="tip11">i</button><span class="tip" role="tooltip" id="tip11">Entry, financing and the capex model. These apply to every layer.</span></span></h2>
+    <div class="seg compact" id="defSwitch" role="group" aria-label="Entry price definition">
+      <button data-d="A" aria-pressed="false">Premium over build cost</button>
+      <button data-d="B" aria-pressed="false">Multiple of forward cash</button>
+      <span class="tipwrap"><button class="info" type="button" aria-label="About: Entry price definition" aria-expanded="false" aria-controls="tip12">i</button><span class="tip" role="tooltip" id="tip12">How the entry price is set. <span id="defNote"></span></span></span>
     </div>
-    <div>
-      <div class="ctl"><label for="g_rd">Interest on debt <output id="o_rd"></output></label>
-        <input type="range" id="g_rd" min="2" max="14" step="0.5"><small>Debt is repaid evenly over eight years after the build ends.</small></div>
-      <div class="ctl"><label for="g_tv">Value beyond year 15 <output id="o_tv"></output></label>
-        <input type="range" id="g_tv" min="0" max="12" step="0.5"><small>Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</small></div>
-      <h3>Capex model</h3>
-      <div class="seg" id="capexSwitch" role="group" aria-label="Capex model">
-        <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
-        <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
-      </div>
-      <p class="legend" id="capexNote" style="margin-top:0"></p>
+    <div class="cctl"><div class="cctl-h"><label for="g_entry">Entry year</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry year" aria-expanded="false" aria-controls="tip13">i</button><span class="tip" role="tooltip" id="tip13">You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</span></span><output id="o_entry"></output></div><input type="range" id="g_entry"></div>
+    <div class="cctl" id="ctl_mult" hidden><div class="cctl-h"><label for="g_mult">Entry multiple</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry multiple" aria-expanded="false" aria-controls="tip14">i</button><span class="tip" role="tooltip" id="tip14">Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</span></span><output id="o_mult"></output></div><input type="range" id="g_mult"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_rd">Interest on debt</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Interest on debt" aria-expanded="false" aria-controls="tip15">i</button><span class="tip" role="tooltip" id="tip15">Debt is repaid evenly over eight years after the build ends.</span></span><output id="o_rd"></output></div><input type="range" id="g_rd"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16">Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
+    <div class="seg compact" id="capexSwitch" role="group" aria-label="Capex model" style="margin-top:6px">
+      <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
+      <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
+      <span class="tipwrap"><button class="info" type="button" aria-label="About: Capex model" aria-expanded="false" aria-controls="tip17">i</button><span class="tip" role="tooltip" id="tip17"><span id="capexNote"></span></span></span>
     </div>
+  </div>
+</div>
+
+<section data-min="advanced" id="detailScore">
+  <h2 class="ctitle"><span>Detailed scorecard</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Detailed scorecard" aria-expanded="false" aria-controls="tip18">i</button><span class="tip" role="tooltip" id="tip18">
+      <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
+      <span id="beLegend"></span><br>
+      <b>Life flag.</b> Cash payback comes after the asset has worn out, or never arrives by year 15. The clock starts when your capital first goes in: your entry year or the build start, whichever is later.<br>
+      <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
+      <b>Tail flag.</b> More than half the value arrives after year 15.<br>
+      <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
+      <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
+    </span></span></h2>
+  <div class="card scroll"><table id="score" aria-label="Scorecard"></table></div>
+</section>
+
+<section data-min="advanced" id="detailSection">
+  <div class="pickrow"><h2 id="detailTitle" class="ctitle">Selected layer</h2><div class="seg compact" id="layerPick" role="group" aria-label="Choose a layer"></div></div>
+  <div class="twocol">
+    <div class="card"><h3 class="ctitle"><span>Cumulative cash to the investor</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Cumulative cash to the investor" aria-expanded="false" aria-controls="tip19">i</button><span class="tip" role="tooltip" id="tip19">Includes your entry premium and sustaining spend. Excludes value beyond year 15. <span id="cashNote"></span></span></span></h3><div id="cashChart"></div></div>
+    <div class="card"><h3 class="ctitle"><span>What moves the answer most</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What moves the answer most" aria-expanded="false" aria-controls="tip20">i</button><span class="tip" role="tooltip" id="tip20">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption. <span id="tornadoNote"></span></span></span></h3><div id="tornado"></div></div>
   </div>
 </section>
 
-<section>
-  <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</p>
+<section data-min="advanced" id="lowerPair">
+  <div class="twocol small">
+    <div class="card"><h3 class="ctitle" id="heatTitle"><span>When you enter and what you pay</span><span class="tipwrap"><button class="info" type="button" aria-label="About: When you enter and what you pay" aria-expanded="false" aria-controls="tip21">i</button><span class="tip" role="tooltip" id="tip21">Present value at the entry year, for each entry year and price. Green earns more than the discount rate, red less; darker is further from zero. The dark line is break-even. The copper dot is your current setting.</span></span></h3><div id="heat"></div></div>
+    <div class="card"><h3 class="ctitle"><span>Your allocation across scenarios</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Your allocation across scenarios" aria-expanded="false" aria-controls="tip22">i</button><span class="tip" role="tooltip" id="tip22"><span id="expoNote"></span></span></span></h3><div class="scroll"><table id="expo" aria-label="Allocation exposure"></table></div></div>
+  </div>
+</section>
+
+<section data-min="analyst" id="layerSection">
+  <h2 class="ctitle"><span>Layer assumptions</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Layer assumptions" aria-expanded="false" aria-controls="tip23">i</button><span class="tip" role="tooltip" id="tip23">Click a layer name to see its detail. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. Defaults are neutral: every layer follows end demand exactly. Build starts, year: when capital starts going in. Independent of the timing offset, which moves revenue. Allocation is your own split, in any units.</span></span></h2>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
-    <div class="seg" style="margin-top:12px;margin-bottom:0">
-      <span class="seg" data-min="analyst" style="margin:0">
+    <div class="seg" style="margin-top:10px;margin-bottom:0">
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
       <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
-      </span>
+      <span class="tipwrap"><button class="info" type="button" aria-label="About: Example buttons" aria-expanded="false" aria-controls="tip24">i</button><span class="tip" role="tooltip" id="tip24">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</span></span>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend" data-min="analyst">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
-<section data-min="analyst">
-  <h2>Phases</h2>
-  <p class="dek" style="font-size:14px">Share drift and cash margin can change over three calendar phases. Each phase starts at the same value, which is the v0.1 model. Change one phase to test, say, a margin squeeze once capacity catches up with demand.</p>
+<section data-min="analyst" id="phaseSection">
+  <h2 class="ctitle"><span>Phases</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Phases" aria-expanded="false" aria-controls="tip25">i</button><span class="tip" role="tooltip" id="tip25">Share drift and cash margin can change over three calendar phases. Each phase starts at the same value, which is the v0.1 model. Change one phase to test, say, a margin squeeze once capacity catches up with demand. <span id="effNote" hidden><b>Effective drift</b> (Vintage cohorts): the phase drift after price erosion from cheaper capacity, (1 + drift) × (1 − pass-through × unit-cost decline) − 1. Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity.</span></span></span></h2>
   <div class="card scroll">
     <div class="seg" style="align-items:center">
       <label class="muted" for="ph1" style="font-size:13px">Phase 2 starts in year</label>
@@ -274,63 +355,25 @@ section > h2::after{content:"";display:block;width:48px;height:3px;background:va
       <input type="number" id="ph2" min="2" max="15" step="1" style="width:56px">
     </div>
     <table id="phaseTable" aria-label="Share drift and cash margin by phase"></table>
-    <div class="legend" id="effNote" hidden><b>Effective drift</b> (Vintage cohorts): the phase drift after price erosion from cheaper capacity, (1 + drift) × (1 − pass-through × unit-cost decline) − 1. Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity.</div>
   </div>
 </section>
 
-<section>
-  <h2>Scorecard</h2>
-  <div class="card scroll"><table id="score" aria-label="Scorecard"></table>
-    <details class="evidence" data-min="advanced"><summary>Show evidence +</summary>
-    <div class="legend">
-      <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
-      <span id="beLegend"></span><br>
-      <b>Life flag.</b> Cash payback comes after the asset has worn out, or never arrives by year 15. The clock starts when your capital first goes in: your entry year or the build start, whichever is later.<br>
-      <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
-      <b>Tail flag.</b> More than half the value arrives after year 15.<br>
-      <b>Pass-through bounds</b> (Vintage cohorts only). Present value if the owner keeps all the savings from cheaper capacity (pass-through 0) and if competition hands all of them to customers (pass-through 1); the gap is the value at stake in pricing power. These are bounds, not forecasts.<br>
-      <b>Peak stranded value</b> (Vintage cohorts only; not a cash item). For each cohort still in use, its unamortised cost times the share by which buying the same capacity now would be cheaper; the peak over 15 years, as a share of build capex. A diagnostic only: the cash effect of cheaper capacity already comes through revenue (pass-through), so deducting it as well would double count.
-    </div>
-    </details>
-  </div>
-  <div class="card" style="margin-top:20px" data-min="analyst">
-    <h3>Verdict fragility</h3>
-    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted. Direction is a display rule: <b>worse</b> means present value turns from positive to negative or a fragility flag is added; <b>better</b> means the reverse; <b>mixed</b> means both happen at once. Present value is shown so a layer sitting near zero is visible as such.</p>
-    <div id="fragility"></div>
-  </div>
-</section>
-
-<section data-min="advanced">
-  <h2 id="detailTitle">Selected layer</h2>
-  <div class="seg" id="layerPick" role="group" aria-label="Choose a layer" style="margin-top:8px"></div>
-  <div class="twocol">
-    <div class="card"><h3>Cumulative cash to the investor</h3><p class="muted" style="font-size:13px">Includes your entry premium and sustaining spend. Excludes value beyond year 15.</p><div id="cashChart"></div></div>
-    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
-  </div>
-  <div class="card" style="margin-top:20px">
-    <h3 id="heatTitle">When you enter and what you pay</h3>
-    <p class="muted" style="font-size:13px">Present value at the entry year, for each entry year and price. Green earns more than the discount rate, red less; darker is further from zero. The dark line is break-even. The copper dot is your current setting.</p>
-    <div id="heat"></div>
-  </div>
-</section>
-
-<section data-min="advanced">
-  <h2>Your allocation across scenarios</h2>
-  <div class="card scroll"><table id="expo" aria-label="Allocation exposure"></table>
-    <div class="legend" id="expoNote"></div></div>
+<section data-min="analyst" id="fragSection">
+  <h2 class="ctitle"><span>Verdict fragility</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Verdict fragility" aria-expanded="false" aria-controls="tip26">i</button><span class="tip" role="tooltip" id="tip26">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted. Direction is a display rule: <b>worse</b> means present value turns from positive to negative or a fragility flag is added; <b>better</b> means the reverse; <b>mixed</b> means both happen at once. Present value is shown so a layer sitting near zero is visible as such.</span></span></h2>
+  <div class="card"><div id="fragility"></div></div>
 </section>
 
 <section id="snapshots" data-min="analyst">
-  <h2>Snapshots</h2>
-  <p class="dek" style="font-size:14px">Save a dated view of every input and result, with a note and what would make you revise each layer, so you can later compare what you believed then with what you believe now. Snapshots stay in this browser. Nothing is sent anywhere; export writes a file you download.</p>
-  <div class="card">
+  <h2 class="ctitle"><span>Snapshots</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Snapshots" aria-expanded="false" aria-controls="tip27">i</button><span class="tip" role="tooltip" id="tip27">Save a dated view of every input and result, with a note and what would make you revise each layer, so you can later compare what you believed then with what you believe now. Snapshots stay in this browser. Nothing is sent anywhere; export writes a file you download.</span></span></h2>
+
+    <div class="card">
     <div class="twocol">
       <div>
         <h3>Save the current view</h3>
         <div class="ctl"><label for="snapName">Name</label><input type="text" id="snapName" class="txt" maxlength="120" placeholder="e.g. Base view, October"></div>
         <div class="ctl"><label for="snapNote">Note</label><textarea id="snapNote" class="txt" maxlength="5000" rows="3" placeholder="What you believe and why"></textarea></div>
         <details id="killBox"><summary>Kill criteria: what would make me revise each layer</summary>
-          <p class="legend">Optional. A trigger is a metric, a direction and a threshold you will check yourself; nothing is fetched. At review time, mark each criterion. <b>Overdue</b>: unanswered or “unknown” after the review-by date. <b>No</b> clears the badge, records the review date and lets you set a next review-by date. <b>Yes</b> shows “Triggered: revise this layer” until you save a new snapshot or reset the criterion. Dates are compared as calendar dates where you are.</p>
+          <p class="legend"><span class="tipwrap"><button class="info" type="button" aria-label="About: Kill criteria" aria-expanded="false" aria-controls="tip1">i</button><span class="tip" role="tooltip" id="tip1">Optional. A trigger is a metric, a direction and a threshold you will check yourself; nothing is fetched. At review time, mark each criterion. <b>Overdue</b>: unanswered or “unknown” after the review-by date. <b>No</b> clears the badge, records the review date and lets you set a next review-by date. <b>Yes</b> shows “Triggered: revise this layer” until you save a new snapshot or reset the criterion. Dates are compared as calendar dates where you are.</span></span> Optional; nothing is fetched.</p>
           <div class="scroll"><table id="killTable" aria-label="Kill criteria for the next snapshot"></table></div>
         </details>
         <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button><button id="snapUndo" class="reset" hidden>Undo load</button></div>
@@ -367,10 +410,13 @@ section > h2::after{content:"";display:block;width:48px;height:3px;background:va
   </div>
 </section>
 
-<section>
-  <h2>How it works and where it is weak</h2>
-  <div class="card note">
-    <ul style="margin:0;padding-left:18px">
+</main>
+<footer class="foot">Not financial advice.</footer>
+
+<div class="modal-back" id="behindModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="behindTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="behindTitle">Behind the tool: how it works and where it is weak</h2><button class="reset" type="button" id="behindClose" aria-label="Close">Close</button></div>
+    <ul class="note">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
       <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. Caveat: pass-through lowers a layer’s revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; price elasticity is not modelled. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
@@ -381,11 +427,8 @@ section > h2::after{content:"";display:block;width:48px;height:3px;background:va
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
-    <p class="src" style="margin-top:14px">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
+    <p class="src">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
   </div>
-</section>
-
-<footer class="foot">Not financial advice.</footer>
 </div>
 <script>
 /*MODEL*/

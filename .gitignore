@@ -9,3 +9,6 @@ exports/
 calibration/private/
 # Calibration exports with any uncited input (named by the calibration page). Never commit these.
 *.private.json
+
+# Local tooling for the in-app browser (not part of the project)
+.claude/

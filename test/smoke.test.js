@@ -51,7 +51,7 @@ function assertSelected(doc, i){
 
 test('page loads from docs/index.html with no console errors', () => {
   const { doc, errors, win } = load();
-  assert.equal(doc.title, 'Load Bearing Simulator');
+  assert.equal(doc.title, 'AI Stack: Load Bearing Simulator');
   assert.ok(doc.querySelector('#score tbody tr'), 'scorecard rendered');
   assert.deepEqual(errors, []);
   win.close();
