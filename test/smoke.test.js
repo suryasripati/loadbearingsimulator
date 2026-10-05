@@ -182,9 +182,12 @@ test('verdict fragility panel: one row per layer matching verdictFragility, in b
     assert.equal(rows.length, D.DEFAULT_LAYERS.length);
     rows.forEach((r, i) => {
       const f = verdictFragility(layerFromInputs(doc, i), g);
-      assert.ok(r.textContent.includes('flips under ' + f.n + ' of ' + f.m + ' shocks'), r.textContent);
+      const split = f.n ? ': ' + f.worse + ' worse, ' + f.better + ' better' + (f.mixed ? ', ' + f.mixed + ' mixed' : '') : '';
+      assert.ok(r.textContent.includes('flips under ' + f.n + ' of ' + f.m + ' shocks' + split), r.textContent);
+      const money = (f.npv < 0 ? '\u2212' : '') + '$' + Math.abs(f.npv).toFixed(0) + 'B';
+      assert.equal(r.cells[2].textContent, money, 'present value shown next to the verdict');
       if (f.n === 0) assert.ok(r.textContent.includes('No tested shock changes the verdict'));
-      f.flips.forEach(x => assert.ok(r.textContent.includes(x.n + ' (' + x.bin + ')'), x.n));
+      f.flips.forEach(x => assert.ok(r.textContent.includes(x.n + ' (' + x.direction + ': ' + x.bin + ')'), x.n));
     });
   };
   const g = { ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, phases: D.DEFAULT_PHASES, capexModel: D.DEFAULT_CAPEX };
@@ -206,3 +209,19 @@ function layerFromInputs(doc, i){
   });
   return L;
 }
+
+test('low-share warning appears in any mode below the display threshold and names the layer', () => {
+  const { doc, win } = load();
+  const note = doc.getElementById('lowShare');
+  assert.equal(note.hidden, true, 'no warning at defaults');
+  const drift = doc.querySelector('#phaseTable input[data-i="2"][data-k="driftP"][data-p="0"]');
+  for (const p of [0, 1, 2]) {
+    const inp = doc.querySelector('#phaseTable input[data-i="2"][data-k="driftP"][data-p="' + p + '"]');
+    inp.value = '-20'; inp.dispatchEvent(new win.Event('input', { bubbles: true }));
+  }
+  assert.ok(drift);
+  assert.equal(note.hidden, false);
+  assert.ok(note.textContent.includes('Models keeps'), note.textContent);
+  assert.ok(/display threshold, not evidence/.test(note.textContent));
+  win.close();
+});

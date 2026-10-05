@@ -92,6 +92,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 #score td.l{min-width:190px}
 .frag td.frag-n{white-space:nowrap}
 .frag td:nth-child(2){min-width:160px}
+.frag td.frag-n{min-width:200px}
 .frag td:last-child{min-width:320px;line-height:1.45}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
@@ -140,6 +141,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <p class="hint">Click any layer name or dot to see its detail.</p>
     <p class="muted" style="font-size:13px;margin-bottom:8px">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag.</p>
     <div id="quad"></div>
+    <div class="notice" id="lowShare" hidden></div>
   </div>
 </div>
 
@@ -186,10 +188,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
-      <button id="ucdExample" title="Placeholder example, invented, not data: chips 10%, data centres 5%, models 20%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
+      <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 10%, data centres 5%, models 20%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
@@ -223,7 +225,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   </div>
   <div class="card" style="margin-top:20px">
     <h3>Verdict fragility</h3>
-    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted.</p>
+    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted. Direction is a display rule: <b>worse</b> means present value turns from positive to negative or a fragility flag is added; <b>better</b> means the reverse; <b>mixed</b> means both happen at once. Present value is shown so a layer sitting near zero is visible as such.</p>
     <div id="fragility"></div>
   </div>
 </section>
@@ -437,7 +439,7 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cap, capexModel: vin ? 'vintage' : 'sustaining',
+  return { years, rev, ocf, opsNet, build, sust, cap, shareMult, shareLeftPct: shareMult[H] * 100, capexModel: vin ? 'vintage' : 'sustaining',
     cohorts: vin ? vin.cohorts : null, stranded: vin ? vin.stranded : null,
     strandedPeakPct: vin ? vin.peak / L.capex * 100 : null, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
@@ -518,6 +520,12 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
+// Display threshold for the low-share warning: a layer whose share falls below this percentage of its starting level
+// by year 15. A display choice, not evidence about when a layer stops being viable.
+const LOW_SHARE_PCT = 5;
+function lowShareLayers(layers, G){
+  return layers.map(L => ({ L, pct: runLayer(L, G).shareLeftPct })).filter(x => x.pct < LOW_SHARE_PCT);
+}
 // Verdict fragility: which tested shocks change a layer's verdict (bin). The shock set is a display choice, not
 // evidence about how far inputs might move. A shock that would leave the inputs unchanged (for example pass-through
 // already at 0, or no room to start the build later) is not tested and not counted.
@@ -550,6 +558,13 @@ function fragilityShocks(L, G){
   }
   return list.filter(s => !s.skip);
 }
+// Direction of a verdict change (a display rule): worse if present value goes from positive to negative or a fragility
+// flag is added; better if present value goes from negative to positive or a flag is removed; mixed if both apply.
+function flipDirection(base, o){
+  const worse = (base.npv >= 0 && o.npv < 0) || o.flags.some(f => base.flags.indexOf(f) < 0);
+  const better = (base.npv < 0 && o.npv >= 0) || base.flags.some(f => o.flags.indexOf(f) < 0);
+  return worse && better ? 'mixed' : worse ? 'worse' : better ? 'better' : 'mixed';
+}
 function shiftDrift(L, k){ return Array.isArray(L.driftP) ? L.driftP.map(v => v + k) : undefined; }
 function verdictFragility(L, G){
   const base = runLayer(L, G);
@@ -557,10 +572,14 @@ function verdictFragility(L, G){
     const l = Object.assign({}, L, s.L || {}), g = Object.assign({}, G, s.G || {});
     if (l.driftP === undefined) delete l.driftP;
     const o = runLayer(l, g);
-    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flips: o.bin !== base.bin };
+    const flips = o.bin !== base.bin;
+    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flags: o.flags, flips,
+      direction: flips ? flipDirection(base, o) : null };
   });
   const flips = results.filter(r => r.flips);
-  return { bin: base.bin, npv: base.npv, results, flips, n: flips.length, m: results.length };
+  const count = (d) => flips.filter(r => r.direction === d).length;
+  return { bin: base.bin, npv: base.npv, flags: base.flags, results, flips, n: flips.length, m: results.length,
+    worse: count('worse'), better: count('better'), mixed: count('mixed') };
 }
 
 // Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
@@ -586,7 +605,7 @@ const DEFAULT_LAYERS = [
 const LEAD_LAG_EXAMPLE = [-1, -2, 0, 1, 2];
 // Opt-in example only, loaded by the "Load unit-cost-decline example" button. Invented round numbers, not data:
 // unit-cost decline in % a year for chips, data centres, models, applications, services. Used in Vintage mode only.
-const UCD_EXAMPLE = [10, 5, 20, 0, 0];
+const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 // passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
 // customers as lower prices, used only in Vintage mode.
 
@@ -1061,7 +1080,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -1075,15 +1094,24 @@ function fragilityPanel(){
   const list = (a) => a.length ? a.join(', ') : 'none';
   let h = '<p style="margin:0 0 6px"><b>Verdict changes if the build starts two years later for: '+list(names('build-late'))+'.</b>';
   if(layers.some(L => L.offset!==0)) h += '<br><b>Verdict depends on the timing offset (set to 0) for: '+list(names('offset-zero'))+'.</b> Offsets are your judgement, not data.';
-  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Flips under</th><th class="l">Shocks that change the verdict (new verdict)</th></tr></thead><tbody>';
+  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Present value</th><th>Flips under</th><th class="l">Shocks that change the verdict (direction, new verdict)</th></tr></thead><tbody>';
   fr.forEach((f,i) => {
     const L = layers[i];
+    const split = f.n ? ': '+f.worse+' worse, '+f.better+' better'+(f.mixed ? ', '+f.mixed+' mixed' : '') : '';
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td><td class="l"><span class="chip '+binClass(f)+'">'+f.bin+'</span></td>'
-      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks</td><td class="l" style="white-space:normal">'
-      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
+      + '<td class="'+(f.npv<0?'neg':'pos')+'">'+money(f.npv)+'</td>'
+      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks'+split+'</td><td class="l" style="white-space:normal">'
+      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.direction+': '+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
   });
   h += '</tbody></table></div>';
   $('fragility').innerHTML = h;
+}
+// Shown in any mode when a layer's share falls below the display threshold by year 15 at the current inputs.
+function lowShareNote(){
+  const low = lowShareLayers(layers, G), el = $('lowShare');
+  el.hidden = !low.length;
+  if(low.length) el.innerHTML = '<b>Share nearly gone by year 15:</b> '+low.map(x => x.L.name+' keeps '+pct(x.pct,1)+' of its starting share').join('; ')
+    + '. Check that this much erosion is what you mean. The '+LOW_SHARE_PCT+'% line is a display threshold, not evidence.';
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }

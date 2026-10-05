@@ -64,7 +64,8 @@ Known weaknesses: one discount rate for all layers; no interaction between layer
 - Per-layer `buildStart` (whole years, default 0, clamped so buildStart + buildYears <= 15). Build spend runs over buildStart to buildEnd - 1, where buildEnd = buildStart + buildYears; sustaining spend, debt repayment, payback and the DSCR check all start at buildEnd.
 - Capacity limit: see locked decision 11.
 - Life flag clock: payback minus max(entry year, build start) is compared with asset life, so idle years before any capital goes in do not count against the asset.
-- Verdict fragility panel under the scorecard (replaces the separate offset and build-start notes; `verdictFragility` in the model): per layer, the tested shocks that change its verdict and "flips under N of M shocks". Shocks, a display choice: offset +/-2 years, build start +2 years, drift +/-3 points, scale +/-25%, discount rate +/-25%, asset life +/-25%, offset set to 0 when an offset is set, and in vintage mode pass-through 0 and 1 and decline +/-3 points. Shocks that would change nothing are not counted. Its summary line keeps: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
+- Verdict fragility panel under the scorecard (replaces the separate offset and build-start notes; `verdictFragility` in the model): per layer, the tested shocks that change its verdict and "flips under N of M shocks". Shocks, a display choice: offset +/-2 years, build start +2 years, drift +/-3 points, scale +/-25%, discount rate +/-25%, asset life +/-25%, offset set to 0 when an offset is set, and in vintage mode pass-through 0 and 1 and decline +/-3 points. Shocks that would change nothing are not counted. Each flip has a direction (display rule): worse = present value positive to negative or a fragility flag added; better = the reverse; mixed = both. The panel shows each layer's present value next to its verdict.
+- Low-share warning (any mode): layers whose share falls below 5% of its starting level by year 15 (`lowShareLayers`, `LOW_SHARE_PCT`). The 5% is a display threshold, not evidence. Its summary line keeps: layers whose verdict changes if the build starts two years later (display choice). Sensitivity chart has a one-sided "Build start (two years later only)" bar.
 
 ## Drop 1 (build first)
 
@@ -112,7 +113,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Caveat: pass-through lowers a layer's revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead. Not modelled (see backlog).
 - Scorecard (vintage): present value at passThrough 0 and 1 and the gap, "value at stake in pricing power". Bounds, not forecasts.
 - Sensitivity (vintage): unit-cost decline +/-3 points; passThrough +/-0.25, clamped to 0-1.
-- "Load unit-cost-decline example" sets invented round numbers (chips 10, data centres 5, models 20, applications 0, services 0 % a year) and switches on vintage mode. Not data.
+- "Load unit-cost-decline example" sets invented round numbers (chips 5, data centres 2, models 8, applications 0, services 0 % a year) and switches on vintage mode. Not data.
 - Even at decline 0, vintage differs from sustaining spend for any layer whose build years differ from its asset life: replacement arrives in lumps at end of life rather than as capex / life every year from the end of the build.
 
 

@@ -167,7 +167,7 @@ function runLayer(L, G){
   else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
   else bin = 'Speculative';
   const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
-  return { years, rev, ocf, opsNet, build, sust, cap, capexModel: vin ? 'vintage' : 'sustaining',
+  return { years, rev, ocf, opsNet, build, sust, cap, shareMult, shareLeftPct: shareMult[H] * 100, capexModel: vin ? 'vintage' : 'sustaining',
     cohorts: vin ? vin.cohorts : null, stranded: vin ? vin.stranded : null,
     strandedPeakPct: vin ? vin.peak / L.capex * 100 : null, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
     entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
@@ -248,6 +248,12 @@ function sensitivity(L, G){
   rows.sort((p, q) => q.swing - p.swing);
   return { base, rows, parts: one };
 }
+// Display threshold for the low-share warning: a layer whose share falls below this percentage of its starting level
+// by year 15. A display choice, not evidence about when a layer stops being viable.
+const LOW_SHARE_PCT = 5;
+function lowShareLayers(layers, G){
+  return layers.map(L => ({ L, pct: runLayer(L, G).shareLeftPct })).filter(x => x.pct < LOW_SHARE_PCT);
+}
 // Verdict fragility: which tested shocks change a layer's verdict (bin). The shock set is a display choice, not
 // evidence about how far inputs might move. A shock that would leave the inputs unchanged (for example pass-through
 // already at 0, or no room to start the build later) is not tested and not counted.
@@ -280,6 +286,13 @@ function fragilityShocks(L, G){
   }
   return list.filter(s => !s.skip);
 }
+// Direction of a verdict change (a display rule): worse if present value goes from positive to negative or a fragility
+// flag is added; better if present value goes from negative to positive or a flag is removed; mixed if both apply.
+function flipDirection(base, o){
+  const worse = (base.npv >= 0 && o.npv < 0) || o.flags.some(f => base.flags.indexOf(f) < 0);
+  const better = (base.npv < 0 && o.npv >= 0) || base.flags.some(f => o.flags.indexOf(f) < 0);
+  return worse && better ? 'mixed' : worse ? 'worse' : better ? 'better' : 'mixed';
+}
 function shiftDrift(L, k){ return Array.isArray(L.driftP) ? L.driftP.map(v => v + k) : undefined; }
 function verdictFragility(L, G){
   const base = runLayer(L, G);
@@ -287,9 +300,13 @@ function verdictFragility(L, G){
     const l = Object.assign({}, L, s.L || {}), g = Object.assign({}, G, s.G || {});
     if (l.driftP === undefined) delete l.driftP;
     const o = runLayer(l, g);
-    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flips: o.bin !== base.bin };
+    const flips = o.bin !== base.bin;
+    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flags: o.flags, flips,
+      direction: flips ? flipDirection(base, o) : null };
   });
   const flips = results.filter(r => r.flips);
-  return { bin: base.bin, npv: base.npv, results, flips, n: flips.length, m: results.length };
+  const count = (d) => flips.filter(r => r.direction === d).length;
+  return { bin: base.bin, npv: base.npv, flags: base.flags, results, flips, n: flips.length, m: results.length,
+    worse: count('worse'), better: count('better'), mixed: count('mixed') };
 }
-if (typeof module !== 'undefined') module.exports = { runLayer, verdictFragility, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
+if (typeof module !== 'undefined') module.exports = { runLayer, verdictFragility, lowShareLayers, LOW_SHARE_PCT, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };

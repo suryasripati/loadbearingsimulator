@@ -92,6 +92,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 #score td.l{min-width:190px}
 .frag td.frag-n{white-space:nowrap}
 .frag td:nth-child(2){min-width:160px}
+.frag td.frag-n{min-width:200px}
 .frag td:last-child{min-width:320px;line-height:1.45}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
 .rowname:hover{color:var(--copper);text-decoration:underline}
@@ -140,6 +141,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
     <p class="hint">Click any layer name or dot to see its detail.</p>
     <p class="muted" style="font-size:13px;margin-bottom:8px">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag.</p>
     <div id="quad"></div>
+    <div class="notice" id="lowShare" hidden></div>
   </div>
 </div>
 
@@ -186,10 +188,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
-      <button id="ucdExample" title="Placeholder example, invented, not data: chips 10%, data centres 5%, models 20%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
+      <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 10%, data centres 5%, models 20%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</div>
   </div>
 </section>
 
@@ -223,7 +225,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   </div>
   <div class="card" style="margin-top:20px">
     <h3>Verdict fragility</h3>
-    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted.</p>
+    <p class="muted" style="font-size:13px">Which tested shocks change each layer's verdict. The shocks are a display choice, not evidence about how far inputs might move: timing offset ±2 years, build start 2 years later, share drift ±3 points, scale ±25%, discount rate ±25%, asset life ±25%, and in Vintage cohorts pass-through 0 and 1 and unit-cost decline ±3 points. When a timing offset is set, setting it back to 0 is also tested. A shock that would change nothing (for example no room to start the build later) is not counted. Direction is a display rule: <b>worse</b> means present value turns from positive to negative or a fragility flag is added; <b>better</b> means the reverse; <b>mixed</b> means both happen at once. Present value is shown so a layer sitting near zero is visible as such.</p>
     <div id="fragility"></div>
   </div>
 </section>

@@ -533,6 +533,14 @@ test('verdict fragility: every tested shock matches a direct model call, and N o
       assert.equal(r.bin, direct.bin, r.id);
       assert.equal(r.flips, direct.bin !== base, r.id);
     }
+    for (const r of f.results.filter(x => x.flips)) {
+      const o = runLayer(exp[r.id][0], exp[r.id][1]), b = runLayer(L, g);
+      const worse = (b.npv >= 0 && o.npv < 0) || o.flags.some(x => !b.flags.includes(x));
+      const better = (b.npv < 0 && o.npv >= 0) || b.flags.some(x => !o.flags.includes(x));
+      assert.ok(worse || better, 'every flip is either a sign change or a flag change');
+      assert.equal(r.direction, worse && better ? 'mixed' : worse ? 'worse' : 'better', r.id);
+    }
+    assert.equal(f.worse + f.better + f.mixed, f.n);
     assert.equal(f.m, f.results.length);
     assert.equal(f.n, f.results.filter(r => r.flips).length);
   });
@@ -541,4 +549,15 @@ test('verdict fragility: every tested shock matches a direct model call, and N o
 test('verdict fragility: the build shock is skipped when there is no room to start later', () => {
   const L = { ...D.DEFAULT_LAYERS[1], buildStart: H - D.DEFAULT_LAYERS[1].buildYears };
   assert.ok(!verdictFragility(L, GA).results.some(r => r.id === 'build-late'));
+});
+
+test('low-share helper: share left by year 15 matches the compounded drift, and the 5% threshold flags only layers below it', () => {
+  const { lowShareLayers, LOW_SHARE_PCT } = require('../src/model.js');
+  assert.equal(LOW_SHARE_PCT, 5);
+  D.DEFAULT_LAYERS.forEach(L => near(runLayer(L, GA).shareLeftPct, Math.pow(1 + L.driftP[0] / 100, H) * 100, 1e-9));
+  assert.deepEqual(lowShareLayers(D.DEFAULT_LAYERS, GA), []);
+  const steep = D.DEFAULT_LAYERS.map((L, i) => i === 2 ? { ...L, driftP: [-20, -20, -20] } : L);
+  const low = lowShareLayers(steep, GA);
+  assert.deepEqual(low.map(x => x.L.id), ['ml']);
+  near(low[0].pct, Math.pow(0.8, H) * 100, 1e-9);
 });

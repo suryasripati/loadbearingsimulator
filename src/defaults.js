@@ -21,7 +21,7 @@ const DEFAULT_LAYERS = [
 const LEAD_LAG_EXAMPLE = [-1, -2, 0, 1, 2];
 // Opt-in example only, loaded by the "Load unit-cost-decline example" button. Invented round numbers, not data:
 // unit-cost decline in % a year for chips, data centres, models, applications, services. Used in Vintage mode only.
-const UCD_EXAMPLE = [10, 5, 20, 0, 0];
+const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 // passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
 // customers as lower prices, used only in Vintage mode.
 if (typeof module !== 'undefined') module.exports = { DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };

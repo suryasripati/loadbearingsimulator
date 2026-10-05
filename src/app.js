@@ -469,7 +469,7 @@ function renderResults(){
   const res = runAll(G);
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
-  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift();
+  quadChart(res); scoreTable(res); fragilityPanel(); updateEffDrift(); lowShareNote();
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -483,15 +483,24 @@ function fragilityPanel(){
   const list = (a) => a.length ? a.join(', ') : 'none';
   let h = '<p style="margin:0 0 6px"><b>Verdict changes if the build starts two years later for: '+list(names('build-late'))+'.</b>';
   if(layers.some(L => L.offset!==0)) h += '<br><b>Verdict depends on the timing offset (set to 0) for: '+list(names('offset-zero'))+'.</b> Offsets are your judgement, not data.';
-  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Flips under</th><th class="l">Shocks that change the verdict (new verdict)</th></tr></thead><tbody>';
+  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Present value</th><th>Flips under</th><th class="l">Shocks that change the verdict (direction, new verdict)</th></tr></thead><tbody>';
   fr.forEach((f,i) => {
     const L = layers[i];
+    const split = f.n ? ': '+f.worse+' worse, '+f.better+' better'+(f.mixed ? ', '+f.mixed+' mixed' : '') : '';
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td><td class="l"><span class="chip '+binClass(f)+'">'+f.bin+'</span></td>'
-      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks</td><td class="l" style="white-space:normal">'
-      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
+      + '<td class="'+(f.npv<0?'neg':'pos')+'">'+money(f.npv)+'</td>'
+      + '<td class="frag-n">flips under '+f.n+' of '+f.m+' shocks'+split+'</td><td class="l" style="white-space:normal">'
+      + (f.n ? f.flips.map(r => r.n+' <span class="muted">('+r.direction+': '+r.bin+')</span>').join('; ') : 'No tested shock changes the verdict')+'</td></tr>';
   });
   h += '</tbody></table></div>';
   $('fragility').innerHTML = h;
+}
+// Shown in any mode when a layer's share falls below the display threshold by year 15 at the current inputs.
+function lowShareNote(){
+  const low = lowShareLayers(layers, G), el = $('lowShare');
+  el.hidden = !low.length;
+  if(low.length) el.innerHTML = '<b>Share nearly gone by year 15:</b> '+low.map(x => x.L.name+' keeps '+pct(x.pct,1)+' of its starting share').join('; ')
+    + '. Check that this much erosion is what you mean. The '+LOW_SHARE_PCT+'% line is a display threshold, not evidence.';
 }
 function renderDrivers(){ syncDriverLabels(); adoptChart(); }
 function update(){ save(); renderDrivers(); renderResults(); }
