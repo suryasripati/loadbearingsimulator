@@ -19,3 +19,15 @@ const out = template.replace('/*MODEL*/', () => model).replace('/*APP*/', () => 
 fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
 fs.writeFileSync(path.join(root, 'docs', 'index.html'), out);
 console.log('Built docs/index.html (' + out.length + ' bytes)');
+
+// Calibration page: a separate page so the main page stays light. It reuses the main page's styles (one CSS source),
+// the model, the defaults and the snapshot code (for its strict-import helpers), plus the calibration logic and UI.
+const calTemplate = read('src/calibration.html');
+for (const p of ['/*STYLE*/', '/*MODEL*/', '/*APP*/']) {
+  if (!calTemplate.includes(p)) throw new Error('calibration.html must contain the ' + p + ' placeholder');
+}
+const style = template.slice(template.indexOf('<style>') + '<style>'.length, template.indexOf('</style>'));
+const calModel = [model, strip(read('src/defaults.js')), strip(read('src/snapshots.js')), strip(read('src/calibration.js'))].join('\n');
+const calOut = calTemplate.replace('/*STYLE*/', () => style).replace('/*MODEL*/', () => calModel).replace('/*APP*/', () => read('src/calibration-app.js'));
+fs.writeFileSync(path.join(root, 'docs', 'calibration.html'), calOut);
+console.log('Built docs/calibration.html (' + calOut.length + ' bytes)');

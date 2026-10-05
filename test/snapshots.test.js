@@ -50,7 +50,7 @@ test('export excludes allocations by default and includes them only when ticked'
 });
 
 test('import checks schema version (file and snapshot) and model version, and says which is incompatible', () => {
-  reject(mutate(f => { f.schemaVersion = 3; }), /File: schema version 3 is not compatible \(this page reads schema versions 1 and 2\)/);
+  reject(mutate(f => { f.schemaVersion = 4; }), /File: schema version 4 is not compatible \(this page reads schema versions 1 and 2 and 3\)/);
   reject(mutate(f => { f.snapshots[0].schemaVersion = 9; }), /Snapshot 1: schema version 9 is not compatible/);
   reject(mutate(f => { f.snapshots[0].modelVersion = M.MODEL_VERSION + 1; }), new RegExp('Snapshot 1: model version ' + (M.MODEL_VERSION + 1) + ' is not compatible: it is newer than this page'));
   reject(mutate(f => { f.format = 'something-else'; }), /not a Load Bearing Simulator snapshot file/);
@@ -180,13 +180,15 @@ test('criterion states: time zones use local calendar dates for both today and t
   }
 });
 
-test('schema 1 files (no answer date) still import, with a blank answer date', () => {
+test('schema 1 files (no answer date, no response) still import, with a blank answer date and no response', () => {
   const f = JSON.parse(fileOf([snap()]));
   f.schemaVersion = 1; f.snapshots[0].schemaVersion = 1;
   f.snapshots[0].kill.forEach(k => { delete k.answeredAt; });
+  delete f.snapshots[0].response;
   const r = S.importSnapshotsText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.ok(r.snapshots[0].kill.every(k => k.answeredAt === ''));
+  assert.equal(r.snapshots[0].response, null);
   assert.equal(r.snapshots[0].schemaVersion, S.SNAP_SCHEMA_VERSION, 'stored in the current schema');
   // In schema 2 the answer date is required and must be ISO UTC.
   reject(mutate(f2 => { delete f2.snapshots[0].kill[0].answeredAt; }), /missing field "answeredAt"/);
@@ -276,7 +278,7 @@ test('import hardening: returns fresh plain objects with whitelisted fields only
   const walk = (v) => { if (v && typeof v === 'object') { if (!Array.isArray(v)) assert.equal(Object.getPrototypeOf(v), Object.prototype); Object.values(v).forEach(walk); } };
   walk(s0);
   assert.notEqual(s0, parsed.snapshots[0]);
-  assert.deepEqual(Object.keys(s0).sort(), ['created', 'inputs', 'kill', 'modelVersion', 'name', 'note', 'outputs', 'schemaVersion']);
+  assert.deepEqual(Object.keys(s0).sort(), ['created', 'inputs', 'kill', 'modelVersion', 'name', 'note', 'outputs', 'response', 'schemaVersion']);
   assert.deepEqual(Object.keys(s0.inputs.layers[0]).sort(), ['alloc', 'buildStart', 'buildYears', 'capex', 'debt', 'driftP', 'evidence', 'id', 'life', 'marginP', 'offset', 'passThrough', 'share', 'steepness', 'unitCostDecline']);
   // Importing twice gives independent objects (nothing is merged or shared).
   const r2 = S.importSnapshotsText(text);
@@ -298,4 +300,62 @@ test('dates: created is ISO UTC; overdue compares local calendar dates, so a lat
   assert.equal(S.snapTodayLocal(late), '2026-10-04');
   assert.equal(S.snapIsOverdue({ reviewBy: '2026-10-04', status: '' }, S.snapTodayLocal(late)), false);
   assert.equal(S.snapIsOverdue({ reviewBy: '2026-10-04', status: '' }, S.snapTodayLocal(new Date(2026, 9, 5, 0, 30))), true);
+});
+
+/* ---------- Trigger response (schema 3) ---------- */
+const trigKill = (answeredAt) => S.snapBlankKill().map((k, i) => (i === 1 ? { ...k, text: 'revise dc', status: 'yes', answeredAt } : k));
+
+test('trigger response: open triggers are listed newest first and close once a later snapshot is saved', () => {
+  const a = snap({ name: 'A', now: new Date('2026-09-01T10:00:00.000Z'), kill: trigKill('2026-09-02T10:00:00.000Z') });
+  const b = snap({ name: 'B', now: new Date('2026-09-03T10:00:00.000Z'), kill: S.snapBlankKill().map((k, i) => (i === 0 ? { ...k, status: 'yes', answeredAt: '2026-09-04T10:00:00.000Z' } : k)) });
+  const t = S.snapTriggeredList([a, b]);
+  assert.deepEqual(t.map(x => [x.name, x.layerId]), [['B', 'hw']], 'A was answered before B was saved, so B resolves A');
+  const c = snap({ name: 'C', now: new Date('2026-09-05T10:00:00.000Z') });
+  assert.deepEqual(S.snapTriggeredList([a, b, c]), []);
+});
+
+test('trigger response: "revised" lists exactly the changed inputs (never allocations); "kept" needs a reason and lists none', () => {
+  const from = snap({ kill: trigKill('2026-10-05T12:00:00.000Z') });
+  const G = baseG(); G.disc = 12;
+  const layers = baseLayers(); layers[1].offset = -2; layers[0].alloc = 77;
+  const to = S.snapInputs(G, layers);
+  const trig = S.snapTriggeredList([from]);
+  const rev = S.snapMakeResponse('revised', '', trig, from.inputs, to);
+  assert.deepEqual(rev.changedInputs.map(c => c.path).sort(), ['layer dc.offset', 'settings.disc']);
+  assert.deepEqual(rev.changedInputs.map(c => c.path).sort(), S.diffInputs(from.inputs, to).map(d => d.path).filter(p => !/alloc/.test(p)).sort(), 'same as the compare logic, minus allocations');
+  const kept = S.snapMakeResponse('kept', '  Evidence not strong enough  ', trig, from.inputs, to);
+  assert.deepEqual(kept.changedInputs, []);
+  assert.equal(kept.reason, 'Evidence not strong enough');
+  // Round trip through export and strict import.
+  const later = snap({ name: 'Later', now: new Date('2026-10-06T12:00:00.000Z'), response: rev });
+  const r = S.importSnapshotsText(fileOf([from, later]));
+  assert.equal(r.ok, true, r.error);
+  assert.deepEqual(r.snapshots[1].response, JSON.parse(JSON.stringify(rev)));
+  assert.equal(r.snapshots[0].response, null);
+});
+
+test('trigger response: strict import rejects bad responses', () => {
+  const rev = { kind: 'revised', reason: '', triggers: [{ name: 'A', created: '2026-10-05T12:00:00.000Z', layerId: 'dc' }], changedInputs: [{ path: 'settings.disc', before: 10, after: 12 }] };
+  const withResp = (r) => fileOf([snap({ response: r })]);
+  assert.equal(S.importSnapshotsText(withResp(rev)).ok, true);
+  reject(withResp({ ...rev, kind: 'kept', changedInputs: [] }), /"kept my view" needs a reason/);
+  reject(withResp({ ...rev, kind: 'kept', reason: 'x' }), /"kept my view" cannot list changed inputs/);
+  reject(withResp({ ...rev, kind: 'ignored' }), /response kind: unexpected value/);
+  reject(withResp({ ...rev, changedInputs: [{ path: 'layer hw.alloc', before: 1, after: 2 }] }), /unexpected input name/);
+  reject(withResp({ ...rev, changedInputs: [{ path: '<img src=x>', before: 1, after: 2 }] }), /unexpected input name/);
+  reject(withResp({ ...rev, triggers: [] }), /expected 1 to 250 triggers/);
+  reject(withResp({ ...rev, triggers: [{ name: 'A', created: '2026-10-05T12:00:00.000Z', layerId: 'zz' }] }), /layerId: unexpected value/);
+  reject(mutate(f => { f.snapshots[0].response = { ...rev, extra: 1 }; }), /response: unknown field "extra"/);
+});
+
+test('trigger response: schema 2 files migrate with no response', () => {
+  const f = JSON.parse(fileOf([snap()]));
+  f.schemaVersion = 2; f.snapshots[0].schemaVersion = 2; delete f.snapshots[0].response;
+  const r = S.importSnapshotsText(JSON.stringify(f));
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.snapshots[0].response, null);
+  assert.equal(r.snapshots[0].schemaVersion, 3);
+  // A schema 2 file must not carry a response field.
+  const g = JSON.parse(fileOf([snap()])); g.schemaVersion = 2; g.snapshots[0].schemaVersion = 2;
+  reject(JSON.stringify(g), /unknown field "response"/);
 });

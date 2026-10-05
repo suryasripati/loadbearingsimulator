@@ -6,9 +6,12 @@
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 2;
-// Schema 1 (no answer date on kill criteria) is still read: answeredAt is filled in as blank.
-const SNAP_SCHEMA_READABLE = [1, 2];
+const SNAP_SCHEMA_VERSION = 3;
+// Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
+// had no trigger response (filled in as null).
+const SNAP_SCHEMA_READABLE = [1, 2, 3];
+const SNAP_RESPONSE_KINDS = ['revised', 'kept'];
+const SNAP_REASON_MAX = 500;
 const SNAP_MAX_BYTES = 1024 * 1024;
 const SNAP_MAX_COUNT = 50; // per file, and in total in this browser
 const SNAP_TEXT_MAX = { name: 120, note: 5000, text: 2000, metric: 120 };
@@ -63,6 +66,27 @@ function snapKillCopy(k){
   return { id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: k.status,
     answeredAt: k.answeredAt || '' };
 }
+function snapResponseCopy(r){
+  return { kind: r.kind, reason: r.reason, triggers: r.triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: r.changedInputs.map(c => ({ path: c.path, before: c.before, after: c.after })) };
+}
+// Criteria answered "yes" whose trigger is still open (no later snapshot saved yet), newest snapshot first.
+function snapTriggeredList(list){
+  const out = [];
+  list.forEach((s, i) => s.kill.forEach(k => {
+    if (k.status === 'yes' && !snapLaterSaved(k, list)) out.push({ index: i, name: s.name, created: s.created, layerId: k.id });
+  }));
+  return out.sort((a, b) => (a.created < b.created ? 1 : a.created > b.created ? -1 : 0));
+}
+// The response recorded on the next snapshot when triggers are open. "revised" lists the inputs that changed since
+// the newest triggering snapshot (using the compare logic); "kept" needs a short reason. Allocations are never
+// listed, so a response cannot leak them into an export.
+function snapMakeResponse(kind, reason, triggers, fromInputs, toInputs){
+  const changed = kind === 'revised' ? diffInputs(fromInputs, toInputs).filter(d => !/\.alloc$/.test(d.path)) : [];
+  return { kind, reason: String(reason || '').trim().slice(0, SNAP_REASON_MAX),
+    triggers: triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: changed.map(d => ({ path: d.path, before: d.before, after: d.after })) };
+}
 function makeSnapshot(opts){
   const inputs = snapInputs(opts.G, opts.layers);
   return {
@@ -72,7 +96,8 @@ function makeSnapshot(opts){
     note: String(opts.note || '').slice(0, SNAP_TEXT_MAX.note),
     modelVersion: snapDeps().MODEL_VERSION,
     inputs, outputs: snapOutputs(inputs),
-    kill: (opts.kill || snapBlankKill()).map(snapKillCopy)
+    kill: (opts.kill || snapBlankKill()).map(snapKillCopy),
+    response: opts.response ? snapResponseCopy(opts.response) : null
   };
 }
 
@@ -173,10 +198,10 @@ function snapCheckOne(s, where, withAlloc){
   const schema = snapSchema(s.schemaVersion, where);
   snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
   if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
-  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'], [], where);
+  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : []), [], where);
   const out = { schemaVersion: SNAP_SCHEMA_VERSION, name: snapStr(s.name, SNAP_TEXT_MAX.name, where + ' name'),
     created: snapDate(s.created, where + ' created'), note: snapStr(s.note, SNAP_TEXT_MAX.note, where + ' note'),
-    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [] };
+    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
@@ -230,8 +255,34 @@ function snapCheckOne(s, where, withAlloc){
       reviewBy: snapDay(k.reviewBy, w + ' reviewBy'), status: snapOneOf(k.status, SNAP_STATUS, w + ' status'),
       answeredAt: schema < 2 || k.answeredAt === '' ? '' : snapDate(k.answeredAt, w + ' answeredAt') });
   });
+  // Trigger response (schema 3): null, or how the user responded to triggered criteria when saving.
+  if (schema >= 3 && s.response !== null) out.response = snapCheckResponse(s.response, where + ' response', ids);
   return out;
 }
+function snapCheckResponse(r, where, ids){
+  snapKeys(r, ['kind', 'reason', 'triggers', 'changedInputs'], [], where);
+  const kind = snapOneOf(r.kind, SNAP_RESPONSE_KINDS, where + ' kind');
+  const reason = snapStr(r.reason, SNAP_REASON_MAX, where + ' reason');
+  if (kind === 'kept' && !reason.trim()) snapErr(where, '"kept my view" needs a reason');
+  if (!Array.isArray(r.triggers) || r.triggers.length < 1 || r.triggers.length > 250) snapErr(where + ' triggers', 'expected 1 to 250 triggers');
+  const triggers = r.triggers.map((t, i) => {
+    const w = where + ' trigger ' + (i + 1);
+    snapKeys(t, ['name', 'created', 'layerId'], [], w);
+    return { name: snapStr(t.name, SNAP_TEXT_MAX.name, w + ' name'), created: snapDate(t.created, w + ' created'), layerId: snapOneOf(t.layerId, ids, w + ' layerId') };
+  });
+  if (!Array.isArray(r.changedInputs) || r.changedInputs.length > 500) snapErr(where + ' changedInputs', 'expected a list of at most 500');
+  if (kind === 'kept' && r.changedInputs.length) snapErr(where, '"kept my view" cannot list changed inputs');
+  const changedInputs = r.changedInputs.map((c, i) => {
+    const w = where + ' changed input ' + (i + 1);
+    snapKeys(c, ['path', 'before', 'after'], [], w);
+    const path = snapStr(c.path, 80, w + ' path');
+    if (!/^(settings\.[A-Za-z]+(\[[0-2]\])?|layer [a-z]+\.[A-Za-z]+(\[[0-2]\])?)$/.test(path) || /\.alloc$/.test(path)) snapErr(w + ' path', 'unexpected input name');
+    const val = (v, ww) => typeof v === 'string' ? snapStr(v, 40, ww) : snapNum(v, [-1e9, 1e9], ww);
+    return { path, before: val(c.before, w + ' before'), after: val(c.after, w + ' after') };
+  });
+  return { kind, reason, triggers, changedInputs };
+}
+
 
 // Criterion state at review time. Dates: review-by is a calendar date; answeredAt and created are ISO UTC and are
 // converted to the viewer's local calendar date before comparing, so a time zone cannot flip a badge.
@@ -324,4 +375,4 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   return { ok: true, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
 }
 
-if (typeof module !== 'undefined') module.exports = { snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };
+if (typeof module !== 'undefined') module.exports = { snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj, SNAP_SCHEMA_READABLE, snapTriggeredList, snapMakeResponse, snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };

@@ -106,6 +106,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 .badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--red-bg);color:var(--red);margin-left:6px}
 .pre{white-space:pre-wrap;word-break:break-word}
 .notice.strong{border-width:2px;font-weight:700}
+.badge.resp{background:var(--navy-bg);color:var(--ink)}
 .badge.trig{background:var(--amber-bg);color:var(--amber)}
 .snapbox{margin-top:16px;border-top:1px solid var(--hair);padding-top:12px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
@@ -278,6 +279,15 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
           <div class="scroll"><table id="killTable" aria-label="Kill criteria for the next snapshot"></table></div>
         </details>
         <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button><button id="snapUndo" class="reset" hidden>Undo load</button></div>
+        <div class="notice" id="snapRespond" hidden>
+          <p style="margin:0 0 6px"><b>Some kill criteria are triggered.</b> Record how you responded with this snapshot (optional; saving is not blocked).</p>
+          <p class="legend" id="snapRespTrig" style="margin:0 0 6px"></p>
+          <label class="chk"><input type="radio" name="snapResp" value="revised"> Revised: list the inputs I changed since the triggering snapshot</label>
+          <div class="legend" id="snapRespDiff"></div>
+          <label class="chk"><input type="radio" name="snapResp" value="kept"> Kept my view</label>
+          <div class="ctl" style="margin-top:6px"><label for="snapRespReason">Reason (required for “kept my view”)</label><input type="text" id="snapRespReason" class="txt" maxlength="500"></div>
+          <div class="seg"><button id="snapRespSave">Save with this response</button><button id="snapRespSkip" class="reset">Save without recording</button><button id="snapRespCancel" class="reset">Cancel</button></div>
+        </div>
         <p class="legend" id="snapMsg" role="status"></p>
       </div>
       <div>
@@ -314,7 +324,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
-      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until then, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
+      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. A <a href="calibration.html" style="color:var(--copper)">calibration scaffold</a> exists, with no episode data. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
     <p class="src" style="margin-top:14px">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
   </div>

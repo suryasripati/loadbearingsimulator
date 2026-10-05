@@ -615,7 +615,8 @@ function snapRenderList(){
     list.forEach((s,i) => {
       const set = s.kill.filter(k => k.text || k.metric || k.reviewBy).length, od = snapCount(s, today, 'overdue'), tr = snapCount(s, today, 'triggered');
       const crit = el('td', {cls:'l'}, [set ? set+' of '+s.kill.length+' layers' : 'none',
-        tr ? el('span', {cls:'badge trig', text: 'triggered ('+tr+')'}) : null, od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null]);
+        tr ? el('span', {cls:'badge trig', text: 'triggered ('+tr+')'}) : null, od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null,
+        s.response ? el('span', {cls:'badge resp', text: s.response.kind==='revised' ? 'triggered, revised' : 'triggered, kept view'}) : null]);
       const review = el('button', {'data-snap':'review', 'aria-expanded': String(snapOpen===i)}, [snapOpen===i ? 'Close' : 'Review']);
       review.addEventListener('click', () => { snapOpen = snapOpen===i ? -1 : i; snapRenderList(); });
       const del = el('button', {cls:'reset', 'data-snap':'delete'}, ['Delete']);
@@ -634,7 +635,8 @@ function snapRenderReview(){
   const s = snapStore.snapshots[snapOpen]; if(!s) return;
   const today = snapTodayLocal();
   box.appendChild(el('div', {cls:'snapbox'}, [el('h3', {text: 'Review: ' + s.name}), el('p', {cls:'muted', text: 'Saved ' + snapWhen(s.created) + ' under model version ' + s.modelVersion + '.'}),
-    el('p', {cls:'pre', text: s.note || '(no note)'})]));
+    el('p', {cls:'pre', text: s.note || '(no note)'}),
+    s.response ? el('p', {cls:'pre', text: (s.response.kind==='revised' ? 'Response to triggers: revised. Changed inputs: ' + (s.response.changedInputs.length ? s.response.changedInputs.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') : 'none') : 'Response to triggers: kept my view. Reason: ' + s.response.reason)}) : null]));
   const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
   t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, [h])))]));
   const tb = el('tbody');
@@ -677,11 +679,36 @@ function snapFillSelects(){
 }
 function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill }); }
 function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots[+v]; }
+// Saving while criteria are triggered opens a prompt to record "revised" or "kept my view". Never blocks saving.
 function snapSaveNew(){
   const name = $('snapName').value.trim();
   if(!name){ $('snapMsg').textContent = 'Give the snapshot a name first.'; $('snapName').focus(); return; }
   if(snapStore.snapshots.length >= SNAP_MAX_COUNT){ $('snapMsg').textContent = 'This browser holds at most ' + SNAP_MAX_COUNT + ' snapshots. Export and delete some first.'; return; }
-  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill }));
+  const trig = snapTriggeredList(snapStore.snapshots);
+  if(trig.length){ snapShowRespond(trig); return; }
+  snapCommitSave(null);
+}
+function snapRespKind(){ const r = document.querySelector('input[name="snapResp"]:checked'); return r ? r.value : ''; }
+function snapShowRespond(trig){
+  const names = (id) => (layers.find(L => L.id===id) || {name:id}).name;
+  $('snapRespTrig').textContent = 'Triggered: ' + trig.map(t => names(t.layerId) + ' (in “' + t.name + '”)').join('; ') + '.';
+  const from = snapStore.snapshots[trig[0].index];
+  const diff = snapMakeResponse('revised', '', trig, from.inputs, snapInputs(G, layers)).changedInputs;
+  $('snapRespDiff').textContent = diff.length ? 'Changed since “' + from.name + '”: ' + diff.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') + '.' : 'No inputs have changed since “' + from.name + '”.';
+  $('snapRespond').hidden = false;
+}
+function snapHideRespond(){ $('snapRespond').hidden = true; document.querySelectorAll('input[name="snapResp"]').forEach(r => { r.checked = false; }); $('snapRespReason').value = ''; }
+function snapRespSave(){
+  const kind = snapRespKind(), reason = $('snapRespReason').value.trim();
+  if(!kind){ $('snapMsg').textContent = 'Choose “revised” or “kept my view”, or save without recording.'; return; }
+  if(kind==='kept' && !reason){ $('snapMsg').textContent = '“Kept my view” needs a short reason.'; $('snapRespReason').focus(); return; }
+  const trig = snapTriggeredList(snapStore.snapshots);
+  snapCommitSave(trig.length ? snapMakeResponse(kind, reason, trig, snapStore.snapshots[trig[0].index].inputs, snapInputs(G, layers)) : null);
+}
+function snapCommitSave(response){
+  const name = $('snapName').value.trim();
+  snapHideRespond();
+  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response }));
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
   else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
   snapRenderList();
@@ -790,6 +817,9 @@ function snapInit(){
   snapLoad(); snapBuildKillTable(); snapRenderList();
   $('snapSave').addEventListener('click', snapSaveNew);
   $('snapUndo').addEventListener('click', snapUndoLoad);
+  $('snapRespSave').addEventListener('click', snapRespSave);
+  $('snapRespSkip').addEventListener('click', () => snapCommitSave(null));
+  $('snapRespCancel').addEventListener('click', snapHideRespond);
   $('cmpGo').addEventListener('click', snapRenderCompare);
   $('snapExport').addEventListener('click', snapExport);
   $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });

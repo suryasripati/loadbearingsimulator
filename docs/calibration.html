@@ -1,0 +1,1594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calibration Scaffold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#F7F5EF; --card:#FFFFFF; --ink:#12213D; --body:#4A4D52; --cap:#6F7378; --hair:#E2DED3; --tint:#FBF6EE;
+  --copper:#B8752A; --green:#1B8A5A; --green-bg:#EAF5EE; --red:#C00000; --red-bg:#FCEEEE; --amber:#B88600; --amber-bg:#FDF3E0; --navy-bg:#E9EBF1;
+  --grid:#D9D5C9;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1626; --card:#16203A; --ink:#EDEAE0; --body:#C3C6CC; --cap:#9498A0; --hair:#2A3552; --tint:#1B2644;
+    --copper:#E0A35A; --green:#4CC38A; --green-bg:#16352B; --red:#FF7B7B; --red-bg:#3A1E24; --amber:#E6B94D; --amber-bg:#3A3015; --navy-bg:#222E4C;
+    --grid:#2F3B5A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1626; --card:#16203A; --ink:#EDEAE0; --body:#C3C6CC; --cap:#9498A0; --hair:#2A3552; --tint:#1B2644;
+  --copper:#E0A35A; --green:#4CC38A; --green-bg:#16352B; --red:#FF7B7B; --red-bg:#3A1E24; --amber:#E6B94D; --amber-bg:#3A3015; --navy-bg:#222E4C;
+  --grid:#2F3B5A; color-scheme: dark;
+}
+*{box-sizing:border-box}
+:root{box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--body);font:15px/1.55 Arial,"Helvetica Neue",sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 56px}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;color:var(--ink);margin:0}
+h1{font-size:30px;line-height:1.15;font-weight:700}
+.sub{font-family:"Source Serif 4",Georgia,serif;font-size:19px;line-height:1.3;color:var(--copper);margin:6px 0 0}
+h2{font-size:21px;line-height:1.25;font-weight:700;margin-bottom:6px}
+h3{font-size:16px;font-weight:700;margin-bottom:4px}
+p{margin:0 0 10px}
+.dek{max-width:68ch;font-size:16px}
+.rule{width:96px;height:4px;background:var(--copper);margin:14px 0 14px}
+.notice{background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:10px 14px;margin:16px 0 8px;color:var(--ink);font-size:14px}
+.card{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:18px 20px}
+section{margin-top:34px}
+.hero{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:20px;align-items:start;margin-top:22px}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.stack{display:grid;gap:20px;align-content:start}
+.tlegend{list-style:none;margin:6px 0 0;padding:0;font-size:12px;line-height:1.35}
+.tlegend li{display:flex;align-items:center;gap:6px;margin:3px 0}
+.tlegend svg{flex:none}
+.tlegend button{font-size:12px;padding:0;border:none;background:none;color:var(--ink);text-align:left;border-radius:0}
+.tlegend button[aria-pressed="true"]{font-weight:700;background:none;color:var(--ink)}
+.tlegend .muted{font-size:12px}
+.ctl{margin-bottom:14px}
+.ctl label{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--ink);font-weight:700;margin-bottom:2px}
+.ctl label output{font-weight:400;color:var(--body)}
+.ctl small{display:block;color:var(--cap);font-size:12px;line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--copper)}
+.seg input[type=number]{font:inherit;font-size:13px;padding:4px 5px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);text-align:right}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+button,.btn{font:inherit;font-size:13px;color:var(--ink);background:var(--tint);border:1px solid var(--copper);border-radius:999px;padding:5px 12px;cursor:pointer}
+button:hover{background:var(--navy-bg)}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.twocol{grid-template-columns:1fr}}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:right;vertical-align:middle;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--ink);font-weight:700;font-size:12px;white-space:normal;vertical-align:bottom}
+td.l,th.l{text-align:left}
+td input[type=number]{width:62px;font:inherit;font-size:13px;padding:4px 5px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);text-align:right}
+tr.sel td{background:var(--tint)}
+.rowname{cursor:pointer;color:var(--ink);font-weight:700;background:none;border:none;padding:0;text-align:left;font-size:13px;border-radius:0}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:normal;text-align:left}
+.c-green{background:var(--green-bg);color:var(--green)}
+.c-amber{background:var(--amber-bg);color:var(--amber)}
+.c-red{background:var(--red-bg);color:var(--red)}
+.c-navy{background:var(--navy-bg);color:var(--ink)}
+.neg{color:var(--red)} .pos{color:var(--green)}
+.legend{font-size:12.5px;color:var(--cap);margin-top:10px;line-height:1.5}
+.legend b{color:var(--ink)}
+svg text{font-family:Arial,"Helvetica Neue",sans-serif}
+.note{font-size:13.5px}
+.note li{margin-bottom:6px}
+.src{font-size:12.5px;color:var(--cap)}
+details summary{cursor:pointer;color:var(--ink);font-weight:700}
+.muted{color:var(--cap)}
+.reset{margin-left:8px;border-color:var(--hair)}
+.eff{display:block;font-size:11px;color:var(--cap);text-align:right}
+#score td.l{min-width:190px}
+.frag td.frag-n{white-space:nowrap}
+.frag td:nth-child(2){min-width:160px}
+.frag td.frag-n{min-width:200px}
+.frag td:last-child{min-width:320px;line-height:1.45}
+.txt{font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);width:100%}
+textarea.txt{resize:vertical}
+select.txt.sel{width:auto;max-width:220px}
+#killTable input.txt,#killTable select.txt{min-width:90px}
+#killTable td{white-space:normal;vertical-align:top}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+label.btn{display:inline-block}
+label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
+.badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--red-bg);color:var(--red);margin-left:6px}
+.pre{white-space:pre-wrap;word-break:break-word}
+.notice.strong{border-width:2px;font-weight:700}
+.badge.resp{background:var(--navy-bg);color:var(--ink)}
+.badge.trig{background:var(--amber-bg);color:var(--amber)}
+.snapbox{margin-top:16px;border-top:1px solid var(--hair);padding-top:12px}
+.hint{font-size:13px;color:var(--ink);margin-bottom:4px}
+.rowname:hover{color:var(--copper);text-decoration:underline}
+#quad .dot{cursor:pointer}
+#quad .dot:focus{outline:none}
+#quad .dot:focus-visible circle:first-child{stroke:var(--copper);stroke-width:3}
+
+.recs td{white-space:normal;vertical-align:top}
+.recs input.txt,.recs select.txt{min-width:70px}
+.recs td.k{white-space:nowrap;color:var(--ink);font-weight:700}
+.status{font-size:13px;margin:6px 0}
+.layercard{border:1px solid var(--hair);border-radius:6px;padding:10px 12px;margin-top:12px}
+fieldset{border:none;padding:0;margin:0;min-width:0}
+a{color:var(--copper)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Calibration Scaffold</h1>
+  <p class="sub">Load Bearing Simulator</p>
+  <div class="rule"></div>
+  <p class="dek">A structure for scoring past episodes using only what was knowable at the time: draft the inputs with cited sources, lock them, and only then record what happened. <a href="index.html">Back to the simulator</a>.</p>
+  <div class="notice"><b>Scaffold only, no data.</b> No episode is filled in, and no number here may be invented: every numeric input needs a cited source. Episodes stay in this browser; nothing is fetched or sent. Not financial advice.</div>
+  <div class="notice" id="scorerBanner"></div>
+</header>
+
+<section>
+  <h2>Episodes</h2>
+  <div class="card">
+    <div class="seg"><button id="epNew">New episode from the empty template</button>
+      <label class="btn" for="epImport">Import episode (.json)</label><input type="file" id="epImport" accept=".json,application/json" class="vh"></div>
+    <p class="legend" id="epMsg" role="status"></p>
+    <div class="scroll"><table id="epList" aria-label="Episodes"></table></div>
+  </div>
+</section>
+
+<section id="editor" hidden>
+  <h2 id="edTitle">Episode</h2>
+  <div class="notice" id="judgeBanner" hidden></div>
+  <div class="card">
+    <p class="status" id="edStatus"></p>
+    <p class="legend" id="edSave" role="status"></p>
+    <div class="seg"><button id="epLock">Lock inputs</button><button id="epVersion" hidden>Make a new version</button><button id="epExport">Export (.json)</button></div>
+    <fieldset id="edInputs">
+      <h3>Episode and rules</h3>
+      <div class="twocol">
+        <div>
+          <div class="ctl"><label for="f_name">Name</label><input id="f_name" class="txt" maxlength="120"></div>
+          <div class="ctl"><label for="f_id">Id (lower-case, digits, hyphens)</label><input id="f_id" class="txt" maxlength="60"></div>
+          <div class="ctl"><label for="f_asOf">As-of date</label><input id="f_asOf" type="date" class="txt"></div>
+        </div>
+        <div>
+          <div class="ctl"><label for="f_rule">As-of rule: how the date was chosen and what counts as knowable</label><textarea id="f_rule" class="txt" rows="2" maxlength="2000"></textarea></div>
+          <div class="ctl"><label for="f_horizon">Outcome horizon</label><input id="f_horizon" class="txt" maxlength="2000"></div>
+          <div class="ctl"><label for="f_measure">Outcome measure: what "capital earned its cost" means here</label><input id="f_measure" class="txt" maxlength="2000"></div>
+        </div>
+      </div>
+      <div class="ctl"><label for="f_knew">What I already knew about the outcome (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
+
+      <h3 style="margin-top:14px">Sources</h3>
+      <p class="legend">Inputs may cite only sources published on or before the as-of date. A source compiled later from period data counts for inputs only if its series is truncated on or before the as-of date. Outcomes must cite sources published after it.</p>
+      <div class="scroll"><table id="srcTable" class="recs" aria-label="Sources"></table></div>
+      <div class="seg" style="margin-top:6px"><button id="srcAdd">Add source</button></div>
+
+      <h3 style="margin-top:14px">Settings</h3>
+      <p class="legend">Each number needs a basis and at least one cited source (comma-separated source ids). Derived values show their calculation; judgements give a rationale.</p>
+      <div class="seg" style="align-items:center">
+        <label class="muted" for="f_entryDef" style="font-size:13px">Entry price definition</label><select id="f_entryDef" class="txt sel"><option value="">not set</option><option value="A">A: premium over build cost</option><option value="B">B: multiple of forward cash</option></select>
+        <label class="muted" for="f_capex" style="font-size:13px">Capex model</label><select id="f_capex" class="txt sel"><option value="">not set</option><option value="sustaining">Sustaining spend</option><option value="vintage">Vintage cohorts</option></select>
+      </div>
+      <div class="scroll"><table id="setTable" class="recs" aria-label="Settings"></table></div>
+
+      <h3 style="margin-top:14px">Layers</h3>
+      <div id="layerBox"></div>
+      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
+    </fieldset>
+  </div>
+
+  <div class="card" id="outBox" style="margin-top:20px" hidden>
+    <h3>Outcomes</h3>
+    <p class="legend">Entered only after locking. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
+    <div class="scroll"><table id="outTable" class="recs" aria-label="Outcomes"></table></div>
+  </div>
+</section>
+
+<section>
+  <h2>Model verdict against recorded outcome</h2>
+  <div class="card">
+    <div class="notice" id="cmpBanner"></div>
+    <p class="status" id="cmpCounts"></p>
+    <div class="scroll"><table id="cmpTable" aria-label="Model verdict against outcome"></table></div>
+    <p class="legend">Verdicts are recomputed with the current model. Where an episode was locked under a different model version, the row says so.</p>
+  </div>
+</section>
+
+</div>
+<script>
+const H = 15;
+// Model version stamp, saved with every snapshot. Bump it whenever the maths changes (any change that can move an
+// output for the same inputs), so comparisons can flag snapshots made under older maths.
+const MODEL_VERSION = 1;
+const AMORT = 8;
+// Below this share of the layer's peak operating cash, a forward multiple on year e+1 is reported as
+// "not meaningful". This is a display cut-off for near-zero denominators, not an evidence-based threshold.
+const B_MIN_OCF_SHARE = 0.01;
+function adoption(t, G){
+  const k = Math.log(81) / G.speed;
+  return 1 / (1 + Math.exp(-k * (t - G.mid)));
+}
+// Drop 1: one underlying demand curve; each layer leads (offset < 0) or lags (offset > 0) it and can be steeper
+// (steepness > 1) or flatter. Offset 0 and steepness 1 give the global curve.
+function layerAdoption(t, L, G){
+  const off = L.offset || 0, st = L.steepness || 1;
+  return adoption(t - off, { speed: G.speed / st, mid: G.mid });
+}
+// Calendar phases: bounds [b1, b2] split years into [0, b1), [b1, b2), [b2, H].
+function phaseOf(t, bounds){
+  const b = bounds || [5, 10];
+  return t < b[0] ? 0 : t < b[1] ? 1 : 2;
+}
+// Per-phase value, falling back to the v0.1 constant when no phase array is given.
+function phaseVal(arr, constant, t, bounds){
+  return Array.isArray(arr) && arr.length === 3 ? arr[phaseOf(t, bounds)] : constant;
+}
+// Build start year, whole years from 0, clamped so the build ends inside the horizon (buildStart + buildYears <= H).
+function buildStartOf(L){
+  const B = Math.max(1, Math.round(L.buildYears));
+  return Math.max(0, Math.min(H - B, Math.round(L.buildStart || 0)));
+}
+// Vintage cohorts (opt-in). Assumptions: replacement happens on time, so capacity stays at 100% after the initial
+// build; replacement timing uses asset life rounded to whole years; debt and the Definition A entry price cover the
+// initial build only (replacement spend before the entry year is not priced).
+// Unit-cost decline lowers the owner's replacement cost. Competition passes a share of it (passThrough, 0 to 1) to
+// customers as lower prices; that erosion is routed through share drift (see passThroughFactor), so drift covers
+// other commoditisation and passThrough covers erosion caused by cheaper capacity.
+// Stranded value is a diagnostic, not a cash item: the cash effect of cheaper capacity already comes through revenue,
+// so deducting stranded value as well would double count. For each cohort in use at year t,
+// unamortised cost (spend x remaining life / life) x (1 - (1 - decline)^(t - t0)), the gap between book value and
+// what the same capacity would cost to buy now.
+// Yearly price-erosion factor from cheaper capacity, used only in Vintage mode. passThrough is the share of the
+// unit-cost decline that competition passes to customers (0 = owner keeps all the savings, 1 = customers get all).
+// Default 0.5 is a placeholder with no view behind it, unsourced.
+function passThroughFactor(L, G){
+  if (G.capexModel !== 'vintage') return 1;
+  const pt = Math.max(0, Math.min(1, L.passThrough === undefined ? 0.5 : L.passThrough));
+  return 1 - pt * (L.unitCostDecline || 0) / 100;
+}
+// Effective share drift in % a year for a given phase drift, after pass-through (equals the phase drift outside Vintage mode).
+function effectiveDrift(drift, L, G){ return ((1 + drift / 100) * passThroughFactor(L, G) - 1) * 100; }
+function vintageSchedule(L, G, build){
+  if (G.capexModel !== 'vintage') return null;
+  const d = (L.unitCostDecline || 0) / 100;
+  const life = Math.max(1, Math.round(L.life));
+  const cohorts = [];
+  for (let t = 0; t <= H; t++) if (build[t] > 0) cohorts.push({ t0: t, spend: build[t], replacement: false });
+  const repl = new Array(H + 1).fill(0);
+  for (let k = 0; k < cohorts.length; k++){
+    const c = cohorts[k], tr = c.t0 + life;
+    if (tr > H) continue;
+    const spend = c.spend * Math.pow(1 - d, life);
+    repl[tr] += spend;
+    cohorts.push({ t0: tr, spend: spend, replacement: true });
+  }
+  const stranded = new Array(H + 1).fill(0);
+  for (let t = 0; t <= H; t++) for (const c of cohorts){
+    if (t < c.t0 || t >= c.t0 + life) continue;
+    stranded[t] += c.spend * (c.t0 + life - t) / life * (1 - Math.pow(1 - d, t - c.t0));
+  }
+  return { repl, cohorts, stranded, peak: Math.max.apply(null, stranded), life,
+    normSust: L.capex * Math.pow(1 - d, H) / L.life };
+}
+function npvOf(cf, r){ let s = 0; for (let t = 0; t < cf.length; t++) s += cf[t] / Math.pow(1 + r, t); return s; }
+function irrOf(cf){
+  let lo = -0.5, hi = 1.5;
+  const f = (r) => npvOf(cf, r);
+  if (f(lo) * f(hi) > 0) return NaN;
+  for (let i = 0; i < 80; i++){
+    const mid = (lo + hi) / 2;
+    if (f(lo) * f(mid) <= 0) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+function runLayer(L, G){
+  const r = G.disc / 100, prem = G.premium / 100;
+  const def = G.entryDef === 'B' ? 'B' : 'A';
+  const e = Math.max(0, Math.min(10, Math.round(G.entry || 0)));
+  const M = G.mult || 0;
+  const bounds = G.phases;
+  const B = Math.max(1, Math.round(L.buildYears));
+  const S = buildStartOf(L);
+  const buildEnd = S + B; // first year after the build
+  const years = []; for (let t = 0; t <= H; t++) years.push(t);
+  const build = years.map(t => t >= S && t < buildEnd ? L.capex / B : 0);
+  // Capex model. "sustaining" (v0.1, default): after the build, sustaining spend = build capex / asset life each year.
+  // "vintage" (opt-in): each year's build spend is a cohort, replaced at end of life at the same capacity and later
+  // prices, original spend x (1 - unit-cost decline)^life. Replacement after year 15 is not charged.
+  const vin = vintageSchedule(L, G, build);
+  const sust  = vin ? vin.repl : years.map(t => t >= buildEnd ? L.capex / L.life : 0);
+  // Capacity limit (assumption, unsourced): capacity scales linearly with build spend, so the layer can serve at most
+  // K(t) = cumulative build spend through t / total build capex of full adoption. A first-order stand-in for the
+  // utilisation backlog item, to be refined by vintage capex in Drop 2.
+  let spent = 0;
+  const cap = years.map(t => { spent += build[t]; return L.capex > 0 ? Math.min(1, spent / L.capex) : 1; });
+  // Share compounds by the drift of the phase each year falls in. With one constant drift this is (1 + drift)^t.
+  // In Vintage mode each year also carries price erosion from cheaper capacity: (1 - passThrough x unit-cost decline).
+  const pf = passThroughFactor(L, G);
+  const shareMult = [1];
+  for (let t = 1; t <= H; t++) shareMult.push(shareMult[t - 1] * (1 + phaseVal(L.driftP, L.drift, t, bounds) / 100) * pf);
+  const rev   = years.map(t => G.pool * Math.min(layerAdoption(t, L, G), cap[t]) * (L.share / 100) * shareMult[t]);
+  const ocf   = rev.map((x, t) => x * phaseVal(L.marginP, L.margin, t, bounds) / 100);
+  const opsNet = years.map(t => ocf[t] - sust[t]);
+  // Terminal value: v0.1 uses year-15 cash after sustaining spend. Vintage mode uses a normalised sustaining spend,
+  // capex x (1 - decline)^15 / life, instead of the lumpy year-15 replacement; at decline 0 this equals capex / life.
+  const tv = vin ? G.tv * Math.max(0, ocf[H] - vin.normSust) : G.tv * Math.max(0, opsNet[H]);
+
+  // Entry year e: the investor owns cash flows from e onward, valued in year-e terms.
+  const disc = (t) => Math.pow(1 + r, t - e);
+  let pvOpsNoTV = 0, pvBuildFwd = 0;
+  for (let t = e; t <= H; t++){ pvOpsNoTV += opsNet[t] / disc(t); pvBuildFwd += build[t] / disc(t); }
+  const tvPV = tv / disc(H);
+  const pvOps = pvOpsNoTV + tvPV;
+  let preBuild = 0; for (let t = 0; t < e; t++) preBuild += build[t];
+
+  // Definition A (replacement-cost premium): pay (1 + p) x build capex already spent, at e; later build at (1 + p).
+  const costA = preBuild + pvBuildFwd;
+  const breakEven = costA > 0 ? (pvOps / costA - 1) * 100 : NaN;
+  // Definition B (forward cash multiple): pay M x operating cash of year e + 1, at e; later build at cost.
+  const fwdOcf = ocf[e + 1];
+  const peakOcf = Math.max.apply(null, ocf);
+  const bMeaningful = fwdOcf > B_MIN_OCF_SHARE * peakOcf && fwdOcf > 0;
+  const breakEvenM = bMeaningful ? (pvOps - pvBuildFwd) / fwdOcf : NaN;
+
+  const price = def === 'A' ? (1 + prem) * preBuild : M * fwdOcf;
+  const buildMult = def === 'A' ? (1 + prem) : 1;
+  const cf = years.map(t => t < e ? 0 : opsNet[t] - build[t] * buildMult - (t === e ? price : 0));
+  const cfTV = cf.slice(); cfTV[H] += tv;
+  const cfFromE = cfTV.slice(e);
+  const npv = npvOf(cfFromE, r);
+  const irr = irrOf(cfFromE);
+  let cum = 0, payback = null; const cumArr = [];
+  for (let t = 0; t <= H; t++){ cum += cf[t]; cumArr.push(cum); if (payback === null && t >= e && cum >= 0 && t >= buildEnd) payback = t; }
+  // debt: describes how the layer itself is financed, so it runs on the layer's full timeline whatever the entry year.
+  const D = (L.debt / 100) * L.capex, rd = G.rd / 100;
+  let bal = 0, cumCash = 0, minCum = 0, minDSCR = Infinity; const ds = [], draws = [], repays = [];
+  for (let t = 0; t <= H; t++){
+    const draw = build[t] * (L.debt / 100);
+    const interest = rd * bal;
+    const repay = (t >= buildEnd && t < buildEnd + AMORT) ? D / AMORT : 0;
+    bal = bal + draw - repay;
+    const service = interest + repay; ds.push(service); draws.push(draw); repays.push(repay);
+    cumCash += opsNet[t] - service; if (cumCash < minCum) minCum = cumCash;
+    if (t >= buildEnd && service > 0.0001) minDSCR = Math.min(minDSCR, opsNet[t] / service);
+  }
+  const hasDebt = L.debt > 0;
+  const flags = [];
+  // Life flag: years from when your capital first goes in (entry year or build start, whichever is later) to payback
+  // exceed asset life. With entry year 0 and build start 0 this is the v0.1 rule.
+  const clockStart = Math.max(e, S);
+  if (payback === null || payback - clockStart > L.life) flags.push('life');
+  if (hasDebt && -minCum > 0.25 * D) flags.push('debt');
+  if (pvOps > 0 && tvPV / pvOps > 0.5) flags.push('tail');
+  const merit = L.evidence >= 3;
+  const pays = npv >= 0;
+  let bin;
+  if (merit && pays) bin = flags.length ? 'Pays, but fragile' : 'Durable value';
+  else if (merit && !pays) bin = 'Useful, but capital does not earn its cost';
+  else if (!merit && pays) bin = 'Pays on assumptions, not evidence';
+  else bin = 'Speculative';
+  const headroom = def === 'A' ? breakEven - G.premium : breakEvenM - M;
+  return { years, rev, ocf, opsNet, build, sust, cap, shareMult, shareLeftPct: shareMult[H] * 100, capexModel: vin ? 'vintage' : 'sustaining',
+    cohorts: vin ? vin.cohorts : null, stranded: vin ? vin.stranded : null,
+    strandedPeakPct: vin ? vin.peak / L.capex * 100 : null, buildStart: S, buildEnd, clockStart, draws, repays, ds, cf, cumArr, tv, tvPV, npv, breakEven, breakEvenM, bMeaningful, irr, payback,
+    entry: e, def, price, minDSCR: hasDebt ? minDSCR : null, shortfall: hasDebt ? Math.max(0, -minCum) : 0, flags, merit, pays, bin, headroom };
+}
+// NPV grid for one layer: rows are entry years, columns are premiums (Definition A) or multiples (Definition B).
+function heatmap(L, G, entries, prices){
+  const key = G.entryDef === 'B' ? 'mult' : 'premium';
+  return entries.map(e => prices.map(p => runLayer(L, Object.assign({}, G, { entry: e, [key]: p })).npv));
+}
+// Sensitivity of NPV to one-at-a-time shocks. Shock sizes differ by input: drift moves in points, timing offset
+// in years, the entry premium in points, everything else by 25%. Bars are not like-for-like across inputs.
+const OFFSET_SHOCK = 2;
+// Two-year build delay used by the sensitivity bar and the "verdict changes if the build starts later" line.
+// A display choice, not evidence about typical delays.
+const BUILD_SHIFT = 2;
+function verdictIfBuildLater(L, G){
+  const later = Object.assign({}, L, { buildStart: buildStartOf(L) + BUILD_SHIFT });
+  return { now: runLayer(L, G).bin, later: runLayer(later, G).bin, shifted: buildStartOf(later) - buildStartOf(L) };
+}
+const withLayer = (L, f) => {
+  const c = Object.assign({}, L);
+  if (Array.isArray(L.driftP)) c.driftP = L.driftP.slice();
+  if (Array.isArray(L.marginP)) c.marginP = L.marginP.slice();
+  f(c); return c;
+};
+function sensItems(G){
+  const items = [
+    {id:'pool', n:'Value pool', lab:'±25%', g:(g,k)=>{ g.pool*=k; }, lo:0.75, hi:1.25},
+    {id:'share', n:'Layer share of pool', lab:'±25%', L:(L,k)=>{ L.share*=k; }, lo:0.75, hi:1.25},
+    {id:'margin', n:'Cash margin, all phases', lab:'±25%', L:(L,k)=>{ if (Array.isArray(L.marginP)) L.marginP = L.marginP.map(v => v*k); else L.margin*=k; }, lo:0.75, hi:1.25},
+    {id:'speed', n:'Adoption speed', lab:'±25%', g:(g,k)=>{ g.speed*=k; }, lo:1.25, hi:0.75},
+    {id:'mid', n:'Adoption midpoint', lab:'±25%', g:(g,k)=>{ g.mid*=k; }, lo:1.25, hi:0.75},
+    {id:'offset', n:'Layer timing offset', lab:'±'+OFFSET_SHOCK+' years', L:(L,k)=>{ L.offset=(L.offset||0)+k; }, lo:OFFSET_SHOCK, hi:-OFFSET_SHOCK},
+    {id:'steepness', n:'Layer curve steepness', lab:'±25%', L:(L,k)=>{ L.steepness=(L.steepness||1)*k; }, lo:0.75, hi:1.25},
+    {id:'drift', n:'Share drift, all phases', lab:'±3 points', L:(L,k)=>{ if (Array.isArray(L.driftP)) L.driftP = L.driftP.map(v => v+k); else L.drift+=k; }, lo:-3, hi:3},
+    {id:'capex', n:'Build capex', lab:'±25%', L:(L,k)=>{ L.capex*=k; }, lo:1.25, hi:0.75},
+    {id:'life', n:'Asset life', lab:'±25%', L:(L,k)=>{ L.life=Math.max(1,L.life*k); }, lo:0.75, hi:1.25},
+    {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
+    {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
+  ];
+  if (G.capexModel === 'vintage'){
+    items.push({id:'decline', n:'Unit-cost decline (\u00b13 points)', lab:'\u00b13 points', L:(L,k)=>{ L.unitCostDecline=(L.unitCostDecline||0)+k; }, lo:-3, hi:3});
+    const pt0 = L0pt => (L0pt === undefined ? 0.5 : L0pt);
+    items.push({id:'passThrough', n:'Pass-through to prices (\u00b10.25)', lab:'\u00b10.25, clamped to 0\u20131', L:(L,k)=>{ L.passThrough=Math.max(0, Math.min(1, pt0(L.passThrough)+k)); }, lo:0.25, hi:-0.25});
+  }
+  items.push(G.entryDef === 'B'
+    ? {id:'mult', n:'Entry multiple', lab:'±25%', g:(g,k)=>{ g.mult*=k; }, lo:1.25, hi:0.75}
+    : {id:'premium', n:'Entry premium', lab:'±25 points', g:(g,k)=>{ g.premium+=k; }, lo:25, hi:-25});
+  return items;
+}
+// Returns one bar per input, after merging inputs that are the same shift by construction:
+// - pool, share and margin all multiply operating cash, so +/-25% on each moves NPV identically;
+// - layer adoption depends on midpoint + offset only, so they merge when the midpoint shock equals the offset shock in years.
+function sensitivity(L, G){
+  const base = runLayer(L, G).npv;
+  const one = {};
+  for (const it of sensItems(G)){
+    const run = (k) => { const g = Object.assign({}, G); const l = withLayer(L, x => { if (it.L) it.L(x, k); }); if (it.g) it.g(g, k); return runLayer(l, g).npv; };
+    const a = run(it.lo), b = run(it.hi);
+    one[it.id] = {id:it.id, n:it.n, lab:it.lab, bad:Math.min(a,b), good:Math.max(a,b), swing:Math.abs(b-a)};
+  }
+  // Build start: two years later only, because the build cannot start before year 0. One-sided by design.
+  const later = withLayer(L, x => { x.buildStart = buildStartOf(L) + BUILD_SHIFT; });
+  const shift = buildStartOf(later) - buildStartOf(L);
+  const bs = runLayer(later, G).npv;
+  one.buildStart = {id:'buildStart', n:'Build start (two years later only; cannot start before year 0)', oneSided:true,
+    lab:shift === BUILD_SHIFT ? '+'+BUILD_SHIFT+' years, one-sided' : shift > 0 ? '+'+shift+' year'+(shift>1?'s':'')+' (end of horizon), one-sided' : 'no room to delay, one-sided',
+    bad:Math.min(base, bs), good:Math.max(base, bs), swing:Math.abs(bs - base)};
+  const rows = [];
+  rows.push(Object.assign({}, one.pool, {id:'scale', n:'Scale (pool, share or margin)', lab:'±25%', members:['pool','share','margin']}));
+  const midYears = 0.25 * G.mid;
+  if (Math.abs(midYears - OFFSET_SHOCK) < 1e-9){
+    rows.push(Object.assign({}, one.mid, {id:'timing', n:'Timing (midpoint or layer offset)', lab:'±'+OFFSET_SHOCK+' years', members:['mid','offset']}));
+  } else {
+    rows.push(Object.assign({}, one.mid, {lab:'±25%, '+midYears.toFixed(1)+' years'}), one.offset);
+  }
+  for (const id in one) if (['pool','share','margin','mid','offset'].indexOf(id) < 0) rows.push(one[id]);
+  rows.sort((p, q) => q.swing - p.swing);
+  return { base, rows, parts: one };
+}
+// Display threshold for the low-share warning: a layer whose share falls below this percentage of its starting level
+// by year 15. A display choice, not evidence about when a layer stops being viable.
+const LOW_SHARE_PCT = 5;
+function lowShareLayers(layers, G){
+  return layers.map(L => ({ L, pct: runLayer(L, G).shareLeftPct })).filter(x => x.pct < LOW_SHARE_PCT);
+}
+// Verdict fragility: which tested shocks change a layer's verdict (bin). The shock set is a display choice, not
+// evidence about how far inputs might move. A shock that would leave the inputs unchanged (for example pass-through
+// already at 0, or no room to start the build later) is not tested and not counted.
+const PT_DEFAULT = 0.5;
+function fragilityShocks(L, G){
+  const vintage = G.capexModel === 'vintage';
+  const pt = L.passThrough === undefined ? PT_DEFAULT : L.passThrough;
+  const life = (k) => Math.max(1, L.life * k);
+  const list = [
+    {id:'offset-late', group:'timing', n:'Timing offset 2 years later', L:{offset:(L.offset || 0) + 2}},
+    {id:'offset-early', group:'timing', n:'Timing offset 2 years earlier', L:{offset:(L.offset || 0) - 2}},
+    {id:'build-late', group:'build', n:'Build starts 2 years later', L:{buildStart:buildStartOf(L) + BUILD_SHIFT},
+      skip: buildStartOf(Object.assign({}, L, {buildStart:buildStartOf(L) + BUILD_SHIFT})) === buildStartOf(L)},
+    {id:'drift-down', group:'drift', n:'Share drift 3 points lower', L:{driftP:shiftDrift(L, -3), drift:(L.drift || 0) - 3}},
+    {id:'drift-up', group:'drift', n:'Share drift 3 points higher', L:{driftP:shiftDrift(L, 3), drift:(L.drift || 0) + 3}},
+    {id:'scale-down', group:'scale', n:'Scale 25% lower', L:{share:L.share * 0.75}},
+    {id:'scale-up', group:'scale', n:'Scale 25% higher', L:{share:L.share * 1.25}},
+    {id:'disc-up', group:'disc', n:'Discount rate 25% higher', G:{disc:G.disc * 1.25}},
+    {id:'disc-down', group:'disc', n:'Discount rate 25% lower', G:{disc:G.disc * 0.75}},
+    {id:'life-down', group:'life', n:'Asset life 25% shorter', L:{life:life(0.75)}},
+    {id:'life-up', group:'life', n:'Asset life 25% longer', L:{life:life(1.25)}}
+  ];
+  // Keeps the information of the earlier timing note: when an offset is set, test the layer at offset 0.
+  if ((L.offset || 0) !== 0) list.push({id:'offset-zero', group:'timing', n:'Timing offset set to 0', L:{offset:0}});
+  if (vintage){
+    list.push({id:'pt-0', group:'passThrough', n:'Pass-through 0 (owner keeps savings)', L:{passThrough:0}, skip: pt === 0});
+    list.push({id:'pt-1', group:'passThrough', n:'Pass-through 1 (competition takes savings)', L:{passThrough:1}, skip: pt === 1});
+    list.push({id:'decline-down', group:'decline', n:'Unit-cost decline 3 points lower', L:{unitCostDecline:(L.unitCostDecline || 0) - 3}});
+    list.push({id:'decline-up', group:'decline', n:'Unit-cost decline 3 points higher', L:{unitCostDecline:(L.unitCostDecline || 0) + 3}});
+  }
+  return list.filter(s => !s.skip);
+}
+// Direction of a verdict change (a display rule): worse if present value goes from positive to negative or a fragility
+// flag is added; better if present value goes from negative to positive or a flag is removed; mixed if both apply.
+function flipDirection(base, o){
+  const worse = (base.npv >= 0 && o.npv < 0) || o.flags.some(f => base.flags.indexOf(f) < 0);
+  const better = (base.npv < 0 && o.npv >= 0) || base.flags.some(f => o.flags.indexOf(f) < 0);
+  return worse && better ? 'mixed' : worse ? 'worse' : better ? 'better' : 'mixed';
+}
+function shiftDrift(L, k){ return Array.isArray(L.driftP) ? L.driftP.map(v => v + k) : undefined; }
+function verdictFragility(L, G){
+  const base = runLayer(L, G);
+  const results = fragilityShocks(L, G).map(s => {
+    const l = Object.assign({}, L, s.L || {}), g = Object.assign({}, G, s.G || {});
+    if (l.driftP === undefined) delete l.driftP;
+    const o = runLayer(l, g);
+    const flips = o.bin !== base.bin;
+    return { id: s.id, group: s.group, n: s.n, bin: o.bin, npv: o.npv, flags: o.flags, flips,
+      direction: flips ? flipDirection(base, o) : null };
+  });
+  const flips = results.filter(r => r.flips);
+  const count = (d) => flips.filter(r => r.direction === d).length;
+  return { bin: base.bin, npv: base.npv, flags: base.flags, results, flips, n: flips.length, m: results.length,
+    worse: count('worse'), better: count('better'), mixed: count('mixed') };
+}
+
+// Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
+// Defaults are neutral on timing (offset 0, steepness 1, build starts in year 0) and on phases (all three equal the v0.1 constant),
+// so the default page reproduces the v0.1 results. Anything that demonstrates a verdict must be opt-in.
+const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
+const DEFAULT_DEF = 'A';
+// Capex model: 'sustaining' (v0.1, default) or 'vintage' (opt-in cohorts with replacement at end of life).
+const DEFAULT_CAPEX = 'sustaining';
+const DEFAULT_PHASES = [5, 10];
+const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mid:5.5} };
+const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
+const ph = (v) => [v, v, v];
+const DEFAULT_LAYERS = [
+  {id:'hw', name:'Chips and accelerators', evidence:3, share:25, offset:0, steepness:1, driftP:ph(-1), marginP:ph(45), capex:120, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:4, life:8,  debt:10, alloc:20},
+  {id:'dc', name:'Data centres and power', evidence:3, share:15, offset:0, steepness:1, driftP:ph(-2), marginP:ph(45), capex:220, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:5, life:10, debt:50, alloc:20},
+  {id:'ml', name:'Models',                 evidence:3, share:15, offset:0, steepness:1, driftP:ph(-3), marginP:ph(35), capex:100, buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:4, life:4,  debt:10, alloc:20},
+  {id:'ap', name:'Applications',           evidence:3, share:30, offset:0, steepness:1, driftP:ph(0),  marginP:ph(30), capex:60,  buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:3, life:5,  debt:0,  alloc:20},
+  {id:'sv', name:'Services and integration',evidence:3, share:15, offset:0, steepness:1, driftP:ph(0),  marginP:ph(15), capex:15,  buildStart:0, unitCostDecline:0, passThrough:0.5, buildYears:2, life:10, debt:0,  alloc:20}
+];
+// Opt-in example only, loaded by the "Load lead/lag example" button. A placeholder, not data:
+// infrastructure leads end demand, applications and services lag (years, in DEFAULT_LAYERS order).
+const LEAD_LAG_EXAMPLE = [-1, -2, 0, 1, 2];
+// Opt-in example only, loaded by the "Load unit-cost-decline example" button. Invented round numbers, not data:
+// unit-cost decline in % a year for chips, data centres, models, applications, services. Used in Vintage mode only.
+const UCD_EXAMPLE = [5, 2, 8, 0, 0];
+// passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
+// customers as lower prices, used only in Vintage mode.
+// Input ranges [min, max, step], shared by the page's inputs and the snapshot import validator.
+const LAYER_RANGES = {
+  evidence:[1,5,1], share:[0,100,1], offset:[-5,5,0.5], steepness:[0.25,4,0.25], capex:[1,2000,5],
+  buildStart:[0,14,1], buildYears:[1,10,1], unitCostDecline:[-10,50,0.5], passThrough:[0,1,0.05],
+  life:[1,40,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
+};
+const GLOBAL_RANGES = {
+  pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,12,0.5]
+};
+// Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
+const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
+
+// Snapshots: dated views of the whole simulation (inputs, outputs, note, kill criteria), so a past view can be compared
+// with the current one. Pure functions, no DOM. CommonJS export for tests; the build strips the export line and runs
+// this file in the page after the defaults and before the UI code.
+// Snapshots live in the browser's local storage only. Exports are files the user downloads; they are never committed
+// (exports/ and *.snapshot.json are gitignored). Allocations are excluded from exports unless the user ticks a box.
+// Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
+
+const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
+const SNAP_SCHEMA_VERSION = 3;
+// Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
+// had no trigger response (filled in as null).
+const SNAP_SCHEMA_READABLE = [1, 2, 3];
+const SNAP_RESPONSE_KINDS = ['revised', 'kept'];
+const SNAP_REASON_MAX = 500;
+const SNAP_MAX_BYTES = 1024 * 1024;
+const SNAP_MAX_COUNT = 50; // per file, and in total in this browser
+const SNAP_TEXT_MAX = { name: 120, note: 5000, text: 2000, metric: 120 };
+const SNAP_GLOBAL_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult'];
+const SNAP_LAYER_NUM_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears',
+  'unitCostDecline', 'passThrough', 'life', 'debt'];
+const SNAP_INT_KEYS = ['entry', 'evidence', 'buildStart', 'buildYears'];
+const SNAP_BINS = ['Durable value', 'Pays, but fragile', 'Useful, but capital does not earn its cost',
+  'Pays on assumptions, not evidence', 'Speculative'];
+const SNAP_FLAGS = ['life', 'debt', 'tail'];
+const SNAP_STATUS = ['', 'yes', 'no', 'unknown'];
+const SNAP_DIRECTIONS = ['', 'above', 'below'];
+const SNAP_FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+// Model and defaults: required in Node, globals in the page (looked up at call time).
+function snapDeps(){
+  if (typeof module !== 'undefined' && typeof require === 'function') {
+    return Object.assign({}, require('./model.js'), require('./defaults.js'));
+  }
+  return { MODEL_VERSION, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
+}
+
+function snapBlankKill(){
+  return snapDeps().DEFAULT_LAYERS.map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
+}
+const snapFinite = (v) => typeof v === 'number' && isFinite(v) ? v : null;
+
+// Outputs saved with a snapshot, computed from its inputs under the current model.
+function snapOutputs(inputs){
+  const d = snapDeps();
+  return inputs.layers.map(L => {
+    const o = d.runLayer(L, inputs.G), f = d.verdictFragility(L, inputs.G);
+    return { id: L.id, npv: o.npv, bin: o.bin, flags: o.flags.slice(), breakEven: snapFinite(o.breakEven), breakEvenM: snapFinite(o.breakEvenM),
+      fragility: { n: f.n, m: f.m, worse: f.worse, better: f.better, mixed: f.mixed } };
+  });
+}
+// Copy only known inputs into fresh objects, so a snapshot never carries display state or stray fields.
+function snapInputs(G, layers){
+  const g = {};
+  SNAP_GLOBAL_KEYS.forEach(k => { g[k] = G[k]; });
+  g.entryDef = G.entryDef; g.capexModel = G.capexModel; g.phases = [G.phases[0], G.phases[1]];
+  const ls = layers.map(L => {
+    const o = { id: L.id };
+    SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = L[k]; });
+    o.driftP = L.driftP.slice(0, 3); o.marginP = L.marginP.slice(0, 3);
+    if (typeof L.alloc === 'number') o.alloc = L.alloc;
+    return o;
+  });
+  return { G: g, layers: ls };
+}
+function snapKillCopy(k){
+  return { id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: k.status,
+    answeredAt: k.answeredAt || '' };
+}
+function snapResponseCopy(r){
+  return { kind: r.kind, reason: r.reason, triggers: r.triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: r.changedInputs.map(c => ({ path: c.path, before: c.before, after: c.after })) };
+}
+// Criteria answered "yes" whose trigger is still open (no later snapshot saved yet), newest snapshot first.
+function snapTriggeredList(list){
+  const out = [];
+  list.forEach((s, i) => s.kill.forEach(k => {
+    if (k.status === 'yes' && !snapLaterSaved(k, list)) out.push({ index: i, name: s.name, created: s.created, layerId: k.id });
+  }));
+  return out.sort((a, b) => (a.created < b.created ? 1 : a.created > b.created ? -1 : 0));
+}
+// The response recorded on the next snapshot when triggers are open. "revised" lists the inputs that changed since
+// the newest triggering snapshot (using the compare logic); "kept" needs a short reason. Allocations are never
+// listed, so a response cannot leak them into an export.
+function snapMakeResponse(kind, reason, triggers, fromInputs, toInputs){
+  const changed = kind === 'revised' ? diffInputs(fromInputs, toInputs).filter(d => !/\.alloc$/.test(d.path)) : [];
+  return { kind, reason: String(reason || '').trim().slice(0, SNAP_REASON_MAX),
+    triggers: triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: changed.map(d => ({ path: d.path, before: d.before, after: d.after })) };
+}
+function makeSnapshot(opts){
+  const inputs = snapInputs(opts.G, opts.layers);
+  return {
+    schemaVersion: SNAP_SCHEMA_VERSION,
+    name: String(opts.name || '').slice(0, SNAP_TEXT_MAX.name) || 'Untitled snapshot',
+    created: (opts.now || new Date()).toISOString(), // ISO, UTC
+    note: String(opts.note || '').slice(0, SNAP_TEXT_MAX.note),
+    modelVersion: snapDeps().MODEL_VERSION,
+    inputs, outputs: snapOutputs(inputs),
+    kill: (opts.kill || snapBlankKill()).map(snapKillCopy),
+    response: opts.response ? snapResponseCopy(opts.response) : null
+  };
+}
+
+// Export: allocations are removed unless the caller asks to include them. The stored list is not modified.
+function exportSnapshots(list, opts){
+  const include = !!(opts && opts.includeAllocations);
+  const snaps = list.map(s => {
+    const c = JSON.parse(JSON.stringify(s));
+    if (!include) c.inputs.layers.forEach(L => { delete L.alloc; });
+    return c;
+  });
+  return { format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: ((opts && opts.now) || new Date()).toISOString(),
+    includesAllocations: include, snapshots: snaps };
+}
+function exportSnapshotsText(list, opts){ return JSON.stringify(exportSnapshots(list, opts), null, 2); }
+
+// Strict import. Never trusts the file. Order: size, JSON parse, scan for prototype keys, then a structural check
+// that rebuilds every snapshot from whitelisted fields into fresh plain objects (nothing parsed is merged into
+// existing objects). Returns { ok: true, snapshots } or { ok: false, error } naming what was rejected.
+// Free text is kept as text; the page renders it with textContent, never as HTML.
+function importSnapshotsText(text, opts){
+  const fail = (msg) => ({ ok: false, error: msg });
+  if (typeof text !== 'string') return fail('the file could not be read as text.');
+  if (snapByteLength(text) > SNAP_MAX_BYTES) return fail('the file is larger than 1 MB.');
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return fail('the file is not valid JSON.'); }
+  const bad = snapForbiddenKey(data, 0);
+  if (bad) return fail('the file contains a forbidden key "' + bad + '".');
+  try { return { ok: true, snapshots: snapCheckFile(data, opts || {}) }; }
+  catch (e) { return fail(e.message); }
+}
+function snapByteLength(text){
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text).length;
+  return unescape(encodeURIComponent(text)).length;
+}
+// Depth-first scan for keys that could reach an object's prototype if ever merged. Also caps nesting depth.
+function snapForbiddenKey(v, depth){
+  if (depth > 20) return '(nesting too deep)';
+  if (Array.isArray(v)) { for (const x of v) { const b = snapForbiddenKey(x, depth + 1); if (b) return b; } return null; }
+  if (v !== null && typeof v === 'object') {
+    for (const k of Object.keys(v)) {
+      if (SNAP_FORBIDDEN_KEYS.indexOf(k) >= 0) return k;
+      const b = snapForbiddenKey(v[k], depth + 1); if (b) return b;
+    }
+  }
+  return null;
+}
+function snapErr(where, what){ throw new Error(where + ': ' + what); }
+function snapIsObj(v){ return v !== null && typeof v === 'object' && !Array.isArray(v); }
+function snapKeys(obj, required, optional, where){
+  if (!snapIsObj(obj)) snapErr(where, 'expected an object');
+  const allowed = required.concat(optional || []);
+  Object.keys(obj).forEach(k => { if (allowed.indexOf(k) < 0) snapErr(where, 'unknown field "' + String(k).slice(0, 40) + '"'); });
+  required.forEach(k => { if (!Object.prototype.hasOwnProperty.call(obj, k)) snapErr(where, 'missing field "' + k + '"'); });
+}
+function snapNum(v, range, where, integer){
+  if (typeof v !== 'number' || !isFinite(v)) snapErr(where, 'expected a finite number');
+  if (range && (v < range[0] || v > range[1])) snapErr(where, 'value ' + v + ' is outside ' + range[0] + ' to ' + range[1]);
+  if (integer && Math.round(v) !== v) snapErr(where, 'expected a whole number');
+  return v;
+}
+function snapStr(v, max, where){
+  if (typeof v !== 'string') snapErr(where, 'expected text');
+  if (v.length > max) snapErr(where, 'text longer than ' + max + ' characters');
+  return v;
+}
+function snapOneOf(v, list, where){ if (list.indexOf(v) < 0) snapErr(where, 'unexpected value'); return v; }
+function snapDate(v, where){
+  snapStr(v, 40, where);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(v) || isNaN(Date.parse(v))) snapErr(where, 'expected an ISO date and time in UTC');
+  return v;
+}
+function snapDay(v, where){
+  snapStr(v, 10, where);
+  if (v !== '' && (!/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(Date.parse(v + 'T00:00:00Z')))) snapErr(where, 'expected a date (YYYY-MM-DD) or blank');
+  return v;
+}
+function snapSchema(v, where){
+  if (SNAP_SCHEMA_READABLE.indexOf(v) < 0) snapErr(where, 'schema version ' + String(v).slice(0, 20) + ' is not compatible (this page reads schema versions ' + SNAP_SCHEMA_READABLE.join(' and ') + ')');
+  return v;
+}
+function snapCheckFile(data, opts){
+  if (!snapIsObj(data)) snapErr('File', 'expected an object');
+  if (data.format !== SNAP_FORMAT) snapErr('File', 'not a Load Bearing Simulator snapshot file');
+  snapSchema(data.schemaVersion, 'File');
+  snapKeys(data, ['format', 'schemaVersion', 'exportedAt', 'includesAllocations', 'snapshots'], [], 'File');
+  snapDate(data.exportedAt, 'File exportedAt');
+  if (typeof data.includesAllocations !== 'boolean') snapErr('File includesAllocations', 'expected true or false');
+  if (!Array.isArray(data.snapshots)) snapErr('File snapshots', 'expected a list');
+  const max = opts.maxCount || SNAP_MAX_COUNT;
+  if (data.snapshots.length > max) snapErr('File snapshots', 'more than ' + max + ' snapshots');
+  return data.snapshots.map((s, i) => snapCheckOne(s, 'Snapshot ' + (i + 1), data.includesAllocations));
+}
+// Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
+function snapCheckOne(s, where, withAlloc){
+  const d = snapDeps(), ids = d.DEFAULT_LAYERS.map(L => L.id);
+  if (!snapIsObj(s)) snapErr(where, 'expected an object');
+  const schema = snapSchema(s.schemaVersion, where);
+  snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
+  if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
+  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : []), [], where);
+  const out = { schemaVersion: SNAP_SCHEMA_VERSION, name: snapStr(s.name, SNAP_TEXT_MAX.name, where + ' name'),
+    created: snapDate(s.created, where + ' created'), note: snapStr(s.note, SNAP_TEXT_MAX.note, where + ' note'),
+    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
+  // Inputs
+  snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
+  const G = s.inputs.G;
+  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases']), [], where + ' settings');
+  SNAP_GLOBAL_KEYS.forEach(k => { out.inputs.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
+  out.inputs.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
+  out.inputs.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
+  if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
+  const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
+  const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
+  if (p1 >= p2) snapErr(where + ' setting phases', 'phase 2 must start before phase 3');
+  out.inputs.G.phases = [p1, p2];
+  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length !== ids.length) snapErr(where + ' layers', 'expected ' + ids.length + ' layers');
+  s.inputs.layers.forEach((L, i) => {
+    const w = where + ' layer ' + (i + 1), o = { id: ids[i] };
+    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP']), withAlloc ? ['alloc'] : [], w);
+    if (L.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
+    SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = snapNum(L[k], d.LAYER_RANGES[k], w + ' ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
+    ['driftP', 'marginP'].forEach(k => {
+      if (!Array.isArray(L[k]) || L[k].length !== 3) snapErr(w + ' ' + k, 'expected three phase values');
+      o[k] = L[k].map(v => snapNum(v, d.LAYER_RANGES[k], w + ' ' + k));
+    });
+    if (Object.prototype.hasOwnProperty.call(L, 'alloc')) o.alloc = snapNum(L.alloc, d.LAYER_RANGES.alloc, w + ' alloc');
+    out.inputs.layers.push(o);
+  });
+  // Outputs (kept for comparison; recomputed when the model version differs)
+  if (!Array.isArray(s.outputs) || s.outputs.length !== ids.length) snapErr(where + ' outputs', 'expected ' + ids.length + ' layers');
+  s.outputs.forEach((o, i) => {
+    const w = where + ' output ' + (i + 1);
+    snapKeys(o, ['id', 'npv', 'bin', 'flags', 'breakEven', 'breakEvenM', 'fragility'], [], w);
+    if (o.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
+    if (!Array.isArray(o.flags) || o.flags.length > 3) snapErr(w + ' flags', 'expected a list of flags');
+    snapKeys(o.fragility, ['n', 'm', 'worse', 'better', 'mixed'], [], w + ' fragility');
+    const fr = {};
+    ['n', 'm', 'worse', 'better', 'mixed'].forEach(k => { fr[k] = snapNum(o.fragility[k], [0, 100], w + ' fragility ' + k, true); });
+    out.outputs.push({ id: ids[i], npv: snapNum(o.npv, [-1e9, 1e9], w + ' npv'), bin: snapOneOf(o.bin, SNAP_BINS, w + ' verdict'),
+      flags: o.flags.map(f => snapOneOf(f, SNAP_FLAGS, w + ' flags')),
+      breakEven: o.breakEven === null ? null : snapNum(o.breakEven, [-1e9, 1e9], w + ' breakEven'),
+      breakEvenM: o.breakEvenM === null ? null : snapNum(o.breakEvenM, [-1e9, 1e9], w + ' breakEvenM'),
+      fragility: fr });
+  });
+  // Kill criteria
+  if (!Array.isArray(s.kill) || s.kill.length !== ids.length) snapErr(where + ' kill criteria', 'expected ' + ids.length + ' layers');
+  s.kill.forEach((k, i) => {
+    const w = where + ' kill criteria ' + (i + 1);
+    snapKeys(k, ['id', 'text', 'metric', 'direction', 'threshold', 'reviewBy', 'status'].concat(schema >= 2 ? ['answeredAt'] : []), [], w);
+    if (k.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
+    out.kill.push({ id: ids[i], text: snapStr(k.text, SNAP_TEXT_MAX.text, w + ' text'), metric: snapStr(k.metric, SNAP_TEXT_MAX.metric, w + ' metric'),
+      direction: snapOneOf(k.direction, SNAP_DIRECTIONS, w + ' direction'),
+      threshold: k.threshold === null ? null : snapNum(k.threshold, [-1e12, 1e12], w + ' threshold'),
+      reviewBy: snapDay(k.reviewBy, w + ' reviewBy'), status: snapOneOf(k.status, SNAP_STATUS, w + ' status'),
+      answeredAt: schema < 2 || k.answeredAt === '' ? '' : snapDate(k.answeredAt, w + ' answeredAt') });
+  });
+  // Trigger response (schema 3): null, or how the user responded to triggered criteria when saving.
+  if (schema >= 3 && s.response !== null) out.response = snapCheckResponse(s.response, where + ' response', ids);
+  return out;
+}
+function snapCheckResponse(r, where, ids){
+  snapKeys(r, ['kind', 'reason', 'triggers', 'changedInputs'], [], where);
+  const kind = snapOneOf(r.kind, SNAP_RESPONSE_KINDS, where + ' kind');
+  const reason = snapStr(r.reason, SNAP_REASON_MAX, where + ' reason');
+  if (kind === 'kept' && !reason.trim()) snapErr(where, '"kept my view" needs a reason');
+  if (!Array.isArray(r.triggers) || r.triggers.length < 1 || r.triggers.length > 250) snapErr(where + ' triggers', 'expected 1 to 250 triggers');
+  const triggers = r.triggers.map((t, i) => {
+    const w = where + ' trigger ' + (i + 1);
+    snapKeys(t, ['name', 'created', 'layerId'], [], w);
+    return { name: snapStr(t.name, SNAP_TEXT_MAX.name, w + ' name'), created: snapDate(t.created, w + ' created'), layerId: snapOneOf(t.layerId, ids, w + ' layerId') };
+  });
+  if (!Array.isArray(r.changedInputs) || r.changedInputs.length > 500) snapErr(where + ' changedInputs', 'expected a list of at most 500');
+  if (kind === 'kept' && r.changedInputs.length) snapErr(where, '"kept my view" cannot list changed inputs');
+  const changedInputs = r.changedInputs.map((c, i) => {
+    const w = where + ' changed input ' + (i + 1);
+    snapKeys(c, ['path', 'before', 'after'], [], w);
+    const path = snapStr(c.path, 80, w + ' path');
+    if (!/^(settings\.[A-Za-z]+(\[[0-2]\])?|layer [a-z]+\.[A-Za-z]+(\[[0-2]\])?)$/.test(path) || /\.alloc$/.test(path)) snapErr(w + ' path', 'unexpected input name');
+    const val = (v, ww) => typeof v === 'string' ? snapStr(v, 40, ww) : snapNum(v, [-1e9, 1e9], ww);
+    return { path, before: val(c.before, w + ' before'), after: val(c.after, w + ' after') };
+  });
+  return { kind, reason, triggers, changedInputs };
+}
+
+
+// Criterion state at review time. Dates: review-by is a calendar date; answeredAt and created are ISO UTC and are
+// converted to the viewer's local calendar date before comparing, so a time zone cannot flip a badge.
+// - 'triggered': answered yes, until a later snapshot is saved or the criterion is reset.
+// - 'overdue': unanswered or "unknown", and the review-by date is before today.
+// - 'reviewed': answered no. Overdue again only if a next review-by date, later than the answer date, has passed.
+// - 'open': has a review-by date still to come, or no date.
+function snapCriterionState(k, today, laterSnapshotSaved){
+  const answeredDay = k.answeredAt ? snapTodayLocal(new Date(k.answeredAt)) : '';
+  if (k.status === 'yes') return laterSnapshotSaved ? { state: 'resolved', answeredDay } : { state: 'triggered', answeredDay };
+  if (k.status === 'no') {
+    const overdue = !!k.reviewBy && k.reviewBy > answeredDay && k.reviewBy < today;
+    return { state: overdue ? 'overdue' : 'reviewed', answeredDay };
+  }
+  return { state: k.reviewBy && k.reviewBy < today ? 'overdue' : 'open', answeredDay };
+}
+function snapIsOverdue(k, today){ return snapCriterionState(k, today, false).state === 'overdue'; }
+// Whether any snapshot in the list was saved after this criterion was answered (clears a "triggered" badge).
+function snapLaterSaved(k, list){ return !!k.answeredAt && list.some(s => s.created > k.answeredAt); }
+function snapTodayLocal(now){
+  const d = now || new Date(), p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+// Flatten inputs to labelled paths for diffing, e.g. "settings.disc" or "layer hw.driftP[2]".
+function snapFlatten(inputs){
+  const out = {};
+  SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel']).forEach(k => { out['settings.' + k] = inputs.G[k]; });
+  inputs.G.phases.forEach((v, i) => { out['settings.phases[' + i + ']'] = v; });
+  inputs.layers.forEach(L => {
+    SNAP_LAYER_NUM_KEYS.forEach(k => { out['layer ' + L.id + '.' + k] = L[k]; });
+    ['driftP', 'marginP'].forEach(k => L[k].forEach((v, i) => { out['layer ' + L.id + '.' + k + '[' + i + ']'] = v; }));
+    if ('alloc' in L) out['layer ' + L.id + '.alloc'] = L.alloc;
+  });
+  return out;
+}
+// Inputs that differ between two snapshots. Allocations are compared only when both snapshots hold them.
+function diffInputs(a, b){
+  const fa = snapFlatten(a), fb = snapFlatten(b), out = [];
+  Object.keys(fa).forEach(k => {
+    if (!(k in fb)) return;
+    if (fa[k] !== fb[k]) out.push({ path: k, before: fa[k], after: fb[k] });
+  });
+  return out;
+}
+// Compare two snapshots. When either was saved under a different model version from the other or from the current
+// model, both are recomputed under the current model and the stored outputs are kept alongside.
+function compareSnapshots(a, b){
+  const d = snapDeps();
+  const versionMismatch = a.modelVersion !== b.modelVersion || a.modelVersion !== d.MODEL_VERSION || b.modelVersion !== d.MODEL_VERSION;
+  const recA = versionMismatch ? snapOutputs(a.inputs) : null, recB = versionMismatch ? snapOutputs(b.inputs) : null;
+  const layers = d.DEFAULT_LAYERS.map((L, i) => {
+    const before = recA ? recA[i] : a.outputs[i], after = recB ? recB[i] : b.outputs[i];
+    return { id: L.id, name: L.name, before, after,
+      storedBefore: a.outputs[i], storedAfter: b.outputs[i],
+      verdictChanged: before.bin !== after.bin,
+      npvChange: after.npv - before.npv,
+      fragilityChange: { n: after.fragility.n - before.fragility.n, worse: after.fragility.worse - before.fragility.worse,
+        better: after.fragility.better - before.fragility.better, mixed: after.fragility.mixed - before.fragility.mixed } };
+  });
+  return { versionMismatch, versions: { before: a.modelVersion, after: b.modelVersion, current: d.MODEL_VERSION },
+    inputs: diffInputs(a.inputs, b.inputs), layers };
+}
+
+// Load a snapshot into the simulator: validated through the same strict path as an import, then turned into page
+// state (inputs only; outputs are recomputed by the page). Allocations are restored only if the snapshot has them.
+// Kill criteria fill the next snapshot's form, without answers. Returns { ok, state, warning } or { ok: false, error }.
+function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
+  const d = snapDeps(), cur = currentModelVersion || d.MODEL_VERSION;
+  let checked;
+  try {
+    const wrapped = { format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: [snapshot] };
+    const r = importSnapshotsText(JSON.stringify(wrapped));
+    if (!r.ok) return { ok: false, error: r.error };
+    checked = r.snapshots[0];
+  } catch (e) { return { ok: false, error: 'the snapshot could not be read.' }; }
+  const g = checked.inputs.G;
+  const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
+  G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
+  const layers = currentLayers.map((L, i) => {
+    const src = checked.inputs.layers[i], out = Object.assign({}, L, { driftP: src.driftP.slice(), marginP: src.marginP.slice() });
+    SNAP_LAYER_NUM_KEYS.forEach(k => { out[k] = src[k]; });
+    if (typeof src.alloc === 'number') out.alloc = src.alloc;
+    return out;
+  });
+  const draftKill = checked.kill.map(k => ({ id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: '', answeredAt: '' }));
+  const warning = checked.modelVersion !== cur
+    ? 'This snapshot was saved under model version ' + checked.modelVersion + '; this page uses version ' + cur + '. Its inputs will load, and results will recompute under the current model, so they may differ from the stored ones.'
+    : '';
+  return { ok: true, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
+}
+
+
+// Calibration scaffold: a structure for scoring past episodes (for example British railways in the 1840s, telecom and
+// fibre 1996-2001, dot-com applications, electricity) using only what was knowable at the time. SCAFFOLD ONLY: this
+// file holds no episode data, and none may be invented. Every numeric input needs a cited source.
+// Pure functions, no DOM. CommonJS export for tests; the build strips the export line and inlines this file in
+// docs/calibration.html after the model, the defaults and the snapshot code (whose strict-import helpers it reuses).
+
+const EP_FORMAT = 'load-bearing-simulator-episode';
+const EP_SCHEMA_VERSION = 1;
+const EP_MAX_LAYERS = 8;
+const EP_MAX_SOURCES = 100;
+const EP_MAX_IDS = 20;
+const EP_TEXT = { name: 120, citation: 1000, long: 2000, knew: 4000 };
+const EP_SOURCE_KINDS = ['contemporary', 'compiled-from-period-data', 'retrospective'];
+const EP_BASIS = ['sourced', 'derived', 'judgement'];
+const EP_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
+const EP_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
+const EP_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline',
+  'passThrough', 'life', 'debt'];
+const EP_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
+const EP_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration.';
+const EP_FEW_CASES = 'Too few cases for statistical conclusions.';
+
+function calDeps(){
+  if (typeof module !== 'undefined' && typeof require === 'function') {
+    return Object.assign({}, require('./model.js'), require('./defaults.js'), require('./snapshots.js'));
+  }
+  return { MODEL_VERSION, runLayer, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H, SNAP_MAX_BYTES,
+    snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj };
+}
+
+/* ---------- Hash (SHA-256, pure JS) and canonical JSON ---------- */
+function calSha256(text){
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,
+    0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,
+    0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,
+    0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,
+    0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const bytes = [];
+  const utf8 = unescape(encodeURIComponent(text));
+  for (let i = 0; i < utf8.length; i++) bytes.push(utf8.charCodeAt(i));
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push(i >= 4 ? 0 : (bitLen >>> (i * 8)) & 0xff);
+  let h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const r = (x, n) => (x >>> n) | (x << (32 - n));
+  const w = new Array(64);
+  for (let off = 0; off < bytes.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = (bytes[off + 4 * i] << 24) | (bytes[off + 4 * i + 1] << 16) | (bytes[off + 4 * i + 2] << 8) | bytes[off + 4 * i + 3];
+    for (let i = 16; i < 64; i++) {
+      const s0 = r(w[i - 15], 7) ^ r(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = r(w[i - 2], 17) ^ r(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (hh + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h = [h[0] + a, h[1] + b, h[2] + c, h[3] + d, h[4] + e, h[5] + f, h[6] + g, h[7] + hh].map(x => x | 0);
+  }
+  return h.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+// Stable JSON: object keys sorted, so the same content always hashes the same.
+function calCanonical(v){
+  if (Array.isArray(v)) return '[' + v.map(calCanonical).join(',') + ']';
+  if (v !== null && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + calCanonical(v[k])).join(',') + '}';
+  return JSON.stringify(v);
+}
+// The lock covers everything decided before the outcome is looked at: inputs, sources, rules and the scorer's
+// statement. Outcomes are not covered (they are entered after locking).
+function episodeHash(ep){
+  return calSha256(calCanonical({ id: ep.id, name: ep.name, version: ep.version, previousHash: ep.previousHash, asOfDate: ep.asOfDate,
+    asOfRule: ep.asOfRule, outcomeHorizon: ep.outcomeHorizon, outcomeMeasure: ep.outcomeMeasure, scorer: ep.scorer,
+    settings: ep.settings, layers: ep.layers, sources: ep.sources }));
+}
+
+/* ---------- Template ---------- */
+function calEmptyRecord(){ return { value: null, basis: null, sourceIds: [], calculation: '', rationale: '' }; }
+function calEmptyLayer(){
+  const inputs = {};
+  EP_LAYER_KEYS.forEach(k => { inputs[k] = calEmptyRecord(); });
+  inputs.driftP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
+  inputs.marginP = [calEmptyRecord(), calEmptyRecord(), calEmptyRecord()];
+  return { name: '', inputs };
+}
+function templateEpisode(){
+  const settings = {};
+  EP_SETTING_KEYS.forEach(k => { settings[k] = calEmptyRecord(); });
+  settings.entryDef = null; settings.capexModel = null;
+  return { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION, id: '', name: '', version: 1, previousHash: null,
+    asOfDate: null, asOfRule: '', outcomeHorizon: '', outcomeMeasure: '', scorer: { knewAboutOutcome: '' },
+    settings, layers: [calEmptyLayer()], sources: [], lock: null, outcomes: [] };
+}
+
+/* ---------- Validation (strict; returns a fresh object) ---------- */
+function calDay(v, where){
+  const d = calDeps();
+  d.snapStr(v, 10, where);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) d.snapErr(where, 'expected a date (YYYY-MM-DD)');
+  const y = +m[1], mo = +m[2], da = +m[3];
+  const dim = [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (mo < 1 || mo > 12 || da < 1 || da > dim[mo - 1]) d.snapErr(where, 'not a real calendar date');
+  return v;
+}
+function calIds(v, where, known){
+  const d = calDeps();
+  if (!Array.isArray(v) || v.length > EP_MAX_IDS) d.snapErr(where, 'expected a list of at most ' + EP_MAX_IDS + ' source ids');
+  v.forEach(id => { if (typeof id !== 'string' || !known.has(id)) d.snapErr(where, 'unknown source id "' + String(id).slice(0, 40) + '"'); });
+  if (new Set(v).size !== v.length) d.snapErr(where, 'a source id is listed twice');
+  return v.slice();
+}
+// Can this source back an input? Inputs may only use what was available at the as-of date.
+function sourceValidForInput(src, asOfDate){
+  if (!asOfDate) return true; // draft without an as-of date: checked again before locking
+  if (src.kind === 'compiled-from-period-data') return !!src.truncatedAt && src.truncatedAt <= asOfDate;
+  return src.publicationDate <= asOfDate;
+}
+// Can this source back an outcome? Outcome evidence must come after the as-of date.
+function sourceValidForOutcome(src, asOfDate){ return !!asOfDate && src.publicationDate > asOfDate; }
+
+function calRecord(r, where, range, integer, ctx){
+  const d = calDeps();
+  d.snapKeys(r, ['value', 'basis', 'sourceIds', 'calculation', 'rationale'], [], where);
+  const out = { value: r.value === null ? null : d.snapNum(r.value, range, where + ' value', integer),
+    basis: r.basis === null ? null : d.snapOneOf(r.basis, EP_BASIS, where + ' basis'),
+    sourceIds: calIds(r.sourceIds, where + ' sources', ctx.known),
+    calculation: d.snapStr(r.calculation, EP_TEXT.long, where + ' calculation'),
+    rationale: d.snapStr(r.rationale, EP_TEXT.long, where + ' rationale') };
+  if (out.value !== null) {
+    if (out.basis === null) d.snapErr(where, 'a value needs a basis (sourced, derived or judgement)');
+    // Every numeric input needs at least one cited source, whatever its basis.
+    if (!out.sourceIds.length) d.snapErr(where, 'a value needs at least one cited source');
+    if (out.basis === 'derived' && !out.calculation.trim()) d.snapErr(where, 'a derived value needs its calculation shown');
+    if (out.basis === 'judgement' && !out.rationale.trim()) d.snapErr(where, 'a judgement needs a rationale');
+  }
+  out.sourceIds.forEach(id => {
+    if (!sourceValidForInput(ctx.byId[id], ctx.asOfDate)) {
+      const s = ctx.byId[id];
+      d.snapErr(where, 'source "' + id + '" was not available at the as-of date ' + ctx.asOfDate
+        + (s.kind === 'compiled-from-period-data' ? ' (a compiled series must be truncated on or before the as-of date)' : ' (published ' + s.publicationDate + ')'));
+    }
+  });
+  return out;
+}
+
+function validateEpisode(raw){
+  const d = calDeps();
+  const where = 'Episode';
+  if (!d.snapIsObj(raw)) d.snapErr(where, 'expected an object');
+  if (raw.format !== EP_FORMAT) d.snapErr(where, 'not a Load Bearing Simulator episode file');
+  if (raw.schemaVersion !== EP_SCHEMA_VERSION) d.snapErr(where, 'schema version ' + String(raw.schemaVersion).slice(0, 20) + ' is not compatible (this page reads schema version ' + EP_SCHEMA_VERSION + ')');
+  d.snapKeys(raw, ['format', 'schemaVersion', 'id', 'name', 'version', 'previousHash', 'asOfDate', 'asOfRule', 'outcomeHorizon',
+    'outcomeMeasure', 'scorer', 'settings', 'layers', 'sources', 'lock', 'outcomes'], [], where);
+  const ep = { format: EP_FORMAT, schemaVersion: EP_SCHEMA_VERSION };
+  ep.id = d.snapStr(raw.id, 60, where + ' id');
+  if (ep.id && !/^[a-z0-9][a-z0-9-]*$/.test(ep.id)) d.snapErr(where + ' id', 'use lower-case letters, digits and hyphens');
+  ep.name = d.snapStr(raw.name, EP_TEXT.name, where + ' name');
+  ep.version = d.snapNum(raw.version, [1, 10000], where + ' version', true);
+  ep.previousHash = raw.previousHash === null ? null : d.snapStr(raw.previousHash, 64, where + ' previousHash');
+  if (ep.previousHash !== null && !/^[0-9a-f]{64}$/.test(ep.previousHash)) d.snapErr(where + ' previousHash', 'expected a SHA-256 hash');
+  ep.asOfDate = raw.asOfDate === null ? null : calDay(raw.asOfDate, where + ' asOfDate');
+  ep.asOfRule = d.snapStr(raw.asOfRule, EP_TEXT.long, where + ' asOfRule');
+  ep.outcomeHorizon = d.snapStr(raw.outcomeHorizon, EP_TEXT.long, where + ' outcomeHorizon');
+  ep.outcomeMeasure = d.snapStr(raw.outcomeMeasure, EP_TEXT.long, where + ' outcomeMeasure');
+  d.snapKeys(raw.scorer, ['knewAboutOutcome'], [], where + ' scorer');
+  ep.scorer = { knewAboutOutcome: d.snapStr(raw.scorer.knewAboutOutcome, EP_TEXT.knew, where + ' scorer knewAboutOutcome') };
+  // Sources first, so inputs and outcomes can be checked against them.
+  if (!Array.isArray(raw.sources) || raw.sources.length > EP_MAX_SOURCES) d.snapErr(where + ' sources', 'expected a list of at most ' + EP_MAX_SOURCES);
+  const byId = {};
+  ep.sources = raw.sources.map((s, i) => {
+    const w = where + ' source ' + (i + 1);
+    d.snapKeys(s, ['id', 'citation', 'publicationDate', 'kind', 'truncatedAt'], [], w);
+    const src = { id: d.snapStr(s.id, 40, w + ' id'), citation: d.snapStr(s.citation, EP_TEXT.citation, w + ' citation'),
+      publicationDate: calDay(s.publicationDate, w + ' publicationDate'), kind: d.snapOneOf(s.kind, EP_SOURCE_KINDS, w + ' kind'),
+      truncatedAt: s.truncatedAt === null ? null : calDay(s.truncatedAt, w + ' truncatedAt') };
+    if (!/^[A-Za-z0-9_-]+$/.test(src.id)) d.snapErr(w + ' id', 'use letters, digits, hyphens and underscores');
+    if (byId[src.id]) d.snapErr(w + ' id', 'duplicate source id "' + src.id + '"');
+    if (!src.citation.trim()) d.snapErr(w + ' citation', 'a source needs a citation');
+    if (src.kind === 'compiled-from-period-data' && src.truncatedAt === null) d.snapErr(w, 'a compiled series needs the date it is truncated at');
+    if (src.kind !== 'compiled-from-period-data' && src.truncatedAt !== null) d.snapErr(w, 'only a compiled series has a truncation date');
+    byId[src.id] = src;
+    return src;
+  });
+  const ctx = { known: new Set(Object.keys(byId)), byId, asOfDate: ep.asOfDate };
+  // Settings
+  const S = raw.settings;
+  d.snapKeys(S, EP_SETTING_KEYS.concat(['entryDef', 'capexModel']), [], where + ' settings');
+  ep.settings = {};
+  EP_SETTING_KEYS.forEach(k => {
+    const range = k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k];
+    ep.settings[k] = calRecord(S[k], where + ' setting ' + k, range, EP_INT_KEYS.indexOf(k) >= 0, ctx);
+  });
+  ep.settings.entryDef = S.entryDef === null ? null : d.snapOneOf(S.entryDef, ['A', 'B'], where + ' setting entryDef');
+  ep.settings.capexModel = S.capexModel === null ? null : d.snapOneOf(S.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
+  const p2 = ep.settings.phase2Start.value, p3 = ep.settings.phase3Start.value;
+  if (p2 !== null && p3 !== null && p2 >= p3) d.snapErr(where + ' settings', 'phase 2 must start before phase 3');
+  // Layers (episode-specific; names are free text)
+  if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > EP_MAX_LAYERS) d.snapErr(where + ' layers', 'expected 1 to ' + EP_MAX_LAYERS + ' layers');
+  ep.layers = raw.layers.map((L, i) => {
+    const w = where + ' layer ' + (i + 1);
+    d.snapKeys(L, ['name', 'inputs'], [], w);
+    d.snapKeys(L.inputs, EP_LAYER_KEYS.concat(['driftP', 'marginP']), [], w + ' inputs');
+    const inputs = {};
+    EP_LAYER_KEYS.forEach(k => { inputs[k] = calRecord(L.inputs[k], w + ' ' + k, d.LAYER_RANGES[k], EP_INT_KEYS.indexOf(k) >= 0, ctx); });
+    ['driftP', 'marginP'].forEach(k => {
+      if (!Array.isArray(L.inputs[k]) || L.inputs[k].length !== 3) d.snapErr(w + ' ' + k, 'expected three phase records');
+      inputs[k] = L.inputs[k].map((r, j) => calRecord(r, w + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
+    });
+    return { name: d.snapStr(L.name, EP_TEXT.name, w + ' name'), inputs };
+  });
+  // Lock
+  if (raw.lock === null) ep.lock = null;
+  else {
+    d.snapKeys(raw.lock, ['hash', 'lockedAt', 'modelVersion'], [], where + ' lock');
+    ep.lock = { hash: d.snapStr(raw.lock.hash, 64, where + ' lock hash'), lockedAt: d.snapDate(raw.lock.lockedAt, where + ' lock lockedAt'),
+      modelVersion: d.snapNum(raw.lock.modelVersion, [1, 100000], where + ' lock modelVersion', true) };
+    const missing = lockProblems(ep);
+    if (missing.length) d.snapErr(where + ' lock', 'locked episode is incomplete: ' + missing[0]);
+    if (episodeHash(ep) !== ep.lock.hash) d.snapErr(where + ' lock', 'the inputs do not match the lock hash; locked inputs cannot change without making a new version');
+  }
+  // Outcomes (only after locking)
+  if (!Array.isArray(raw.outcomes)) d.snapErr(where + ' outcomes', 'expected a list');
+  if (raw.outcomes.length && !ep.lock) d.snapErr(where + ' outcomes', 'outcomes can only be entered after the episode is locked');
+  const seen = new Set();
+  ep.outcomes = raw.outcomes.map((o, i) => {
+    const w = where + ' outcome ' + (i + 1);
+    const out = calOutcome(o, w, ep, ctx);
+    if (seen.has(out.layer)) d.snapErr(w, 'layer ' + (out.layer + 1) + ' already has an outcome');
+    seen.add(out.layer);
+    return out;
+  });
+  return ep;
+}
+function calOutcome(o, w, ep, ctx){
+  const d = calDeps();
+  d.snapKeys(o, ['layer', 'result', 'sourceIds', 'note', 'contested'], [], w);
+  const out = { layer: d.snapNum(o.layer, [0, ep.layers.length - 1], w + ' layer', true),
+    result: d.snapOneOf(o.result, EP_OUTCOMES, w + ' result'),
+    sourceIds: calIds(o.sourceIds, w + ' sources', ctx.known), note: d.snapStr(o.note, EP_TEXT.long, w + ' note'), contested: null };
+  if (!out.note.trim()) d.snapErr(w, 'an outcome needs a note');
+  const after = (ids, ww) => ids.forEach(id => { if (!sourceValidForOutcome(ctx.byId[id], ep.asOfDate)) d.snapErr(ww, 'outcome source "' + id + '" must be published after the as-of date ' + ep.asOfDate); });
+  if (out.result === 'contested') {
+    if (o.contested === null) d.snapErr(w, 'a contested outcome needs citations on both sides');
+    d.snapKeys(o.contested, ['forSourceIds', 'againstSourceIds'], [], w + ' contested');
+    const f = calIds(o.contested.forSourceIds, w + ' contested for', ctx.known), a = calIds(o.contested.againstSourceIds, w + ' contested against', ctx.known);
+    if (!f.length || !a.length) d.snapErr(w, 'a contested outcome needs at least one citation on each side');
+    after(f, w + ' contested for'); after(a, w + ' contested against');
+    out.contested = { forSourceIds: f, againstSourceIds: a };
+  } else {
+    if (o.contested !== null) d.snapErr(w, 'only a contested outcome has citations on both sides');
+    if ((out.result === 'yes' || out.result === 'no') && !out.sourceIds.length) d.snapErr(w, 'an outcome of yes or no needs a cited source');
+  }
+  after(out.sourceIds, w + ' sources');
+  return out;
+}
+
+// What still has to be filled in before an episode can be locked (empty list when ready).
+function lockProblems(ep){
+  const p = [];
+  if (!ep.id) p.push('an id');
+  if (!ep.name.trim()) p.push('a name');
+  if (!ep.asOfDate) p.push('an as-of date');
+  if (!ep.asOfRule.trim()) p.push('the as-of rule');
+  if (!ep.outcomeHorizon.trim()) p.push('the outcome horizon');
+  if (!ep.outcomeMeasure.trim()) p.push('the outcome measure');
+  if (!ep.scorer.knewAboutOutcome.trim()) p.push('what the scorer already knew about the outcome');
+  if (!ep.settings.entryDef) p.push('settings entryDef');
+  if (!ep.settings.capexModel) p.push('settings capexModel');
+  EP_SETTING_KEYS.forEach(k => { if (ep.settings[k].value === null) p.push('settings ' + k); });
+  ep.layers.forEach((L, i) => {
+    if (!L.name.trim()) p.push('layer ' + (i + 1) + ' name');
+    calRecords(L.inputs).forEach(([k, r]) => { if (r.value === null) p.push('layer ' + (i + 1) + ' ' + k); });
+  });
+  return p;
+}
+function calRecords(inputs){
+  const out = [];
+  EP_LAYER_KEYS.forEach(k => out.push([k, inputs[k]]));
+  ['driftP', 'marginP'].forEach(k => inputs[k].forEach((r, j) => out.push([k + '[' + j + ']', r])));
+  return out;
+}
+function allRecords(ep){
+  const out = EP_SETTING_KEYS.map(k => ['settings ' + k, ep.settings[k]]);
+  ep.layers.forEach((L, i) => calRecords(L.inputs).forEach(([k, r]) => out.push(['layer ' + (i + 1) + ' ' + k, r])));
+  return out;
+}
+
+/* ---------- Strict import and export ---------- */
+function importEpisodeText(text){
+  const d = calDeps(), fail = (m) => ({ ok: false, error: m });
+  if (typeof text !== 'string') return fail('the file could not be read as text.');
+  if (d.snapByteLength(text) > d.SNAP_MAX_BYTES) return fail('the file is larger than 1 MB.');
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return fail('the file is not valid JSON.'); }
+  const bad = d.snapForbiddenKey(data, 0);
+  if (bad) return fail('the file contains a forbidden key "' + bad + '".');
+  try { return { ok: true, episode: validateEpisode(data) }; } catch (e) { return fail(e.message); }
+}
+function exportEpisodeText(ep){ return JSON.stringify(validateEpisode(JSON.parse(JSON.stringify(ep))), null, 2); }
+
+/* ---------- Workflow: draft, locked, outcomes ---------- */
+function lockEpisode(ep, now){
+  if (ep.lock) throw new Error('This episode is already locked. Make a new version to change its inputs.');
+  const problems = lockProblems(ep);
+  if (problems.length) throw new Error('Not ready to lock. Still needed: ' + problems.join(', ') + '.');
+  const copy = validateEpisode(JSON.parse(JSON.stringify(ep)));
+  copy.lock = { hash: episodeHash(copy), lockedAt: (now || new Date()).toISOString(), modelVersion: calDeps().MODEL_VERSION };
+  return validateEpisode(copy);
+}
+// A new version keeps the inputs as a starting point, links to the old lock and starts as an unlocked draft.
+function newEpisodeVersion(ep){
+  if (!ep.lock) throw new Error('Only a locked episode needs a new version; a draft can be edited directly.');
+  const copy = JSON.parse(JSON.stringify(ep));
+  copy.version = ep.version + 1; copy.previousHash = ep.lock.hash; copy.lock = null; copy.outcomes = [];
+  return validateEpisode(copy);
+}
+function setOutcome(ep, outcome){
+  if (!ep.lock) throw new Error('Outcomes can only be entered after the episode is locked.');
+  const copy = JSON.parse(JSON.stringify(ep));
+  copy.outcomes = copy.outcomes.filter(o => o.layer !== outcome.layer).concat([outcome]).sort((a, b) => a.layer - b.layer);
+  return validateEpisode(copy);
+}
+
+/* ---------- Basis mix ---------- */
+function judgementShare(ep){
+  const filled = allRecords(ep).filter(([, r]) => r.value !== null);
+  if (!filled.length) return { judgement: 0, total: 0, share: 0, heavy: false };
+  const j = filled.filter(([, r]) => r.basis === 'judgement').length;
+  return { judgement: j, total: filled.length, share: j / filled.length, heavy: j / filled.length > 0.5 };
+}
+// For committed files (public repo): numeric inputs without a cited source. Validation already rejects these;
+// this second check is used by the repository test as a belt-and-braces guard.
+function unsourcedInputs(ep){ return allRecords(ep).filter(([, r]) => r.value !== null && !r.sourceIds.length).map(([k]) => k); }
+
+/* ---------- Comparison ---------- */
+function episodeModelInputs(ep){
+  const s = ep.settings, G = {};
+  ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult'].forEach(k => { G[k] = s[k].value; });
+  G.entryDef = s.entryDef; G.capexModel = s.capexModel; G.phases = [s.phase2Start.value, s.phase3Start.value];
+  const layers = ep.layers.map((L, i) => {
+    const o = { id: 'layer' + (i + 1), name: L.name };
+    EP_LAYER_KEYS.forEach(k => { o[k] = L.inputs[k].value; });
+    o.driftP = L.inputs.driftP.map(r => r.value); o.marginP = L.inputs.marginP.map(r => r.value);
+    return o;
+  });
+  return { G, layers };
+}
+// Model verdict (current model) against the recorded outcome, per layer of every locked episode. No hit rate.
+function compareEpisodes(episodes){
+  const d = calDeps(), rows = [];
+  episodes.filter(ep => ep.lock).forEach(ep => {
+    const m = episodeModelInputs(ep);
+    m.layers.forEach((L, i) => {
+      const o = d.runLayer(L, m.G), outcome = ep.outcomes.find(x => x.layer === i) || null;
+      rows.push({ episode: ep.name, episodeId: ep.id, version: ep.version, layer: L.name, verdict: o.bin, npv: o.npv,
+        modelSaysEarnsCost: o.npv >= 0, outcome: outcome ? outcome.result : null,
+        lockedModelVersion: ep.lock.modelVersion, versionDiffers: ep.lock.modelVersion !== d.MODEL_VERSION });
+    });
+  });
+  const lockedEps = episodes.filter(ep => ep.lock);
+  return { rows, episodes: lockedEps.length, layers: rows.length, caveat: EP_FEW_CASES, banner: EP_BANNER, currentModelVersion: d.MODEL_VERSION };
+}
+
+
+// Calibration page UI. Vanilla JS, no framework. Episodes stay in this browser's local storage; nothing is fetched.
+// Every piece of user text is written with textContent or .value, never as HTML.
+const CAL_KEY = 'load-bearing-calibration-v1';
+const CAL_MAX = 20;
+const $c = (id) => document.getElementById(id);
+let calStore = { episodes: [] };
+let calSel = -1;
+let calWork = null; // working copy of the selected episode (may be mid-edit and not yet valid)
+
+function cel(tag, props, kids){
+  const e = document.createElement(tag);
+  if (props) for (const k in props) { if (k === 'text') e.textContent = props[k]; else if (k === 'cls') e.className = props[k]; else e.setAttribute(k, props[k]); }
+  (kids || []).forEach(c => { if (c !== null && c !== undefined) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+function calLoad(){
+  let raw = null;
+  try { raw = localStorage.getItem(CAL_KEY); } catch (e) { $c('epMsg').textContent = 'This browser blocks local storage, so episodes cannot be kept here. Export them to keep a copy.'; return; }
+  if (!raw) return;
+  try {
+    const o = JSON.parse(raw), list = o && Array.isArray(o.episodes) ? o.episodes.slice(0, CAL_MAX) : [];
+    const kept = [], dropped = [];
+    list.forEach((ep, i) => { const r = importEpisodeText(JSON.stringify(ep)); if (r.ok) kept.push(r.episode); else dropped.push((i + 1) + ': ' + r.error); });
+    calStore.episodes = kept;
+    if (dropped.length) $c('epMsg').textContent = 'Some saved episodes could not be read and were ignored (' + dropped.join('; ') + ').';
+  } catch (e) { $c('epMsg').textContent = 'Saved episodes could not be read and were ignored.'; }
+}
+function calPersist(){
+  try { localStorage.setItem(CAL_KEY, JSON.stringify(calStore)); return true; }
+  catch (e) { $c('edSave').textContent = 'Not saved: the browser refused to store this (storage full or blocked). Export to keep a copy.'; return false; }
+}
+function calState(ep){ return !ep.lock ? 'draft' : ep.outcomes.length ? 'locked, outcomes recorded' : 'locked'; }
+
+/* ---------- List ---------- */
+function calRenderList(){
+  const t = $c('epList'); t.textContent = '';
+  if (!calStore.episodes.length) { t.appendChild(cel('tbody', null, [cel('tr', null, [cel('td', { cls: 'l muted', text: 'No episodes yet.' })])])); return; }
+  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Version', 'As of', 'State', ''].map((h, i) => cel('th', { cls: i === 0 || i === 3 ? 'l' : '', text: h })))]));
+  const tb = cel('tbody');
+  calStore.episodes.forEach((ep, i) => {
+    const open = cel('button', { 'data-ep': 'open' }, [calSel === i ? 'Open (editing)' : 'Open']);
+    open.addEventListener('click', () => calOpen(i));
+    const del = cel('button', { cls: 'reset', 'data-ep': 'delete' }, ['Delete']);
+    del.addEventListener('click', () => calDelete(i));
+    tb.appendChild(cel('tr', { cls: calSel === i ? 'sel' : '' }, [cel('td', { cls: 'l', text: ep.name || '(unnamed)' }), cel('td', { text: 'v' + ep.version }),
+      cel('td', { text: ep.asOfDate || '—' }), cel('td', { cls: 'l', text: calState(ep) }), cel('td', null, [open, ' ', del])]));
+  });
+  t.appendChild(tb);
+}
+function calNew(){
+  if (calStore.episodes.length >= CAL_MAX) { $c('epMsg').textContent = 'This browser holds at most ' + CAL_MAX + ' episodes. Export and delete some first.'; return; }
+  calStore.episodes.push(validateEpisode(templateEpisode()));
+  if (!calPersist()) { calStore.episodes.pop(); return; }
+  calOpen(calStore.episodes.length - 1);
+}
+function calDelete(i){
+  const ep = calStore.episodes[i]; if (!ep) return;
+  if (!window.confirm('Delete the episode “' + (ep.name || '(unnamed)') + '” (version ' + ep.version + ')? This cannot be undone.')) return;
+  const before = calStore.episodes.slice();
+  calStore.episodes.splice(i, 1);
+  if (!calPersist()) { calStore.episodes = before; return; }
+  if (calSel === i) { calSel = -1; calWork = null; $c('editor').hidden = true; } else if (calSel > i) calSel--;
+  calRenderAll();
+}
+function calOpen(i){ calSel = i; calWork = JSON.parse(JSON.stringify(calStore.episodes[i])); $c('editor').hidden = false; calRenderAll(); }
+
+/* ---------- Editing ---------- */
+// Every edit updates the working copy, then validates it strictly. A valid copy is saved; an invalid one is kept on
+// screen with the reason, and nothing invalid is stored.
+function calCommit(){
+  try {
+    const ep = validateEpisode(JSON.parse(JSON.stringify(calWork)));
+    calStore.episodes[calSel] = ep;
+    if (calPersist()) $c('edSave').textContent = 'Saved. ' + (ep.lock ? '' : (lockProblems(ep).length ? 'Draft: ' + lockProblems(ep).length + ' item(s) still needed before locking.' : 'Ready to lock.'));
+  } catch (e) { $c('edSave').textContent = 'Not saved yet: ' + e.message; }
+  calRenderList(); calRenderBanners(); calRenderCompare(); calRenderStatus();
+}
+const calIdsText = (ids) => ids.join(', ');
+const calIdsParse = (t) => String(t).split(',').map(x => x.trim()).filter(Boolean);
+function calRecordRow(label, rec, range, locked){
+  const num = cel('input', { type: 'number', cls: 'txt', step: 'any', min: String(range[0]), max: String(range[1]), 'aria-label': label + ' value' });
+  num.value = rec.value === null ? '' : rec.value;
+  num.addEventListener('input', () => { const v = parseFloat(num.value); rec.value = num.value === '' || !isFinite(v) ? null : v; calCommit(); });
+  const basis = cel('select', { cls: 'txt', 'aria-label': label + ' basis' }, [['', '—'], ['sourced', 'sourced'], ['derived', 'derived'], ['judgement', 'judgement']].map(o => cel('option', { value: o[0] }, [o[1]])));
+  basis.value = rec.basis || '';
+  basis.addEventListener('change', () => { rec.basis = basis.value || null; calCommit(); });
+  const txt = (field, aria, parse) => {
+    const e = cel('input', { cls: 'txt', 'aria-label': label + ' ' + aria, maxlength: '2000' });
+    e.value = parse ? calIdsText(rec[field]) : rec[field];
+    e.addEventListener('input', () => { rec[field] = parse ? calIdsParse(e.value) : e.value; calCommit(); });
+    return e;
+  };
+  [num, basis].forEach(e => { e.disabled = locked; });
+  const ids = txt('sourceIds', 'source ids', true), calc = txt('calculation', 'calculation'), rat = txt('rationale', 'rationale');
+  [ids, calc, rat].forEach(e => { e.disabled = locked; });
+  return cel('tr', null, [cel('td', { cls: 'k l', text: label }), cel('td', null, [num]), cel('td', null, [basis]), cel('td', null, [ids]), cel('td', null, [calc]), cel('td', null, [rat])]);
+}
+const calRecHead = () => cel('thead', null, [cel('tr', null, ['Input', 'Value', 'Basis', 'Sources (ids)', 'Calculation (derived)', 'Rationale (judgement)'].map((h, i) => cel('th', { cls: i === 0 ? 'l' : '', text: h })))]);
+function calRangeOf(k){ return k === 'phase2Start' ? PHASE_RANGES[0] : k === 'phase3Start' ? PHASE_RANGES[1] : GLOBAL_RANGES[k] || LAYER_RANGES[k.replace(/\[\d\]$/, '')]; }
+
+function calRenderEditor(){
+  if (!calWork) return;
+  const w = calWork, locked = !!w.lock;
+  $c('edTitle').textContent = (w.name || 'Unnamed episode') + ' (version ' + w.version + ')';
+  const bind = (id, get, set) => { const e = $c(id); e.value = get(); e.oninput = () => { set(e.value); calCommit(); }; e.onchange = e.oninput; e.disabled = locked; };
+  bind('f_name', () => w.name, v => { w.name = v; });
+  bind('f_id', () => w.id, v => { w.id = v.trim(); });
+  bind('f_asOf', () => w.asOfDate || '', v => { w.asOfDate = v || null; });
+  bind('f_rule', () => w.asOfRule, v => { w.asOfRule = v; });
+  bind('f_horizon', () => w.outcomeHorizon, v => { w.outcomeHorizon = v; });
+  bind('f_measure', () => w.outcomeMeasure, v => { w.outcomeMeasure = v; });
+  bind('f_knew', () => w.scorer.knewAboutOutcome, v => { w.scorer.knewAboutOutcome = v; });
+  bind('f_entryDef', () => w.settings.entryDef || '', v => { w.settings.entryDef = v || null; });
+  bind('f_capex', () => w.settings.capexModel || '', v => { w.settings.capexModel = v || null; });
+  // Sources
+  const st = $c('srcTable'); st.textContent = '';
+  st.appendChild(cel('thead', null, [cel('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series truncated at (compiled only)', ''].map((h, i) => cel('th', { cls: i < 2 ? 'l' : '', text: h })))]));
+  const sb = cel('tbody');
+  w.sources.forEach((s, i) => {
+    const inp = (field, type, aria) => { const e = cel('input', { type: type || 'text', cls: 'txt', 'aria-label': 'Source ' + (i + 1) + ' ' + aria, maxlength: field === 'citation' ? '1000' : '40' }); e.value = s[field] || ''; e.oninput = () => { s[field] = type === 'date' ? (e.value || (field === 'truncatedAt' ? null : '')) : e.value; calCommit(); }; e.onchange = e.oninput; e.disabled = locked; return e; };
+    const kind = cel('select', { cls: 'txt', 'aria-label': 'Source ' + (i + 1) + ' kind' }, [['contemporary', 'contemporary'], ['compiled-from-period-data', 'compiled from period data'], ['retrospective', 'retrospective']].map(o => cel('option', { value: o[0] }, [o[1]])));
+    kind.value = s.kind; kind.disabled = locked;
+    kind.onchange = () => { s.kind = kind.value; if (s.kind !== 'compiled-from-period-data') s.truncatedAt = null; calCommit(); calRenderEditor(); };
+    const rm = cel('button', { cls: 'reset' }, ['Remove']); rm.disabled = locked;
+    rm.onclick = () => { w.sources.splice(i, 1); calCommit(); calRenderEditor(); };
+    const trunc = inp('truncatedAt', 'date', 'truncated at'); trunc.disabled = locked || s.kind !== 'compiled-from-period-data';
+    sb.appendChild(cel('tr', null, [cel('td', null, [inp('id', 'text', 'id')]), cel('td', null, [inp('citation', 'text', 'citation')]), cel('td', null, [inp('publicationDate', 'date', 'published')]), cel('td', null, [kind]), cel('td', null, [trunc]), cel('td', null, [rm])]));
+  });
+  st.appendChild(sb);
+  $c('srcAdd').disabled = locked;
+  // Settings
+  const set = $c('setTable'); set.textContent = ''; set.appendChild(calRecHead());
+  const setBody = cel('tbody');
+  EP_SETTING_KEYS.forEach(k => setBody.appendChild(calRecordRow(k, w.settings[k], calRangeOf(k), locked)));
+  set.appendChild(setBody);
+  // Layers
+  const lb = $c('layerBox'); lb.textContent = '';
+  w.layers.forEach((L, i) => {
+    const name = cel('input', { cls: 'txt', maxlength: '120', 'aria-label': 'Layer ' + (i + 1) + ' name', placeholder: 'Layer name (free text)' });
+    name.value = L.name; name.disabled = locked; name.oninput = () => { L.name = name.value; calCommit(); };
+    const rm = cel('button', { cls: 'reset' }, ['Remove layer']); rm.disabled = locked || w.layers.length < 2;
+    rm.onclick = () => { w.layers.splice(i, 1); calCommit(); calRenderEditor(); };
+    const t = cel('table', { cls: 'recs', 'aria-label': 'Layer ' + (i + 1) + ' inputs' }); t.appendChild(calRecHead());
+    const tb = cel('tbody');
+    EP_LAYER_KEYS.forEach(k => tb.appendChild(calRecordRow(k, L.inputs[k], LAYER_RANGES[k], locked)));
+    ['driftP', 'marginP'].forEach(k => L.inputs[k].forEach((r, j) => tb.appendChild(calRecordRow(k + '[' + j + ']', r, LAYER_RANGES[k], locked))));
+    t.appendChild(tb);
+    lb.appendChild(cel('div', { cls: 'layercard' }, [cel('div', { cls: 'seg' }, [cel('b', { text: 'Layer ' + (i + 1) }), name, rm]), cel('div', { cls: 'scroll' }, [t])]));
+  });
+  $c('layerAdd').disabled = locked || w.layers.length >= 8;
+  $c('epLock').hidden = locked; $c('epVersion').hidden = !locked;
+  calRenderOutcomes(); calRenderStatus(); calRenderBanners();
+}
+function calRenderStatus(){
+  if (!calWork) return;
+  const w = calWork;
+  $c('edStatus').textContent = !w.lock
+    ? 'Draft, version ' + w.version + (w.previousHash ? ' (replaces a locked version with hash ' + w.previousHash.slice(0, 12) + '…)' : '') + '. Inputs can still change.'
+    : 'Locked on ' + new Date(w.lock.lockedAt).toLocaleString() + ' under model version ' + w.lock.modelVersion + '. Input hash ' + w.lock.hash.slice(0, 16) + '…. Inputs cannot change; make a new version to revise them.'
+      + (w.lock.modelVersion !== MODEL_VERSION ? ' This page uses model version ' + MODEL_VERSION + ', so verdicts are recomputed under it.' : '');
+}
+function calRenderBanners(){
+  $c('scorerBanner').textContent = EP_BANNER;
+  $c('cmpBanner').textContent = EP_BANNER;
+  const jb = $c('judgeBanner');
+  if (!calWork) { jb.hidden = true; return; }
+  const js = judgementShare(calWork);
+  jb.hidden = !js.heavy;
+  if (js.heavy) jb.textContent = 'Judgement-heavy: ' + js.judgement + ' of ' + js.total + ' filled inputs are judgement rather than sourced or derived values.';
+}
+
+/* ---------- Lock, version, outcomes ---------- */
+function calLock(){
+  try {
+    const ep = lockEpisode(validateEpisode(JSON.parse(JSON.stringify(calWork))));
+    const before = calStore.episodes[calSel];
+    calStore.episodes[calSel] = ep;
+    if (!calPersist()) { calStore.episodes[calSel] = before; return; }
+    calWork = JSON.parse(JSON.stringify(ep));
+    $c('edSave').textContent = 'Locked.';
+  } catch (e) { $c('edSave').textContent = 'Not locked: ' + e.message; }
+  calRenderAll();
+}
+function calNewVersion(){
+  if (calStore.episodes.length >= CAL_MAX) { $c('edSave').textContent = 'This browser holds at most ' + CAL_MAX + ' episodes.'; return; }
+  try {
+    const ep = newEpisodeVersion(calStore.episodes[calSel]);
+    calStore.episodes.push(ep);
+    if (!calPersist()) { calStore.episodes.pop(); return; }
+    calOpen(calStore.episodes.length - 1);
+    $c('edSave').textContent = 'New draft version ' + ep.version + ' made; the locked version is kept unchanged.';
+  } catch (e) { $c('edSave').textContent = e.message; }
+}
+function calRenderOutcomes(){
+  const box = $c('outBox'), w = calWork;
+  box.hidden = !w || !w.lock;
+  if (box.hidden) return;
+  const t = $c('outTable'); t.textContent = '';
+  t.appendChild(cel('thead', null, [cel('tr', null, ['Layer', 'Capital earned its cost?', 'Sources (ids)', 'Note', 'Contested: for (ids)', 'Contested: against (ids)', ''].map((h, i) => cel('th', { cls: i === 0 || i === 3 ? 'l' : '', text: h })))]));
+  const tb = cel('tbody');
+  w.layers.forEach((L, i) => {
+    const cur = w.outcomes.find(o => o.layer === i);
+    const res = cel('select', { cls: 'txt', 'aria-label': (L.name || 'Layer ' + (i + 1)) + ' outcome' }, [['', 'not recorded'], ['yes', 'yes'], ['no', 'no'], ['unknown', 'unknown'], ['contested', 'contested']].map(o => cel('option', { value: o[0] }, [o[1]])));
+    res.value = cur ? cur.result : '';
+    const inp = (v, aria) => { const e = cel('input', { cls: 'txt', maxlength: '2000', 'aria-label': (L.name || 'Layer ' + (i + 1)) + ' ' + aria }); e.value = v; return e; };
+    const ids = inp(cur ? calIdsText(cur.sourceIds) : '', 'outcome sources'), note = inp(cur ? cur.note : '', 'outcome note');
+    const forI = inp(cur && cur.contested ? calIdsText(cur.contested.forSourceIds) : '', 'contested for'), agI = inp(cur && cur.contested ? calIdsText(cur.contested.againstSourceIds) : '', 'contested against');
+    const save = cel('button', { 'data-ep': 'save-outcome' }, ['Save outcome']);
+    save.onclick = () => {
+      if (!res.value) { $c('edSave').textContent = 'Choose an outcome for ' + (L.name || 'layer ' + (i + 1)) + ' first.'; return; }
+      const o = { layer: i, result: res.value, sourceIds: calIdsParse(ids.value), note: note.value,
+        contested: res.value === 'contested' ? { forSourceIds: calIdsParse(forI.value), againstSourceIds: calIdsParse(agI.value) } : null };
+      try {
+        const ep = setOutcome(calStore.episodes[calSel], o);
+        const before = calStore.episodes[calSel];
+        calStore.episodes[calSel] = ep;
+        if (!calPersist()) { calStore.episodes[calSel] = before; return; }
+        calWork = JSON.parse(JSON.stringify(ep));
+        $c('edSave').textContent = 'Outcome saved for ' + (L.name || 'layer ' + (i + 1)) + '.';
+        calRenderAll();
+      } catch (e) { $c('edSave').textContent = 'Outcome not saved: ' + e.message; }
+    };
+    tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: L.name || 'Layer ' + (i + 1) }), cel('td', null, [res]), cel('td', null, [ids]), cel('td', { cls: 'l' }, [note]), cel('td', null, [forI]), cel('td', null, [agI]), cel('td', null, [save])]));
+  });
+  t.appendChild(tb);
+}
+
+/* ---------- Comparison ---------- */
+function calRenderCompare(){
+  const c = compareEpisodes(calStore.episodes);
+  $c('cmpCounts').textContent = 'Episodes: ' + c.episodes + '. Layers: ' + c.layers + '. ' + c.caveat;
+  const t = $c('cmpTable'); t.textContent = '';
+  if (!c.rows.length) { t.appendChild(cel('tbody', null, [cel('tr', null, [cel('td', { cls: 'l muted', text: 'No locked episodes yet.' })])])); return; }
+  t.appendChild(cel('thead', null, [cel('tr', null, ['Episode', 'Layer', 'Model verdict (current model)', 'Present value', 'Model: capital earns its cost?', 'Recorded outcome', 'Model version'].map((h, i) => cel('th', { cls: i < 3 || i === 5 ? 'l' : '', text: h })))]));
+  const tb = cel('tbody');
+  c.rows.forEach(r => tb.appendChild(cel('tr', null, [cel('td', { cls: 'l', text: r.episode + ' (v' + r.version + ')' }), cel('td', { cls: 'l', text: r.layer }),
+    cel('td', { cls: 'l', text: r.verdict }), cel('td', { text: (r.npv < 0 ? '−' : '') + '$' + Math.abs(r.npv).toFixed(0) + 'B' }),
+    cel('td', { text: r.modelSaysEarnsCost ? 'yes' : 'no' }), cel('td', { cls: 'l', text: r.outcome || 'not recorded' }),
+    cel('td', { text: r.versionDiffers ? 'locked under v' + r.lockedModelVersion + ', recomputed under v' + c.currentModelVersion : 'v' + r.lockedModelVersion })])));
+  t.appendChild(tb);
+}
+
+/* ---------- Import and export ---------- */
+function calExport(){
+  let text;
+  try { text = exportEpisodeText(calStore.episodes[calSel]); } catch (e) { $c('edSave').textContent = 'Not exported: ' + e.message; return; }
+  const ep = calStore.episodes[calSel];
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = cel('a', { href: url, download: (ep.id || 'episode') + '-v' + ep.version + '.episode.json' });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+  $c('edSave').textContent = 'Exported. Commit an episode file only if every number cites a public source; otherwise keep it in calibration/private/.';
+}
+function calImportFile(file){
+  const msg = $c('epMsg');
+  if (!file) return Promise.resolve();
+  if (file.size > SNAP_MAX_BYTES) { msg.textContent = 'Import rejected: the file is larger than 1 MB.'; return Promise.resolve(); }
+  return file.text().then(text => {
+    const r = importEpisodeText(text);
+    if (!r.ok) { msg.textContent = 'Import rejected: ' + r.error; return; }
+    if (calStore.episodes.length >= CAL_MAX) { msg.textContent = 'Import rejected: this browser holds at most ' + CAL_MAX + ' episodes.'; return; }
+    calStore.episodes.push(r.episode);
+    if (!calPersist()) { calStore.episodes.pop(); msg.textContent = 'Import not kept: the browser refused to store more.'; return; }
+    msg.textContent = 'Imported “' + (r.episode.name || '(unnamed)') + '”.';
+    calRenderAll();
+  }, () => { msg.textContent = 'Import rejected: the file could not be read.'; });
+}
+
+function calRenderAll(){ calRenderList(); calRenderEditor(); calRenderBanners(); calRenderCompare(); }
+function calInit(){
+  calLoad();
+  $c('epNew').addEventListener('click', calNew);
+  $c('epImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; calImportFile(f); e.target.value = ''; });
+  $c('epLock').addEventListener('click', calLock);
+  $c('epVersion').addEventListener('click', calNewVersion);
+  $c('epExport').addEventListener('click', calExport);
+  $c('srcAdd').addEventListener('click', () => { calWork.sources.push({ id: 'S' + (calWork.sources.length + 1), citation: '', publicationDate: '', kind: 'contemporary', truncatedAt: null }); calCommit(); calRenderEditor(); });
+  $c('layerAdd').addEventListener('click', () => { calWork.layers.push(calEmptyLayer()); calCommit(); calRenderEditor(); });
+  calRenderAll();
+}
+calInit();
+
+</script>
+</body>
+</html>

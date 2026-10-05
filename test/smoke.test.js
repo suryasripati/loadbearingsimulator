@@ -471,6 +471,8 @@ test('snapshots: review states in the page (no shows last reviewed and a next da
   win.Date = class extends RealDate { constructor(...a){ super(...(a.length ? a : [later.getTime()])); } static now(){ return later.getTime(); } };
   setVal(win, doc.getElementById('snapName'), 'Now');
   click(win, doc.getElementById('snapSave'));
+  assert.equal(doc.getElementById('snapRespond').hidden, false, 'saving with an open trigger prompts for a response');
+  click(win, doc.getElementById('snapRespSkip'));
   win.Date = RealDate;
   assert.ok(!/triggered/.test(doc.querySelectorAll('#snapList tbody tr')[0].textContent), 'trigger resolved by the later snapshot');
   assert.ok(/a later snapshot has been saved/.test(doc.getElementById('snapReview').textContent));
@@ -522,6 +524,61 @@ test('snapshots: load into the simulator (confirm, recompute, undo), and a malfo
   click(win, doc.querySelector('#snapList [data-snap="load"]'));
   assert.ok(/Not loaded: .*setting disc: value 99 is outside 5 to 20/.test(doc.getElementById('snapMsg').textContent), doc.getElementById('snapMsg').textContent);
   assert.deepEqual(settings(), before);
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('snapshots: saving with an open trigger prompts "revised" or "kept my view", never blocks, and labels the list', () => {
+  const { doc, win, errors } = load();
+  const RealDate = win.Date; let t = Date.now();
+  const tick = () => { t += 2000; const at = t; win.Date = class extends RealDate { constructor(...a){ super(...(a.length ? a : [at])); } static now(){ return at; } }; };
+  const save = (name) => { tick(); setVal(win, doc.getElementById('snapName'), name); click(win, doc.getElementById('snapSave')); };
+  const trigger = (rowIndex, layerIndex) => {
+    click(win, doc.querySelectorAll('#snapList [data-snap="review"]')[rowIndex]);
+    tick(); setVal(win, doc.querySelectorAll('#snapReview select')[layerIndex], 'yes', 'change');
+  };
+  save('First'); assert.equal(doc.getElementById('snapRespond').hidden, true, 'no prompt without triggers');
+  trigger(0, 1);
+  // Change two inputs, then save: the prompt lists them.
+  setVal(win, doc.getElementById('g_disc'), '12');
+  setVal(win, doc.querySelector('#inputs input[data-i="1"][data-k="offset"]'), '-2');
+  save('Second');
+  const panel = doc.getElementById('snapRespond');
+  assert.equal(panel.hidden, false);
+  assert.ok(/Data centres and power \(in “First”\)/.test(doc.getElementById('snapRespTrig').textContent));
+  assert.ok(/Setting: disc 10 → 12/.test(doc.getElementById('snapRespDiff').textContent), doc.getElementById('snapRespDiff').textContent);
+  assert.ok(/Data centres and power: offset 0 → -2/.test(doc.getElementById('snapRespDiff').textContent));
+  assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 1, 'not saved yet');
+  // "Kept my view" without a reason is refused; nothing saved.
+  doc.querySelector('input[name="snapResp"][value="kept"]').checked = true;
+  click(win, doc.getElementById('snapRespSave'));
+  assert.ok(/needs a short reason/.test(doc.getElementById('snapMsg').textContent));
+  assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 1);
+  // "Revised" saves with the changed inputs listed.
+  doc.querySelector('input[name="snapResp"][value="revised"]').checked = true;
+  tick(); click(win, doc.getElementById('snapRespSave'));
+  const stored = () => JSON.parse(win.localStorage.getItem('load-bearing-snapshots-v1')).snapshots;
+  assert.equal(stored().length, 2);
+  assert.equal(stored()[1].response.kind, 'revised');
+  assert.deepEqual(stored()[1].response.changedInputs.map(c => c.path).sort(), ['layer dc.offset', 'settings.disc']);
+  assert.ok(/triggered, revised/.test(doc.querySelectorAll('#snapList tbody tr')[1].textContent));
+  assert.equal(panel.hidden, true);
+  // A new trigger, then "kept my view" with a reason.
+  trigger(1, 0);
+  save('Third');
+  doc.querySelector('input[name="snapResp"][value="kept"]').checked = true;
+  setVal(win, doc.getElementById('snapRespReason'), 'One quarter of data is not enough');
+  tick(); click(win, doc.getElementById('snapRespSave'));
+  assert.equal(stored()[2].response.kind, 'kept');
+  assert.equal(stored()[2].response.reason, 'One quarter of data is not enough');
+  assert.ok(/triggered, kept view/.test(doc.querySelectorAll('#snapList tbody tr')[2].textContent));
+  // Not blocked: with another trigger open, "save without recording" saves with no response.
+  trigger(2, 2);
+  save('Fourth');
+  tick(); click(win, doc.getElementById('snapRespSkip'));
+  assert.equal(stored().length, 4);
+  assert.equal(stored()[3].response, null);
+  win.Date = RealDate;
   assert.deepEqual(errors, []);
   win.close();
 });

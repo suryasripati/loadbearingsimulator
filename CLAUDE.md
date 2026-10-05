@@ -16,7 +16,7 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 
 - `npm test` runs `node --test`: model tests and a jsdom UI smoke test against `docs/index.html` (build first). Node 22.22+ or 24.15+. jsdom is a pinned devDependency (test only; the page stays dependency-free).
 - `npm run fixture:model` regenerates `test/fixtures/model_outputs.json` (only after bumping `MODEL_VERSION`)
-- `npm run build` writes `docs/index.html` (self-contained; serve from GitHub Pages using the `/docs` folder)
+- `npm run build` writes `docs/index.html` and `docs/calibration.html` (both self-contained; serve from GitHub Pages using the `/docs` folder)
 
 ## Layout
 
@@ -24,11 +24,15 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 - `src/defaults.js` default inputs (neutral) and the opt-in lead/lag example. CommonJS export for tests; stripped and prepended to the UI code by the build.
 - `src/snapshots.js` snapshot capture, export, strict import, diff and compare. Pure, no DOM; CommonJS export for tests; stripped and inlined after the defaults.
 - `src/app.js` UI logic, vanilla JS, no framework.
+- `src/calibration.js` calibration scaffold logic (episode schema, strict validation, SHA-256 lock hash, versions, outcomes, comparison). Pure; reuses the snapshot import helpers.
+- `src/calibration.html` and `src/calibration-app.js` the separate calibration page; the build reuses the main page's CSS.
+- `calibration/` empty episode template and README only; `calibration/private/` is gitignored.
 - `src/template.html` markup and CSS with `/*MODEL*/` and `/*APP*/` placeholders.
 - `scripts/build.js` assembles the page.
 - `test/model.test.js` property tests plus a regression test against `test/fixtures/v0_1_defaults.json`.
 - `test/snapshots.test.js` snapshot round trip, export privacy, import hardening, diff, compare, overdue.
 - `test/model-version.test.js` runs the model on a canonical input set (`test/support/canonical.js`; records present value, break-evens, IRR, payback, terminal value, flags, verdict, stranded value, debt shortfall and cover, share left, present value at pass-through 0 and 1, and the full verdict-fragility output) and compares with `test/fixtures/model_outputs.json`; fails if outputs change without a `MODEL_VERSION` bump.
+- `test/calibration.test.js` and `test/calibration-smoke.test.js` calibration rules and page; `test/support/synthetic-episode.js` is a labelled synthetic fixture (placeholder defaults, fictitious sources), not data.
 - `test/smoke.test.js` jsdom smoke test of the built page (selection, default verdicts, lead/lag note, Reset). No layout: label overlap and clipping need a real-browser check.
 
 Keep the model pure and testable. Keep the page dependency-free. If a library is ever needed, ask first.
@@ -132,6 +136,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - A snapshot holds `schemaVersion`, name, created (ISO UTC), note, `modelVersion`, every input (settings, capex mode, entry definition, phases, all layer fields) and per-layer outputs (present value, verdict, flags, break-even premium and multiple, fragility summary), plus kill criteria per layer: free text, optional metric / direction / threshold, optional review-by date and a status (blank, yes, no, unknown) set at review time. Nothing is fetched.
 - Criterion states (`snapCriterionState`): unanswered or "unknown" past the review-by date = overdue. "No" clears the badge, records the answer date (`answeredAt`, ISO UTC) and offers an optional next review-by date (overdue again only once a next date later than the answer day has passed). "Yes" shows "Triggered: revise this layer" until a later snapshot is saved or the criterion is reset. Today and the answer date are both converted to local calendar dates before comparing, so time zones cannot flip a badge.
 - Schema version 2 adds `answeredAt` to each kill criterion. Schema 1 files still import, with a blank answer date.
+- Trigger response (schema 3): saving while any criterion is triggered prompts "Revised" (changed inputs listed automatically from the compare logic, never allocations) or "Kept my view" (reason required); "Save without recording" keeps saving unblocked. The list shows "triggered, revised" or "triggered, kept view". Schemas 1 and 2 import with no response.
 - Load into simulator (`snapPrepareLoad`): confirm first; one-step undo of the previous settings, selection and criteria form; the snapshot goes through the same strict validation as an import; inputs only are restored and outputs recompute; allocations are restored only if the snapshot has them; the criteria (without answers) fill the "Save the current view" form; a model-version mismatch warns that results will recompute.
 - Storage: key `load-bearing-snapshots-v1`, separate from settings; every read and write in try/catch; at most 50 snapshots, with a message when full or when the browser refuses to store.
 - Import: size checked before parsing (1 MB), then JSON parse, then rejection of any `__proto__`, `constructor` or `prototype` key at any depth, then a strict structural check (exact fields, types, ranges from `LAYER_RANGES` / `GLOBAL_RANGES` / `PHASE_RANGES`, text lengths, ISO UTC dates). Each snapshot is rebuilt from whitelisted fields into fresh objects; nothing parsed is merged into existing objects. Errors say which field and why, and whether the schema or the model version is incompatible (a model version newer than the page is rejected). Free text is always rendered with textContent.
@@ -143,7 +148,15 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Compare two snapshots: input diff plus verdict changes per layer.
 - Exclude allocations from export by default (see locked decision 4).
 
-### 3. Calibration scaffold
+### Built: step 3, calibration scaffold (no data)
+- Separate page `docs/calibration.html`, built by the same script; no network access; episodes stay in local storage (key `load-bearing-calibration-v1`, at most 20).
+- Episode schema 1 (documented in `calibration/README.md`): id, name, version, previousHash, asOfDate, asOfRule, outcomeHorizon, outcomeMeasure, scorer.knewAboutOutcome, settings and 1 to 8 free-text-named layers whose numeric inputs are records `{value, basis, sourceIds, calculation, rationale}`, sources `{id, citation, publicationDate, kind, truncatedAt}`, lock, outcomes.
+- Rules: every non-null numeric input needs a basis and at least one cited source (judgement included: it cites what informed it); derived shows a calculation; judgement gives a rationale. Input sources must be published on or before the as-of date, except a `compiled-from-period-data` source, which is valid only if truncated on or before it. Outcome sources must be published after the as-of date.
+- Workflow: draft, locked (SHA-256 of canonical JSON over everything decided before outcomes, with time and model version; a locked file whose inputs change fails import; changing inputs means a new version linked by previousHash), then outcomes (yes, no, unknown, contested; contested needs citations on both sides; only after locking). Locking requires the as-of rule, outcome horizon, outcome measure and scorer statement.
+- Banners: "Scored by someone who knew the outcome. Treat as a sanity check, not calibration." on every result; judgement-heavy when more than half of filled inputs are judgement. Comparison shows counts and "Too few cases for statistical conclusions." and no hit rate.
+- A repository test fails if any committed file under `calibration/` other than the template has a numeric input without a source.
+
+### 3. Calibration scaffold (original spec)
 - Scaffold only, no data: a structure for scoring past episodes (British railways 1840s, telecom and fibre 1996-2001, dot-com applications, electricity) blind, using only what was knowable at the time. Do not populate with invented numbers. Every row needs a cited, period-appropriate source. Ask the maintainer for sources, or propose them for review.
 
 ## Backlog (not in either drop)

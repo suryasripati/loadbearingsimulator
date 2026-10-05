@@ -106,6 +106,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
 .badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--red-bg);color:var(--red);margin-left:6px}
 .pre{white-space:pre-wrap;word-break:break-word}
 .notice.strong{border-width:2px;font-weight:700}
+.badge.resp{background:var(--navy-bg);color:var(--ink)}
 .badge.trig{background:var(--amber-bg);color:var(--amber)}
 .snapbox{margin-top:16px;border-top:1px solid var(--hair);padding-top:12px}
 .hint{font-size:13px;color:var(--ink);margin-bottom:4px}
@@ -278,6 +279,15 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
           <div class="scroll"><table id="killTable" aria-label="Kill criteria for the next snapshot"></table></div>
         </details>
         <div class="seg" style="margin-top:10px"><button id="snapSave">Save snapshot</button><button id="snapUndo" class="reset" hidden>Undo load</button></div>
+        <div class="notice" id="snapRespond" hidden>
+          <p style="margin:0 0 6px"><b>Some kill criteria are triggered.</b> Record how you responded with this snapshot (optional; saving is not blocked).</p>
+          <p class="legend" id="snapRespTrig" style="margin:0 0 6px"></p>
+          <label class="chk"><input type="radio" name="snapResp" value="revised"> Revised: list the inputs I changed since the triggering snapshot</label>
+          <div class="legend" id="snapRespDiff"></div>
+          <label class="chk"><input type="radio" name="snapResp" value="kept"> Kept my view</label>
+          <div class="ctl" style="margin-top:6px"><label for="snapRespReason">Reason (required for “kept my view”)</label><input type="text" id="snapRespReason" class="txt" maxlength="500"></div>
+          <div class="seg"><button id="snapRespSave">Save with this response</button><button id="snapRespSkip" class="reset">Save without recording</button><button id="snapRespCancel" class="reset">Cancel</button></div>
+        </div>
         <p class="legend" id="snapMsg" role="status"></p>
       </div>
       <div>
@@ -314,7 +324,7 @@ label.btn:focus-within{outline:2px solid var(--copper);outline-offset:2px}
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
-      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until then, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
+      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. A <a href="calibration.html" style="color:var(--copper)">calibration scaffold</a> exists, with no episode data. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
     <p class="src" style="margin-top:14px">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
   </div>
@@ -684,9 +694,12 @@ const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 2;
-// Schema 1 (no answer date on kill criteria) is still read: answeredAt is filled in as blank.
-const SNAP_SCHEMA_READABLE = [1, 2];
+const SNAP_SCHEMA_VERSION = 3;
+// Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
+// had no trigger response (filled in as null).
+const SNAP_SCHEMA_READABLE = [1, 2, 3];
+const SNAP_RESPONSE_KINDS = ['revised', 'kept'];
+const SNAP_REASON_MAX = 500;
 const SNAP_MAX_BYTES = 1024 * 1024;
 const SNAP_MAX_COUNT = 50; // per file, and in total in this browser
 const SNAP_TEXT_MAX = { name: 120, note: 5000, text: 2000, metric: 120 };
@@ -741,6 +754,27 @@ function snapKillCopy(k){
   return { id: k.id, text: k.text, metric: k.metric, direction: k.direction, threshold: k.threshold, reviewBy: k.reviewBy, status: k.status,
     answeredAt: k.answeredAt || '' };
 }
+function snapResponseCopy(r){
+  return { kind: r.kind, reason: r.reason, triggers: r.triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: r.changedInputs.map(c => ({ path: c.path, before: c.before, after: c.after })) };
+}
+// Criteria answered "yes" whose trigger is still open (no later snapshot saved yet), newest snapshot first.
+function snapTriggeredList(list){
+  const out = [];
+  list.forEach((s, i) => s.kill.forEach(k => {
+    if (k.status === 'yes' && !snapLaterSaved(k, list)) out.push({ index: i, name: s.name, created: s.created, layerId: k.id });
+  }));
+  return out.sort((a, b) => (a.created < b.created ? 1 : a.created > b.created ? -1 : 0));
+}
+// The response recorded on the next snapshot when triggers are open. "revised" lists the inputs that changed since
+// the newest triggering snapshot (using the compare logic); "kept" needs a short reason. Allocations are never
+// listed, so a response cannot leak them into an export.
+function snapMakeResponse(kind, reason, triggers, fromInputs, toInputs){
+  const changed = kind === 'revised' ? diffInputs(fromInputs, toInputs).filter(d => !/\.alloc$/.test(d.path)) : [];
+  return { kind, reason: String(reason || '').trim().slice(0, SNAP_REASON_MAX),
+    triggers: triggers.map(t => ({ name: t.name, created: t.created, layerId: t.layerId })),
+    changedInputs: changed.map(d => ({ path: d.path, before: d.before, after: d.after })) };
+}
 function makeSnapshot(opts){
   const inputs = snapInputs(opts.G, opts.layers);
   return {
@@ -750,7 +784,8 @@ function makeSnapshot(opts){
     note: String(opts.note || '').slice(0, SNAP_TEXT_MAX.note),
     modelVersion: snapDeps().MODEL_VERSION,
     inputs, outputs: snapOutputs(inputs),
-    kill: (opts.kill || snapBlankKill()).map(snapKillCopy)
+    kill: (opts.kill || snapBlankKill()).map(snapKillCopy),
+    response: opts.response ? snapResponseCopy(opts.response) : null
   };
 }
 
@@ -851,10 +886,10 @@ function snapCheckOne(s, where, withAlloc){
   const schema = snapSchema(s.schemaVersion, where);
   snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
   if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
-  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'], [], where);
+  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : []), [], where);
   const out = { schemaVersion: SNAP_SCHEMA_VERSION, name: snapStr(s.name, SNAP_TEXT_MAX.name, where + ' name'),
     created: snapDate(s.created, where + ' created'), note: snapStr(s.note, SNAP_TEXT_MAX.note, where + ' note'),
-    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [] };
+    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
@@ -908,8 +943,34 @@ function snapCheckOne(s, where, withAlloc){
       reviewBy: snapDay(k.reviewBy, w + ' reviewBy'), status: snapOneOf(k.status, SNAP_STATUS, w + ' status'),
       answeredAt: schema < 2 || k.answeredAt === '' ? '' : snapDate(k.answeredAt, w + ' answeredAt') });
   });
+  // Trigger response (schema 3): null, or how the user responded to triggered criteria when saving.
+  if (schema >= 3 && s.response !== null) out.response = snapCheckResponse(s.response, where + ' response', ids);
   return out;
 }
+function snapCheckResponse(r, where, ids){
+  snapKeys(r, ['kind', 'reason', 'triggers', 'changedInputs'], [], where);
+  const kind = snapOneOf(r.kind, SNAP_RESPONSE_KINDS, where + ' kind');
+  const reason = snapStr(r.reason, SNAP_REASON_MAX, where + ' reason');
+  if (kind === 'kept' && !reason.trim()) snapErr(where, '"kept my view" needs a reason');
+  if (!Array.isArray(r.triggers) || r.triggers.length < 1 || r.triggers.length > 250) snapErr(where + ' triggers', 'expected 1 to 250 triggers');
+  const triggers = r.triggers.map((t, i) => {
+    const w = where + ' trigger ' + (i + 1);
+    snapKeys(t, ['name', 'created', 'layerId'], [], w);
+    return { name: snapStr(t.name, SNAP_TEXT_MAX.name, w + ' name'), created: snapDate(t.created, w + ' created'), layerId: snapOneOf(t.layerId, ids, w + ' layerId') };
+  });
+  if (!Array.isArray(r.changedInputs) || r.changedInputs.length > 500) snapErr(where + ' changedInputs', 'expected a list of at most 500');
+  if (kind === 'kept' && r.changedInputs.length) snapErr(where, '"kept my view" cannot list changed inputs');
+  const changedInputs = r.changedInputs.map((c, i) => {
+    const w = where + ' changed input ' + (i + 1);
+    snapKeys(c, ['path', 'before', 'after'], [], w);
+    const path = snapStr(c.path, 80, w + ' path');
+    if (!/^(settings\.[A-Za-z]+(\[[0-2]\])?|layer [a-z]+\.[A-Za-z]+(\[[0-2]\])?)$/.test(path) || /\.alloc$/.test(path)) snapErr(w + ' path', 'unexpected input name');
+    const val = (v, ww) => typeof v === 'string' ? snapStr(v, 40, ww) : snapNum(v, [-1e9, 1e9], ww);
+    return { path, before: val(c.before, w + ' before'), after: val(c.after, w + ' after') };
+  });
+  return { kind, reason, triggers, changedInputs };
+}
+
 
 // Criterion state at review time. Dates: review-by is a calendar date; answeredAt and created are ISO UTC and are
 // converted to the viewer's local calendar date before comparing, so a time zone cannot flip a badge.
@@ -1620,7 +1681,8 @@ function snapRenderList(){
     list.forEach((s,i) => {
       const set = s.kill.filter(k => k.text || k.metric || k.reviewBy).length, od = snapCount(s, today, 'overdue'), tr = snapCount(s, today, 'triggered');
       const crit = el('td', {cls:'l'}, [set ? set+' of '+s.kill.length+' layers' : 'none',
-        tr ? el('span', {cls:'badge trig', text: 'triggered ('+tr+')'}) : null, od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null]);
+        tr ? el('span', {cls:'badge trig', text: 'triggered ('+tr+')'}) : null, od ? el('span', {cls:'badge', text: 'overdue ('+od+')'}) : null,
+        s.response ? el('span', {cls:'badge resp', text: s.response.kind==='revised' ? 'triggered, revised' : 'triggered, kept view'}) : null]);
       const review = el('button', {'data-snap':'review', 'aria-expanded': String(snapOpen===i)}, [snapOpen===i ? 'Close' : 'Review']);
       review.addEventListener('click', () => { snapOpen = snapOpen===i ? -1 : i; snapRenderList(); });
       const del = el('button', {cls:'reset', 'data-snap':'delete'}, ['Delete']);
@@ -1639,7 +1701,8 @@ function snapRenderReview(){
   const s = snapStore.snapshots[snapOpen]; if(!s) return;
   const today = snapTodayLocal();
   box.appendChild(el('div', {cls:'snapbox'}, [el('h3', {text: 'Review: ' + s.name}), el('p', {cls:'muted', text: 'Saved ' + snapWhen(s.created) + ' under model version ' + s.modelVersion + '.'}),
-    el('p', {cls:'pre', text: s.note || '(no note)'})]));
+    el('p', {cls:'pre', text: s.note || '(no note)'}),
+    s.response ? el('p', {cls:'pre', text: (s.response.kind==='revised' ? 'Response to triggers: revised. Changed inputs: ' + (s.response.changedInputs.length ? s.response.changedInputs.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') : 'none') : 'Response to triggers: kept my view. Reason: ' + s.response.reason)}) : null]));
   const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
   t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, [h])))]));
   const tb = el('tbody');
@@ -1682,11 +1745,36 @@ function snapFillSelects(){
 }
 function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill }); }
 function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots[+v]; }
+// Saving while criteria are triggered opens a prompt to record "revised" or "kept my view". Never blocks saving.
 function snapSaveNew(){
   const name = $('snapName').value.trim();
   if(!name){ $('snapMsg').textContent = 'Give the snapshot a name first.'; $('snapName').focus(); return; }
   if(snapStore.snapshots.length >= SNAP_MAX_COUNT){ $('snapMsg').textContent = 'This browser holds at most ' + SNAP_MAX_COUNT + ' snapshots. Export and delete some first.'; return; }
-  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill }));
+  const trig = snapTriggeredList(snapStore.snapshots);
+  if(trig.length){ snapShowRespond(trig); return; }
+  snapCommitSave(null);
+}
+function snapRespKind(){ const r = document.querySelector('input[name="snapResp"]:checked'); return r ? r.value : ''; }
+function snapShowRespond(trig){
+  const names = (id) => (layers.find(L => L.id===id) || {name:id}).name;
+  $('snapRespTrig').textContent = 'Triggered: ' + trig.map(t => names(t.layerId) + ' (in “' + t.name + '”)').join('; ') + '.';
+  const from = snapStore.snapshots[trig[0].index];
+  const diff = snapMakeResponse('revised', '', trig, from.inputs, snapInputs(G, layers)).changedInputs;
+  $('snapRespDiff').textContent = diff.length ? 'Changed since “' + from.name + '”: ' + diff.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') + '.' : 'No inputs have changed since “' + from.name + '”.';
+  $('snapRespond').hidden = false;
+}
+function snapHideRespond(){ $('snapRespond').hidden = true; document.querySelectorAll('input[name="snapResp"]').forEach(r => { r.checked = false; }); $('snapRespReason').value = ''; }
+function snapRespSave(){
+  const kind = snapRespKind(), reason = $('snapRespReason').value.trim();
+  if(!kind){ $('snapMsg').textContent = 'Choose “revised” or “kept my view”, or save without recording.'; return; }
+  if(kind==='kept' && !reason){ $('snapMsg').textContent = '“Kept my view” needs a short reason.'; $('snapRespReason').focus(); return; }
+  const trig = snapTriggeredList(snapStore.snapshots);
+  snapCommitSave(trig.length ? snapMakeResponse(kind, reason, trig, snapStore.snapshots[trig[0].index].inputs, snapInputs(G, layers)) : null);
+}
+function snapCommitSave(response){
+  const name = $('snapName').value.trim();
+  snapHideRespond();
+  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response }));
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
   else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
   snapRenderList();
@@ -1795,6 +1883,9 @@ function snapInit(){
   snapLoad(); snapBuildKillTable(); snapRenderList();
   $('snapSave').addEventListener('click', snapSaveNew);
   $('snapUndo').addEventListener('click', snapUndoLoad);
+  $('snapRespSave').addEventListener('click', snapRespSave);
+  $('snapRespSkip').addEventListener('click', () => snapCommitSave(null));
+  $('snapRespCancel').addEventListener('click', snapHideRespond);
   $('cmpGo').addEventListener('click', snapRenderCompare);
   $('snapExport').addEventListener('click', snapExport);
   $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });

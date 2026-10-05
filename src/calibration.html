@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calibration Scaffold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
+<style>
+/*STYLE*/
+.recs td{white-space:normal;vertical-align:top}
+.recs input.txt,.recs select.txt{min-width:70px}
+.recs td.k{white-space:nowrap;color:var(--ink);font-weight:700}
+.status{font-size:13px;margin:6px 0}
+.layercard{border:1px solid var(--hair);border-radius:6px;padding:10px 12px;margin-top:12px}
+fieldset{border:none;padding:0;margin:0;min-width:0}
+a{color:var(--copper)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Calibration Scaffold</h1>
+  <p class="sub">Load Bearing Simulator</p>
+  <div class="rule"></div>
+  <p class="dek">A structure for scoring past episodes using only what was knowable at the time: draft the inputs with cited sources, lock them, and only then record what happened. <a href="index.html">Back to the simulator</a>.</p>
+  <div class="notice"><b>Scaffold only, no data.</b> No episode is filled in, and no number here may be invented: every numeric input needs a cited source. Episodes stay in this browser; nothing is fetched or sent. Not financial advice.</div>
+  <div class="notice" id="scorerBanner"></div>
+</header>
+
+<section>
+  <h2>Episodes</h2>
+  <div class="card">
+    <div class="seg"><button id="epNew">New episode from the empty template</button>
+      <label class="btn" for="epImport">Import episode (.json)</label><input type="file" id="epImport" accept=".json,application/json" class="vh"></div>
+    <p class="legend" id="epMsg" role="status"></p>
+    <div class="scroll"><table id="epList" aria-label="Episodes"></table></div>
+  </div>
+</section>
+
+<section id="editor" hidden>
+  <h2 id="edTitle">Episode</h2>
+  <div class="notice" id="judgeBanner" hidden></div>
+  <div class="card">
+    <p class="status" id="edStatus"></p>
+    <p class="legend" id="edSave" role="status"></p>
+    <div class="seg"><button id="epLock">Lock inputs</button><button id="epVersion" hidden>Make a new version</button><button id="epExport">Export (.json)</button></div>
+    <fieldset id="edInputs">
+      <h3>Episode and rules</h3>
+      <div class="twocol">
+        <div>
+          <div class="ctl"><label for="f_name">Name</label><input id="f_name" class="txt" maxlength="120"></div>
+          <div class="ctl"><label for="f_id">Id (lower-case, digits, hyphens)</label><input id="f_id" class="txt" maxlength="60"></div>
+          <div class="ctl"><label for="f_asOf">As-of date</label><input id="f_asOf" type="date" class="txt"></div>
+        </div>
+        <div>
+          <div class="ctl"><label for="f_rule">As-of rule: how the date was chosen and what counts as knowable</label><textarea id="f_rule" class="txt" rows="2" maxlength="2000"></textarea></div>
+          <div class="ctl"><label for="f_horizon">Outcome horizon</label><input id="f_horizon" class="txt" maxlength="2000"></div>
+          <div class="ctl"><label for="f_measure">Outcome measure: what "capital earned its cost" means here</label><input id="f_measure" class="txt" maxlength="2000"></div>
+        </div>
+      </div>
+      <div class="ctl"><label for="f_knew">What I already knew about the outcome (required before locking)</label><textarea id="f_knew" class="txt" rows="2" maxlength="4000"></textarea></div>
+
+      <h3 style="margin-top:14px">Sources</h3>
+      <p class="legend">Inputs may cite only sources published on or before the as-of date. A source compiled later from period data counts for inputs only if its series is truncated on or before the as-of date. Outcomes must cite sources published after it.</p>
+      <div class="scroll"><table id="srcTable" class="recs" aria-label="Sources"></table></div>
+      <div class="seg" style="margin-top:6px"><button id="srcAdd">Add source</button></div>
+
+      <h3 style="margin-top:14px">Settings</h3>
+      <p class="legend">Each number needs a basis and at least one cited source (comma-separated source ids). Derived values show their calculation; judgements give a rationale.</p>
+      <div class="seg" style="align-items:center">
+        <label class="muted" for="f_entryDef" style="font-size:13px">Entry price definition</label><select id="f_entryDef" class="txt sel"><option value="">not set</option><option value="A">A: premium over build cost</option><option value="B">B: multiple of forward cash</option></select>
+        <label class="muted" for="f_capex" style="font-size:13px">Capex model</label><select id="f_capex" class="txt sel"><option value="">not set</option><option value="sustaining">Sustaining spend</option><option value="vintage">Vintage cohorts</option></select>
+      </div>
+      <div class="scroll"><table id="setTable" class="recs" aria-label="Settings"></table></div>
+
+      <h3 style="margin-top:14px">Layers</h3>
+      <div id="layerBox"></div>
+      <div class="seg" style="margin-top:8px"><button id="layerAdd">Add layer</button></div>
+    </fieldset>
+  </div>
+
+  <div class="card" id="outBox" style="margin-top:20px" hidden>
+    <h3>Outcomes</h3>
+    <p class="legend">Entered only after locking. For each layer: did capital earn its cost? Yes and no need a source; contested needs at least one citation on each side; every outcome needs a note. Outcome sources must be published after the as-of date.</p>
+    <div class="scroll"><table id="outTable" class="recs" aria-label="Outcomes"></table></div>
+  </div>
+</section>
+
+<section>
+  <h2>Model verdict against recorded outcome</h2>
+  <div class="card">
+    <div class="notice" id="cmpBanner"></div>
+    <p class="status" id="cmpCounts"></p>
+    <div class="scroll"><table id="cmpTable" aria-label="Model verdict against outcome"></table></div>
+    <p class="legend">Verdicts are recomputed with the current model. Where an episode was locked under a different model version, the row says so.</p>
+  </div>
+</section>
+
+</div>
+<script>
+/*MODEL*/
+/*APP*/
+</script>
+</body>
+</html>
