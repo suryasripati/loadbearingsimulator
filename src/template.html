@@ -49,6 +49,7 @@ section{margin-top:34px}
 .ctl label output{font-weight:400;color:var(--body)}
 .ctl small{display:block;color:var(--cap);font-size:12px;line-height:1.35}
 input[type=range]{width:100%;accent-color:var(--copper)}
+.seg input[type=number]{font:inherit;font-size:13px;padding:4px 5px;border:1px solid var(--hair);border-radius:4px;background:var(--bg);color:var(--ink);text-align:right}
 .seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 button,.btn{font:inherit;font-size:13px;color:var(--ink);background:var(--tint);border:1px solid var(--copper);border-radius:999px;padding:5px 12px;cursor:pointer}
 button:hover{background:var(--navy-bg)}
@@ -122,12 +123,22 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <h2>Money assumptions</h2>
   <div class="card twocol">
     <div>
-      <div class="ctl"><label for="g_prem">Entry premium over build cost <output id="o_prem"></output></label>
+      <h3>Entry</h3>
+      <div class="seg" id="defSwitch" role="group" aria-label="Entry price definition">
+        <button data-d="A" aria-pressed="false">Premium over build cost</button>
+        <button data-d="B" aria-pressed="false">Multiple of forward cash</button>
+      </div>
+      <div class="ctl"><label for="g_entry">Entry year <output id="o_entry"></output></label>
+        <input type="range" id="g_entry" min="0" max="10" step="1"><small>You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</small></div>
+      <div class="ctl" id="ctl_prem"><label for="g_prem">Entry premium over build cost <output id="o_prem"></output></label>
         <input type="range" id="g_prem" min="-50" max="300" step="5"><small>0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</small></div>
-      <div class="ctl"><label for="g_disc">Discount rate <output id="o_disc"></output></label>
-        <input type="range" id="g_disc" min="5" max="20" step="0.5"><small>The return you need to be paid for the risk.</small></div>
+      <div class="ctl" id="ctl_mult" hidden><label for="g_mult">Entry multiple of next-year operating cash <output id="o_mult"></output></label>
+        <input type="range" id="g_mult" min="0" max="60" step="0.5"><small>Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</small></div>
+      <p class="legend" id="defNote" style="margin-top:0"></p>
     </div>
     <div>
+      <div class="ctl"><label for="g_disc">Discount rate <output id="o_disc"></output></label>
+        <input type="range" id="g_disc" min="5" max="20" step="0.5"><small>The return you need to be paid for the risk.</small></div>
       <div class="ctl"><label for="g_rd">Interest on debt <output id="o_rd"></output></label>
         <input type="range" id="g_rd" min="2" max="14" step="0.5"><small>Debt is repaid evenly over eight years after the build ends.</small></div>
       <div class="ctl"><label for="g_tv">Value beyond year 15 <output id="o_tv"></output></label>
@@ -138,7 +149,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
 
 <section>
   <h2>Layer assumptions</h2>
-  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Allocation is your own split, in any units.</p>
+  <p class="dek" style="font-size:14px">Click a layer name to see its detail below. Demand evidence: 1 means forecast only, 5 means observed, paid, growing usage. Timing offset moves the layer ahead of end demand (negative) or behind it (positive); steepness above 1 makes its curve steeper than demand. The starting offsets (infrastructure leads, applications and services lag) are placeholders, not data. Allocation is your own split, in any units.</p>
   <div class="card scroll"><table id="inputs" aria-label="Layer assumptions"></table>
     <div class="legend" id="shareCheck"></div>
     <div class="seg" style="margin-top:12px;margin-bottom:0">
@@ -146,7 +157,21 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
       <button id="reset" class="reset">Reset everything</button>
     </div>
-    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift, margin, debt and build period.</div>
+    <div class="legend">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Phases</h2>
+  <p class="dek" style="font-size:14px">Share drift and cash margin can change over three calendar phases. Each phase starts at the same value, which is the v0.1 model. Change one phase to test, say, a margin squeeze once capacity catches up with demand.</p>
+  <div class="card scroll">
+    <div class="seg" style="align-items:center">
+      <label class="muted" for="ph1" style="font-size:13px">Phase 2 starts in year</label>
+      <input type="number" id="ph1" min="1" max="14" step="1" style="width:56px">
+      <label class="muted" for="ph2" style="font-size:13px;margin-left:10px">Phase 3 starts in year</label>
+      <input type="number" id="ph2" min="2" max="15" step="1" style="width:56px">
+    </div>
+    <table id="phaseTable" aria-label="Share drift and cash margin by phase"></table>
   </div>
 </section>
 
@@ -155,7 +180,7 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <div class="card scroll"><table id="score" aria-label="Scorecard"></table>
     <div class="legend">
       <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
-      <b>Break-even premium.</b> The most you could pay above build cost and still earn the discount rate. Headroom is that figure minus your entry premium.<br>
+      <span id="beLegend"></span><br>
       <b>Life flag.</b> Cash payback comes after the asset has worn out, or never arrives by year 15.<br>
       <b>Debt flag.</b> Operating cash falls short of debt service by more than a quarter of the debt.<br>
       <b>Tail flag.</b> More than half the value arrives after year 15.
@@ -167,7 +192,12 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <h2 id="detailTitle">Selected layer</h2>
   <div class="twocol">
     <div class="card"><h3>Cumulative cash to the investor</h3><p class="muted" style="font-size:13px">Includes your entry premium and sustaining spend. Excludes value beyond year 15.</p><div id="cashChart"></div></div>
-    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
+    <div class="card"><h3>What moves the answer most</h3><p class="muted" style="font-size:13px">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years). Longest bar is your biggest assumption.</p><div id="tornado"></div></div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <h3 id="heatTitle">When you enter and what you pay</h3>
+    <p class="muted" style="font-size:13px">Present value at the entry year, for each entry year and price. Green earns more than the discount rate, red less; darker is further from zero. The dark line is break-even. The copper dot is your current setting.</p>
+    <div id="heat"></div>
   </div>
 </section>
 
@@ -181,9 +211,10 @@ details summary{cursor:pointer;color:var(--ink);font-weight:700}
   <h2>How it works and where it is weak</h2>
   <div class="card note">
     <ul style="margin:0;padding-left:18px">
-      <li>Adoption follows an S-curve. Layer revenue is the value pool times adoption times the layer's share, with the share drifting each year (negative drift stands for commoditisation).</li>
+      <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread over the build years. After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
-      <li>Present value uses your discount rate. The break-even premium solves for the entry price at which present value is zero.</li>
+      <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
+      <li>Not yet modelled: margins and drift that respond to how full the built capacity is. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until then, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>

@@ -10,7 +10,7 @@ An interactive scenario tool. It asks: if a technology works the way the user ex
 
 It is not a forecast, not a bubble detector, and not financial advice. It tests the soundness of money and the need to rebalance. Price enters only through the entry premium.
 
-Status: v0.1 exists as a published claude.ai artifact (single HTML page). This repo is now the source of truth. Retire or update the artifact link once the repo is live.
+Status: Drop 1 is built (layer timing, calendar phases, entry year with both price definitions, heatmap). Repo: https://github.com/suryasripati/loadbearingsimulator (public). The v0.1 claude.ai artifact is superseded; retire or update its link.
 
 ## Commands
 
@@ -67,7 +67,7 @@ Goal: time structure and layer-specific adoption. Reproduce v0.1 results exactly
 ### 2. Calendar phases
 - Three phases (default years 0-4, 5-9, 10-15, boundaries editable). Per layer, per phase: share drift and cash margin.
 - Neutral default: all three phases carry the v0.1 constant value.
-- Optional, off by default: utilisation-linked margin and drift. Proposal to confirm with Surya before coding: capacity index K(t) = fraction of build capex spent by t; demand index D(t) = layer adoption; utilisation u = D/K capped at 1.5; margin scaled by `u^e` when u < 1, with elasticity `e` as a visible, unsourced input (default 0.5, labelled as an assumption). Do not claim the shape is evidence-based.
+- Decided 2026-10-05: deferred until the post-Drop-1 sensitivity shows it matters (locked decision 3). Original proposal kept for reference. Optional, off by default: utilisation-linked margin and drift. Proposal to confirm with Surya before coding: capacity index K(t) = fraction of build capex spent by t; demand index D(t) = layer adoption; utilisation u = D/K capped at 1.5; margin scaled by `u^e` when u < 1, with elasticity `e` as a visible, unsourced input (default 0.5, labelled as an assumption). Do not claim the shape is evidence-based.
 
 ### 3. Entry year and both entry-price definitions
 Entry year `e` runs 0 to 10. The investor owns the layer's cash flows from year `e` onward (operating cash minus sustaining spend, plus terminal value). Show NPV in entry-year terms and say so on the page.
@@ -75,7 +75,7 @@ Entry year `e` runs 0 to 10. The investor owns the layer's cash flows from year 
 - **Definition A, replacement-cost premium (default).** Price at entry = `(1 + p)` x gross build capex spent before year `e`, paid at `e`. Build capex from year `e` on is paid as incurred at `(1 + p)`. At `e = 0` this equals v0.1 exactly. Break-even premium solves for the `p` that makes NPV zero.
 - **Definition B, forward cash multiple.** Price at entry = `M` x operating cash in year `e + 1` (before sustaining spend), paid at `e`. Build capex from year `e` on is paid at cost with no premium. Report break-even `M`. Show "not meaningful" when year `e + 1` operating cash is near zero, which is normal early on the S-curve and is itself a finding about early-stage multiples.
 - UI: a switch between definitions; the premium slider relabels itself per definition; the second definition uses its own multiple input.
-- Open question to confirm with Surya: use operating cash or revenue as the basis for Definition B?
+- Decided 2026-10-05: Definition B uses operating cash (before sustaining spend), not revenue.
 - Output: a heatmap of NPV (or headroom) by entry year against premium (A) or multiple (B) for the selected layer, with the zero contour visible.
 
 ### 4. Tests for drop 1

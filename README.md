@@ -8,10 +8,13 @@ A scenario tool for one question: if a technology works the way you expect, whic
 
 ## What it does
 
-- Scenario drivers: adoption speed, midpoint and value pool.
-- Money assumptions: discount rate, debt interest, value beyond year 15, entry premium.
-- Five layers with editable demand evidence, share, drift, margin, capex, asset life, debt and your own allocation.
-- Outputs: a quadrant chart, a scorecard with three fragility flags (life, debt, tail), cumulative cash, a sensitivity chart, and your allocation across slow, base and fast adoption.
+- Scenario drivers: adoption speed, midpoint and value pool. One end-demand curve drives every layer.
+- Layer timing: each layer leads or lags end demand (offset, in years) and can be steeper or flatter. The starting offsets (infrastructure leads, applications and services lag) are placeholders.
+- Phases: share drift and cash margin can differ across three calendar phases (default years 0-4, 5-9, 10-15, editable).
+- Entry: pick an entry year (0 to 10) and one of two price definitions: a premium over replacement cost, or a multiple of next-year operating cash. Present values are stated in entry-year terms.
+- Money assumptions: discount rate, debt interest, value beyond year 15.
+- Five layers with editable demand evidence, share, capex, asset life, debt and your own allocation.
+- Outputs: a quadrant chart, a scorecard with three fragility flags (life, debt, tail), cumulative cash, a sensitivity chart, a heatmap of value by entry year and price with the break-even line, and your allocation across slow, base and fast adoption.
 
 It does not say whether there is a bubble. It shows which assumptions carry the answer.
 
