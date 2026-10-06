@@ -610,3 +610,37 @@ test('the page never uses the browser\'s own dialogs (confirm, alert, prompt); e
   assert.equal(dlg.getAttribute('aria-modal'), 'true');
   assert.equal(dlg.getAttribute('aria-describedby'), 'confirmText');
 });
+
+test('"Reset everything": shows "Scenario reset. Undo" for 10 seconds; Undo restores the scenario, allocations and mode in one step', () => {
+  const { doc, win, errors } = load({ hash: '#analyst' });
+  const timers = [];
+  win.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  win.clearTimeout = () => {};
+  setVal(win, doc.getElementById('g_disc'), '13');
+  const alloc = doc.querySelectorAll('#scoreLite input[data-k="alloc"]');
+  setVal(win, alloc[0], '55'); setVal(win, alloc[3], '7');
+  click(win, doc.querySelector('#capexSwitch [data-c="vintage"]'));
+  click(win, doc.getElementById('reset'));
+  assert.equal(doc.getElementById('g_disc').value, '10', 'reset happened');
+  const toast = doc.getElementById('resetToast');
+  assert.equal(toast.hidden, false);
+  assert.equal(toast.textContent.replace(/\s+/g, ' ').trim(), 'Scenario reset. Undo');
+  assert.equal(toast.getAttribute('role'), 'status');
+  assert.ok(timers.some(t => t.ms === 10000), 'hides after 10 seconds');
+  // The user switches mode, then undoes: everything comes back, mode included.
+  click(win, doc.querySelector('[data-mode-btn="basic"]'));
+  click(win, doc.getElementById('resetUndo'));
+  assert.equal(doc.getElementById('g_disc').value, '13');
+  assert.deepEqual([...doc.querySelectorAll('#scoreLite input[data-k="alloc"]')].map(i => i.value), ['55', '20', '20', '7', '20']);
+  assert.equal(doc.querySelector('#capexSwitch [data-c="vintage"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(doc.body.getAttribute('data-mode'), 'analyst');
+  assert.equal(toast.hidden, true);
+  // The timer hides it without undoing.
+  click(win, doc.getElementById('reset'));
+  assert.equal(toast.hidden, false);
+  timers[timers.length - 1].fn();
+  assert.equal(toast.hidden, true);
+  assert.equal(doc.getElementById('g_disc').value, '10');
+  assert.deepEqual(errors, []);
+  win.close();
+});

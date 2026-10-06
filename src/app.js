@@ -681,10 +681,30 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
-    if(caseCtx){ resetToCase(); return; }
-    G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
-    syncDriverInputs(); buildInputs(); update();
+    const before = { state: snapPageState(), mode: mode };
+    if(caseCtx) resetToCase();
+    else { G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1; syncDriverInputs(); buildInputs(); update(); }
+    showResetUndo(before);
   });
+  $('resetUndo').addEventListener('click', undoReset);
+}
+// "Reset everything" shows "Scenario reset. Undo" for RESET_UNDO_MS; Undo restores the previous scenario, allocations
+// and view mode in one step.
+const RESET_UNDO_MS = 10000;
+let resetUndo = null;
+function showResetUndo(before){
+  if(resetUndo) clearTimeout(resetUndo.timer);
+  resetUndo = { before: before, timer: setTimeout(hideResetUndo, RESET_UNDO_MS) };
+  $('resetToast').hidden = false;
+}
+function hideResetUndo(){ if(resetUndo) clearTimeout(resetUndo.timer); resetUndo = null; $('resetToast').hidden = true; }
+function undoReset(){
+  if(!resetUndo) return;
+  const b = resetUndo.before;
+  hideResetUndo();
+  snapApplyState(b.state);
+  if(b.mode !== mode) setMode(b.mode);
+  $('reset').focus();
 }
 /* ---------- snapshots ---------- */
 // Separate storage key from the settings. Snapshots keep allocations in this browser; exports leave them out unless

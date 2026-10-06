@@ -242,6 +242,8 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:75;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:8px 10px 8px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:13.5px;max-width:calc(100vw - 32px)}
+.toast[hidden]{display:none}
 /* Phones: scorecards, the allocation table and the fragility table become one card per layer; the input grids keep
    their columns and say they scroll sideways. */
 .scrollhint{display:none;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--cap)}
@@ -555,6 +557,7 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
 </section>
 
 </main>
+<div class="toast" id="resetToast" role="status" hidden><span>Scenario reset.</span> <button class="pill" type="button" id="resetUndo">Undo</button></div>
 <footer class="foot">Not financial advice.</footer>
 
 <div class="popover" id="sharePop" role="dialog" aria-labelledby="shareTitle" hidden>
@@ -2820,10 +2823,30 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
-    if(caseCtx){ resetToCase(); return; }
-    G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
-    syncDriverInputs(); buildInputs(); update();
+    const before = { state: snapPageState(), mode: mode };
+    if(caseCtx) resetToCase();
+    else { G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1; syncDriverInputs(); buildInputs(); update(); }
+    showResetUndo(before);
   });
+  $('resetUndo').addEventListener('click', undoReset);
+}
+// "Reset everything" shows "Scenario reset. Undo" for RESET_UNDO_MS; Undo restores the previous scenario, allocations
+// and view mode in one step.
+const RESET_UNDO_MS = 10000;
+let resetUndo = null;
+function showResetUndo(before){
+  if(resetUndo) clearTimeout(resetUndo.timer);
+  resetUndo = { before: before, timer: setTimeout(hideResetUndo, RESET_UNDO_MS) };
+  $('resetToast').hidden = false;
+}
+function hideResetUndo(){ if(resetUndo) clearTimeout(resetUndo.timer); resetUndo = null; $('resetToast').hidden = true; }
+function undoReset(){
+  if(!resetUndo) return;
+  const b = resetUndo.before;
+  hideResetUndo();
+  snapApplyState(b.state);
+  if(b.mode !== mode) setMode(b.mode);
+  $('reset').focus();
 }
 /* ---------- snapshots ---------- */
 // Separate storage key from the settings. Snapshots keep allocations in this browser; exports leave them out unless
