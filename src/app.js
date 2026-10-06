@@ -1059,11 +1059,13 @@ function bindTips(){
 }
 /* Dialogs ("Behind the tool", Cases, Sources): focus moves in, Tab is trapped inside, Esc or Close shuts it, and
    focus returns to whatever opened it. */
-const MODALS = { behindModal: 'behindClose', casesModal: 'casesClose', sourcesModal: 'sourcesClose' };
+// MODALS maps each dialog to its close (or cancel) button, which also takes focus on opening.
+const MODALS = { behindModal: 'behindClose', casesModal: 'casesClose', sourcesModal: 'sourcesClose', whModal: 'whClose', confirmModal: 'confirmCancel' };
 let modalReturn = null, modalOpen = null;
-function openModal(id){
+// returnTo (optional): an element, or a function giving one, to focus on closing instead of the opener.
+function openModal(id, returnTo){
   if(modalOpen) closeModal(true);
-  modalReturn = document.activeElement; modalOpen = id;
+  modalReturn = returnTo || document.activeElement; modalOpen = id;
   $(id).hidden = false;
   $(MODALS[id]).focus();
 }
@@ -1071,14 +1073,33 @@ function closeModal(keepFocus){
   if(!modalOpen) return;
   $(modalOpen).hidden = true; modalOpen = null;
   if(keepFocus) return;
-  const r = modalReturn && document.contains(modalReturn) && modalReturn !== document.body && modalReturn.offsetParent !== null ? modalReturn : $('behindBtn');
+  focusBack();
+}
+function focusBack(){
+  let r = typeof modalReturn === 'function' ? modalReturn() : modalReturn;
+  const shown = (e) => e.checkVisibility ? e.checkVisibility() : !e.closest('[hidden]');
+  if(!(r && document.contains(r) && r !== document.body && shown(r))) r = $('behindBtn');
   r.focus(); modalReturn = null;
+}
+// In-page confirmation (replaces window.confirm for opening a case): OK runs onOk, Cancel or Esc does nothing.
+let confirmAction = null;
+function askConfirm(o){
+  $('confirmTitle').textContent = o.title; $('confirmText').textContent = o.text; $('confirmOk').textContent = o.ok;
+  confirmAction = o.onOk;
+  openModal('confirmModal', o.returnTo);
 }
 const openBehind = () => openModal('behindModal'), closeBehind = () => closeModal();
 function bindBehind(){
   $('behindBtn').addEventListener('click', openBehind);
   $('casesBtn').addEventListener('click', () => { renderCasesList(); openModal('casesModal'); });
   $('caseSources').addEventListener('click', () => { renderSources(); openModal('sourcesModal'); });
+  $('caseWhat').addEventListener('click', () => { renderWhModal(); openModal('whModal'); });
+  $('confirmOk').addEventListener('click', () => {
+    const f = confirmAction; confirmAction = null;
+    $('confirmModal').hidden = true; modalOpen = null;
+    if(f) f();
+    focusBack();
+  });
   for(const id in MODALS){
     $(MODALS[id]).addEventListener('click', () => closeModal());
     $(id).addEventListener('click', e => { if(e.target === $(id)) closeModal(); });
@@ -1120,20 +1141,29 @@ function setCaseContext(ctx){
   moneyUnit = ctx ? ctx.c.moneyUnit : '$B';
   const name = ctx ? ctx.c.title : CASE_NAME;
   $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
+  // The subtitle is hidden in a case (CSS); the full title stays available when the name is cut with an ellipsis.
+  document.querySelector('.tb-name').title = ctx ? name + ': Load Bearing Simulator' : '';
   document.body.classList.toggle('case-mode', !!ctx);
+  if(!ctx && modalOpen === 'whModal') closeModal(true);
   $('caseBar').hidden = !ctx;
   $('whatHappened').hidden = !ctx;
   if(ctx) renderCaseBar();
 }
+// Asks first (in-page dialog) unless opts.noConfirm; opts.returnTo is where focus goes afterwards.
 function openCase(id, versionId, opts){
   const c = CASES.find(x => x.id === id); if(!c) return false;
   const o = opts || {};
   const switching = caseCtx && caseCtx.c.id === id;
   if(!o.noConfirm){
-    const ask = switching
-      ? 'Switch to the \u201c' + (versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label) + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : '')
-      : 'Open the case \u201c' + c.title + '\u201d (as of ' + c.asOfDate + ')? Your current scenario is kept in memory; use \u201cReturn to my scenario\u201d to get it back.';
-    if(!window.confirm(ask)) return false;
+    const label = versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label;
+    askConfirm(switching
+      ? { title: 'Switch version', ok: 'Switch version', returnTo: o.returnTo,
+          text: 'Switch to the \u201c' + label + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : ''),
+          onOk: () => openCase(id, versionId, { noConfirm: true }) }
+      : { title: 'Open case', ok: 'Open case', returnTo: o.returnTo,
+          text: 'Open the case \u201c' + c.title + '\u201d (as of ' + c.asOfDate + ')? Your current scenario is kept in memory; use \u201cReturn to my scenario\u201d to get it back.',
+          onOk: () => openCase(id, versionId, { noConfirm: true }) });
+    return false;
   }
   const mine = caseCtx ? caseCtx.mine : snapMine();
   const st = caseState(c, versionId || 'base');
@@ -1165,7 +1195,7 @@ function renderCaseBar(){
   if(c.versions.length){
     [{ id: 'base', label: 'Base' }].concat(c.versions).forEach(v => {
       const b = el('button', {type:'button', 'data-version': v.id, 'aria-pressed': String(v.id === caseCtx.versionId)}, [v.label]);
-      b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id); });
+      b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id, { returnTo: () => document.querySelector('#caseVersions button[aria-pressed="true"]') }); });
       vb.appendChild(b);
     });
   }
@@ -1176,7 +1206,7 @@ function renderCasesList(){
   const list = el('div', {cls:'caselist'});
   CASES.forEach(c => {
     const open = el('button', {type:'button', 'data-case': c.id}, [caseCtx && caseCtx.c.id === c.id ? 'Open again' : 'Open']);
-    open.addEventListener('click', () => { closeModal(true); if(!openCase(c.id, 'base')) $('casesBtn').focus(); });
+    open.addEventListener('click', () => openCase(c.id, 'base', { returnTo: $('casesBtn') }));
     list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'})]), open]));
   });
   box.appendChild(list);
@@ -1196,7 +1226,7 @@ const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
 let chipN = 0;
 function chipTargets(){
   const out = [];
-  for(const id in SLIDER_KEYS){ const inp = $(id); if(inp) out.push({ key: 'settings.' + SLIDER_KEYS[id], host: inp.closest('.cctl').querySelector('.cctl-h output'), before: true, cur: () => G[SLIDER_KEYS[id]], word: true }); }
+  for(const id in SLIDER_KEYS){ const inp = $(id); if(inp) out.push({ key: 'settings.' + SLIDER_KEYS[id], host: inp.closest('.cctl').querySelector('.cctl-h output'), before: true, cur: () => G[SLIDER_KEYS[id]] }); }
   out.push({ key: 'settings.phase2Start', host: $('ph1'), cur: () => G.phases[0] }, { key: 'settings.phase3Start', host: $('ph2'), cur: () => G.phases[1] });
   document.querySelectorAll('#inputs input[data-k], #phaseTable input[data-k]').forEach(inp => {
     const k = inp.dataset.k, i = +inp.dataset.i, p = inp.dataset.p;
@@ -1225,7 +1255,7 @@ function renderChips(){
     const rec = caseCtx.st.recs[t.key]; if(!rec || !t.host) return;
     const id = 'bc' + (++chipN);
     const b = el('button', {cls: 'bchip b-' + rec.basis, type: 'button', 'aria-expanded': 'false', 'aria-controls': id, 'data-key': t.key,
-      'aria-label': 'Basis: ' + rec.basis + (rec.basis === 'judgement' ? ' (labelled judgement)' : '')}, [t.word ? rec.basis : BASIS_LETTER[rec.basis]]);
+      'aria-label': 'Basis: ' + rec.basis + (rec.basis === 'judgement' ? ' (labelled judgement)' : '')}, [BASIS_LETTER[rec.basis]]);
     const tip = el('span', {cls: 'tip', role: 'tooltip', id: id});
     const w = el('span', {cls: 'tipwrap bchipwrap'}, [b, tip]);
     if(t.before) t.host.parentNode.insertBefore(w, t.host); else t.host.insertAdjacentElement('afterend', w);
@@ -1254,13 +1284,26 @@ function renderWhatHappened(res){
   t.appendChild(el('thead', null, [el('tr', null, ['Layer', 'Model verdict (inputs on screen)', 'Model: capital earns its cost?', 'What happened', 'Summary', 'Sources', 'Horizon'].map((h,i) => el('th', {cls: i===2 ? '' : 'l', text: h})))]));
   const tb = el('tbody');
   w.rows.forEach(r => {
-    const srcs = r.sourceIds.map(id => { const s = c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; }).join('; ');
+    // Each source as "citation (date)", with the date kept on one line.
+    const srcs = el('td', {cls:'l'});
+    r.sourceIds.forEach((id, j) => { const s = c.sources.find(x => x.id === id); if(j) srcs.appendChild(document.createTextNode('; '));
+      if(s){ srcs.appendChild(document.createTextNode(s.citation + ' (')); srcs.appendChild(el('span', {cls:'nowrap', text: s.publicationDate})); srcs.appendChild(document.createTextNode(')')); }
+      else srcs.appendChild(document.createTextNode(id)); });
+    if(!r.sourceIds.length) srcs.textContent = '\u2014';
     tb.appendChild(el('tr', null, [el('td', {cls:'l', text: r.layer}), el('td', {cls:'l', text: r.verdict}), el('td', {text: r.earnsCost ? 'yes' : 'no'}),
-      el('td', {cls:'l', 'data-outcome': r.outcome || '', text: r.outcome || 'not recorded'}), el('td', {cls:'l', text: r.summary || '\u2014'}), el('td', {cls:'l', text: srcs || '\u2014'}), el('td', {cls:'l', text: r.horizon || '\u2014'})]));
+      el('td', {cls:'l', 'data-outcome': r.outcome || '', text: r.outcome || 'not recorded'}), el('td', {cls:'l', text: r.summary || '\u2014'}), srcs, el('td', {cls:'l', text: r.horizon || '\u2014'})]));
   });
   t.appendChild(tb);
   const k = w.counts;
   $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
+  if(modalOpen === 'whModal') renderWhModal();
+}
+// The "What happened" dialog (any mode) shows a copy of the card's content, without its ids.
+function renderWhModal(){
+  const box = $('whModalBody'), copy = $('whBody').cloneNode(true);
+  copy.removeAttribute('id'); copy.classList.remove('card');
+  copy.querySelectorAll('[id]').forEach(e => { e.setAttribute('data-wh', e.id); e.removeAttribute('id'); });
+  box.textContent = ''; box.appendChild(copy);
 }
 function bindCases(){
   $('casesBtn').hidden = !CASES.length;

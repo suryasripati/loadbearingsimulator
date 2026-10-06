@@ -29,7 +29,12 @@ function load(opts = {}){
 const click = (win, el) => el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 const setMode = (win, doc, m) => click(win, doc.querySelector('[data-mode-btn="' + m + '"]'));
 const $ = (doc, id) => doc.getElementById(id);
-function openCase(win, doc, id){ click(win, $(doc, 'casesBtn')); click(win, doc.querySelector('#casesList [data-case="' + id + '"]')); }
+// Opening asks in an in-page dialog (not window.confirm); ok=false cancels.
+function openCase(win, doc, id, ok = true){
+  click(win, $(doc, 'casesBtn')); click(win, doc.querySelector('#casesList [data-case="' + id + '"]'));
+  assert.equal($(doc, 'confirmModal').hidden, false, 'asks before opening');
+  click(win, $(doc, ok ? 'confirmOk' : 'confirmCancel'));
+}
 function setInput(win, el, v){ el.value = String(v); el.dispatchEvent(new win.Event('input', { bubbles: true })); el.dispatchEvent(new win.Event('change', { bubbles: true })); }
 const sliderVal = (doc, id) => +$(doc, id).value;
 
@@ -48,14 +53,69 @@ test('Cases pill: shown in the dev build; the dialog lists title, as-of date and
   win.close();
 });
 
-test('opening a case asks first; cancelling changes nothing', () => {
-  const { doc, win, asked } = load({ answer: false });
+test('opening a case asks in an in-page dialog (focus inside, Esc or Cancel changes nothing, focus returns); no window.confirm', () => {
+  const { doc, win, asked } = load();
   const before = doc.querySelector('.tb-name').textContent;
-  openCase(win, doc, 'synthetic-3-layer');
-  assert.equal(asked.length, 1);
-  assert.match(asked[0], /Open the case “Synthetic 3-layer case” \(as of 1845-06-30\)\? Your current scenario is kept in memory/);
+  click(win, $(doc, 'casesBtn')); click(win, doc.querySelector('#casesList [data-case="synthetic-3-layer"]'));
+  const m = $(doc, 'confirmModal');
+  assert.equal(m.hidden, false); assert.equal($(doc, 'casesModal').hidden, true);
+  assert.equal(m.querySelector('[role="dialog"]').getAttribute('aria-modal'), 'true');
+  assert.equal($(doc, 'confirmText').textContent, 'Open the case “Synthetic 3-layer case” (as of 1845-06-30)? Your current scenario is kept in memory; use “Return to my scenario” to get it back.');
+  assert.ok(m.contains(doc.activeElement), 'focus is inside the dialog');
+  // Tab is trapped: from the last button it wraps to the first.
+  $(doc, 'confirmCancel').focus();
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  assert.ok(m.contains(doc.activeElement));
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(m.hidden, true);
+  assert.equal(doc.activeElement, $(doc, 'casesBtn'), 'focus returns to the Cases button');
+  openCase(win, doc, 'synthetic-3-layer', false);
   assert.equal(doc.querySelector('.tb-name').textContent, before);
   assert.equal($(doc, 'caseBar').hidden, true);
+  openCase(win, doc, 'synthetic-3-layer');
+  assert.equal($(doc, 'caseBar').hidden, false);
+  assert.equal(doc.activeElement, $(doc, 'casesBtn'));
+  assert.deepEqual(asked, [], 'window.confirm is not used to open a case');
+  win.close();
+});
+
+test('case header: subtitle hidden, full title in a title attribute; example and profile buttons hidden in a case only', () => {
+  const { doc, win } = load({ hash: '#analyst' });
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(css.includes('body.case-mode .tb-sub{display:none}'));
+  assert.ok(/\.tb-name\{overflow:hidden;text-overflow:ellipsis\}/.test(css));
+  assert.ok(css.includes('body.case-mode .nocase{display:none !important}'));
+  for (const id of ['arch_rail', 'arch_app', 'leadlag', 'ucdExample']) assert.ok($(doc, id).classList.contains('nocase'), id);
+  assert.ok(doc.querySelector('[aria-controls="tip24"]').closest('.tipwrap').classList.contains('nocase'));
+  assert.equal(doc.querySelector('.tb-name').title, '');
+  openCase(win, doc, 'synthetic-6-layer');
+  assert.equal(doc.querySelector('.tb-name').title, 'Synthetic 6-layer case: Load Bearing Simulator');
+  assert.ok(doc.body.classList.contains('case-mode'));
+  click(win, $(doc, 'caseReturn'));
+  assert.equal(doc.querySelector('.tb-name').title, '');
+  assert.ok(!doc.body.classList.contains('case-mode'));
+  win.close();
+});
+
+test('What happened button: in every mode, opens the outcome content in a dialog; the card stays in Advanced and Analyst', () => {
+  const c = FIX[6], { doc, win } = load({ hash: '#basic' });
+  openCase(win, doc, c.id);
+  const btn = $(doc, 'caseWhat');
+  assert.ok($(doc, 'caseBar').contains(btn) && !btn.closest('[data-min]'), 'button shown in every mode');
+  btn.focus(); click(win, btn);
+  const m = $(doc, 'whModal'), body = $(doc, 'whModalBody');
+  assert.equal(m.hidden, false);
+  assert.equal(doc.activeElement, $(doc, 'whClose'));
+  assert.equal(body.querySelector('[data-wh="whBanner"]').textContent, $(doc, 'whBanner').textContent);
+  assert.equal(body.querySelectorAll('tbody tr').length, 6);
+  assert.equal(body.querySelector('[data-wh="whCounts"]').textContent, $(doc, 'whCounts').textContent);
+  assert.equal(body.querySelectorAll('[id]').length, 0, 'no duplicate ids in the copy');
+  // Sources dates stay whole.
+  assert.ok([...body.querySelectorAll('.nowrap')].every(s => /^\d{4}-\d{2}-\d{2}$/.test(s.textContent)) && body.querySelectorAll('.nowrap').length > 0);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(m.hidden, true);
+  assert.equal(doc.activeElement, btn);
+  assert.equal($(doc, 'whatHappened').getAttribute('data-min'), 'advanced');
   win.close();
 });
 
@@ -138,7 +198,7 @@ test('basis chips: one per case input, labelled, with citation, calculation or r
     if (rec.basis === 'judgement') { assert.match(tip, /Rationale: Synthetic rationale/); assert.match(tip, /No source\./); }
   });
   assert.equal(doc.querySelector('.bchip[data-key="layer syn-1.evidence"]').textContent, 'J');
-  assert.equal(doc.querySelector('.bchip[data-key="settings.speed"]').textContent, 'derived');
+  assert.equal(doc.querySelector('.bchip[data-key="settings.speed"]').textContent, 'D');
   assert.equal($(doc, 'caseModified').hidden, true);
   const cap = doc.querySelector('#inputs input[data-i="1"][data-k="capex"]');
   setInput(win, cap, st.layers[1].capex + 50);
@@ -172,7 +232,8 @@ test('versions: pills switch the case version (with a prompt) and only the overr
   assert.equal(pills[0].getAttribute('aria-pressed'), 'true');
   const pool = sliderVal(doc, 'g_pool');
   click(win, pills[2]);
-  assert.match(asked[asked.length - 1], /Switch to the “Measured” version of this case\?/);
+  assert.match($(doc, 'confirmText').textContent, /^Switch to the “Measured” version of this case\?/);
+  click(win, $(doc, 'confirmOk'));
   assert.equal(sliderVal(doc, 'g_speed'), 12);
   assert.equal(+doc.querySelector('#inputs input[data-i="1"][data-k="capex"]').value, 180);
   assert.equal(sliderVal(doc, 'g_pool'), pool);
