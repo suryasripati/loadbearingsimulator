@@ -1436,7 +1436,7 @@ function renderCaseBar(){
   const c = caseCtx.c;
   $('caseBadgeText').textContent = c.title + ', as of ' + c.asOfDate;
   const tip = $('caseTip'); tip.textContent = '';
-  [c.subtitle, c.description, caseCountText(c), 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].filter(Boolean).forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
+  [c.subtitle, c.description, caseCountText(c), 'As-of rule: ' + c.asOfRule, 'Money in ' + c.moneyUnit + '.'].filter(Boolean).forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
   const vb = $('caseVersions'); vb.textContent = '';
   if(c.versions.length){
     [{ id: 'base', label: c.baseLabel }].concat(c.versions).forEach(v => {
@@ -1530,7 +1530,6 @@ function renderWhatHappened(res){
   if(!caseCtx) return;
   const c = caseCtx.c, w = caseOutcomeRows(c, layers, res);
   $('whBanner').textContent = w.banner;
-  $('whHindsight').textContent = 'Hindsight: ' + c.hindsightDisclosure;
   const t = $('outcomeTable'); t.textContent = '';
   t.appendChild(el('thead', null, [el('tr', null, ['Layer', 'Model verdict (inputs on screen)', 'Model: capital earns its cost?', 'What happened', 'Summary', 'Sources', 'Horizon'].map((h,i) => el('th', {cls: i===2 ? '' : 'l', text: h})))]));
   const tb = el('tbody');

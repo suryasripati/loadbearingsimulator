@@ -131,7 +131,8 @@ for (const n of [1, 3, 6]) {
     assert.equal($(doc, 'caseBar').hidden, false);
     const badge = doc.querySelector('.casebadge').cloneNode(true); badge.querySelector('.tipwrap').remove();
     assert.equal(badge.textContent.trim(), 'Case: ' + c.title + ', as of ' + c.asOfDate);
-    assert.match($(doc, 'caseTip').textContent, new RegExp('As-of rule: .*Hindsight: ' + c.hindsightDisclosure));
+    assert.match($(doc, 'caseTip').textContent, /As-of rule: /);
+    assert.ok(!/Hindsight:/.test($(doc, 'caseTip').textContent), 'no separate hindsight line');
     assert.ok(doc.body.classList.contains('case-mode'));
     assert.match($(doc, 'o_pool').textContent, new RegExp('^' + c.moneyUnit[0].replace('$', '\\$')));
     assert.ok($(doc, 'o_pool').textContent.endsWith(c.moneyUnit.slice(1) + ' a year'));
@@ -168,8 +169,8 @@ test('What happened: Advanced and Analyst only; the banner, outcomes with source
   openCase(win, doc, c.id);
   const sec = $(doc, 'whatHappened');
   assert.equal(sec.hidden, false); assert.equal(sec.getAttribute('data-min'), 'advanced');
-  assert.equal($(doc, 'whBanner').textContent, 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.');
-  assert.equal($(doc, 'whHindsight').textContent, 'Hindsight: ' + c.hindsightDisclosure);
+  assert.equal($(doc, 'whBanner').textContent, "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
+  assert.equal($(doc, 'whHindsight'), null, 'no separate hindsight line');
   const rows = [...doc.querySelectorAll('#outcomeTable tbody tr')];
   assert.deepEqual(rows.map(r => r.querySelector('[data-outcome]').textContent), c.outcomes.map(o => o.status));
   assert.match(rows[0].textContent, /Synthetic outcome source \(fictitious, not data\) \(1856-01-01\)/);

@@ -7,7 +7,7 @@ Historical cases for the Load Bearing Simulator, one plain file each (`cases/<id
 - `railway-mania-1845` (British railway mania, as of 30 September 1845; schema 4, money in £m with one decimal).
 - `telecom-fibre-1999` (telecom and fibre, as of 31 December 1999; schema 4, money in $bn with one decimal). Three layers: long-haul transport capacity builders, network equipment suppliers, and Internet applications and content. Two versions differ in adoption speed: "Measured growth" (traffic doubling each year, speed 6.3) and "Period claims" (the reported 10-fold yearly growth, speed 1.9). Most inputs are judgement. Each layer's timing offset is derived from its observed year-0 revenue over its full-adoption revenue, computed from the stored speed and midpoint, so the modelled year-0 revenue matches the observed figure. Several source dates are approximate and marked so in the source notes. The model has no supply-and-demand link, so a capacity glut shows up only through share drift.
 
-In a case the header pill reads "Case data" instead of "Placeholder data". Both cases' hindsight disclosure reads "Scored by the tool's author." Every number in a case must come from a public source, be clearly labelled as a judgement with a stated rationale, or be a neutral default the case does not use.
+In a case the header pill reads "Case data" instead of "Placeholder data". Every number in a case must come from a public source, be clearly labelled as a judgement with a stated rationale, or be a neutral default the case does not use.
 
 ## Rules (the build fails on any breach)
 
@@ -25,7 +25,7 @@ In a case the header pill reads "Case data" instead of "Placeholder data". Both 
   - each has a `status` (`yes`, `no`, `unknown` or `contested`), a `summary`, sources and a `horizon`;
   - `yes` and `no` need a source;
   - `contested` needs at least two sources, and a summary that states both positions ("For: … Against: …").
-- **Hindsight.** `hindsightDisclosure` is one line saying who scored the case (both shipped cases: "Scored by the tool's author."); the What happened card shows it after "Hindsight:". The page also shows, unchanged: "Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
+- **Hindsight.** The page shows, for every case: "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
 - **Allocations are personal** and are never part of a case. A case opens with a placeholder equal split.
 
 ## File format (`schemaVersion` 4; schema 1 to 3 files stay valid)
@@ -41,7 +41,7 @@ In a case the header pill reads "Case data" instead of "Placeholder data". Both 
 | `id` | lower-case letters, digits and hyphens |
 | `title`, `subtitle` | the title replaces "AI Stack" in the page title while the case is open |
 | `asOfDate`, `asOfRule` | the date, and how it was chosen |
-| `hindsightDisclosure` | one line |
+| `hindsightDisclosure` | optional, no longer shown (the banner says who scored the cases); older files that carry it still load, and it must be one line |
 | `moneyUnit` | for example `"$B"`, `"£m"`, `"€bn"` |
 | `sources[]` | `{ id, citation, publicationDate, kind: "period" \| "compiled" \| "outcome", seriesEndsOn, note }` (`seriesEndsOn` for compiled only; `note`, schema 3, for caveats such as "original not opened" or "date approximate") |
 | `settings` | `pool`, `speed`, `mid`, `disc`, `rd`, `tv`, `premium`, `entry`, `mult`, `phase2Start`, `phase3Start` as input records, plus `entryDef` (`"A"` or `"B"`) and `capexModel` (`"sustaining"` or `"vintage"`). Schema 2 only, optional: `tvMode` (`"multiple"` or `"perpetuity"`) and `tvGrowth` (an input record; long-run growth, at least 1 point below the discount rate) |

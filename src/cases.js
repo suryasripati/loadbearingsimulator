@@ -28,7 +28,7 @@ const CASE_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'build
 const CASE_BASIS = ['sourced', 'derived', 'judgement', 'default'];
 const CASE_SOURCE_KINDS = ['period', 'compiled', 'outcome'];
 const CASE_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
-const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
+const CASE_BANNER = 'Scored by the tool\'s author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){
@@ -145,7 +145,7 @@ function phaseOrder(settings, where){
 function validateCase(raw, where0){
   const where = where0 || 'Case';
   const schema3 = (raw && raw.schemaVersion >= 3 ? ['description', 'baseLabel', 'moneyRanges'] : []).concat(raw && raw.schemaVersion >= 4 ? ['moneyDecimals'] : []);
-  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'].concat(schema3), where);
+  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions', 'hindsightDisclosure'].concat(schema3), where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
   if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
   const c = { format: CASE_FORMAT, schemaVersion: raw.schemaVersion };
@@ -155,7 +155,8 @@ function validateCase(raw, where0){
   c.subtitle = caseText(raw.subtitle, where + ' subtitle', 160);
   c.asOfDate = caseDay(raw.asOfDate, where + ' asOfDate');
   c.asOfRule = caseText(raw.asOfRule, where + ' asOfRule', 1000);
-  c.hindsightDisclosure = caseText(raw.hindsightDisclosure, where + ' hindsightDisclosure', 240);
+  // Optional and no longer shown: the banner says who scored the cases. Older files that carry it still load.
+  c.hindsightDisclosure = raw.hindsightDisclosure === undefined ? '' : caseText(raw.hindsightDisclosure, where + ' hindsightDisclosure', 240);
   if (/\n/.test(c.hindsightDisclosure)) caseErr(where + ' hindsightDisclosure', 'must be one line');
   if (!parseMoneyUnit(raw.moneyUnit)) caseErr(where + ' moneyUnit', 'expected a currency symbol and an optional unit, e.g. "$B" or "£m"');
   c.moneyUnit = raw.moneyUnit;

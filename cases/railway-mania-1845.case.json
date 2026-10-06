@@ -7,7 +7,6 @@
  "description": "The original-lines result depends heavily on asset life and terminal value, which are judgement inputs. See the verdict fragility panel.",
  "asOfDate": "1845-09-30",
  "asOfRule": "Last quarter-end before the primary railway share index peak (6 October 1845, per Campbell). Uses hindsight. To be applied the same way to later cases.",
- "hindsightDisclosure": "Scored by the tool's author.",
  "moneyUnit": "£m",
  "moneyDecimals": 1,
  "moneyRanges": {

@@ -7,7 +7,6 @@
   "description": "Most inputs are judgement. The model has no supply-and-demand link, so a capacity glut shows up only through share drift. Read the What must be true panel and compare with What happened before reading anything into the verdicts.",
   "asOfDate": "1999-12-31",
   "asOfRule": "Last quarter-end before the primary equity index peak (Nasdaq Composite, 10 March 2000; to be verified). Uses hindsight; applied the same way as for the railway case.",
-  "hindsightDisclosure": "Scored by the tool's author.",
   "moneyUnit": "$bn",
   "moneyDecimals": 1,
   "moneyRanges": {

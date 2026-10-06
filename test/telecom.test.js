@@ -204,9 +204,21 @@ test('caseAgreement: yes/no outcomes are decided; contested, unknown and not rec
   assert.equal(C.caseAgreementText(C.caseAgreement([{ outcome: 'contested', earnsCost: true }])), 'No decided outcomes; 1 contested');
 });
 
-test('hindsight disclosure: both cases read "Scored by the tool\'s author."; the general banner is unchanged', () => {
-  const rail = C.validateCase(JSON.parse(fs.readFileSync(path.join(root, 'cases', 'railway-mania-1845.case.json'), 'utf8')));
-  assert.equal(rail.hindsightDisclosure, "Scored by the tool's author.");
-  assert.equal(CASE.hindsightDisclosure, "Scored by the tool's author.");
-  assert.equal(C.CASE_BANNER, 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.');
+test('banner: "Scored by the tool\'s author." for every case; no separate hindsight line; the field is optional', () => {
+  assert.equal(C.CASE_BANNER, "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
+  for (const f of ['railway-mania-1845', 'telecom-fibre-1999']) {
+    const raw = JSON.parse(fs.readFileSync(path.join(root, 'cases', f + '.case.json'), 'utf8'));
+    assert.ok(!('hindsightDisclosure' in raw), f + ' carries no hindsight line');
+    assert.doesNotThrow(() => C.validateCase(raw));
+  }
+  // Older files that still carry the field load; it must stay one line.
+  const old = JSON.parse(JSON.stringify(RAW)); old.hindsightDisclosure = 'An older one-line disclosure.';
+  assert.doesNotThrow(() => C.validateCase(old));
+  old.hindsightDisclosure = 'a\nb'; assert.throws(() => C.validateCase(old), /must be one line/);
+  const { doc, win, errors } = load('#advanced');
+  openCase(win, doc, 'telecom-fibre-1999');
+  assert.equal(doc.getElementById('whBanner').textContent, C.CASE_BANNER);
+  assert.ok(!/Hindsight:/.test(doc.getElementById('whBody').textContent));
+  assert.deepEqual(errors, []);
+  win.close();
 });
