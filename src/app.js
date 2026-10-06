@@ -48,8 +48,8 @@ function save(){ if(caseCtx) return; try{ localStorage.setItem(KEY, JSON.stringi
 
 const $ = (id) => document.getElementById(id);
 // Money unit: "$B" for your own scenario; a case sets its own (for example "\u00a3m") for every money label.
-let moneyUnit = '$B';
-const money = (x) => formatMoney(x, moneyUnit);
+let moneyUnit = '$B', moneyDecimals = 0; // a case may set decimals for every money label (schema 4)
+const money = (x) => formatMoney(x, moneyUnit, moneyDecimals);
 let caseCtx = null; // open case: { c, versionId, st (case state), mine (your scenario, kept in memory) }
 const pct = (x, d) => (x<0?'\u2212':'') + Math.abs(x).toFixed(d||0) + '%';
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -212,7 +212,8 @@ function phaseLabels(){
 function buildInputs(){
   // Basic and Advanced show one cash margin per layer; it sets all three phases. When the phases differ (set in
   // Analyst), the cell says so instead of offering an input that would overwrite them.
-  const head = (c) => '<th'+dm(c[0])+'>'+c[1].replace('$B', esc(moneyUnit))+'</th>';
+  // In a case the inputs are case data, so the pass-through header drops its "placeholder" wording.
+  const head = (c) => '<th'+dm(c[0])+'>'+(caseCtx ? c[1].replace('; no view, placeholder, unsourced', '') : c[1]).replace('$B', esc(moneyUnit))+'</th>';
   let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => head(c) + (c[0]==='share' ? '<th>Cash margin, %</th>' : '')).join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
@@ -515,7 +516,7 @@ function cashChart(o){
   const x = (t) => m.l + iw*t/H, y = (v) => m.t + ih*(1-(v-lo)/(hi-lo));
   const bw = iw/(H+1)*0.6;
   let s = '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" role="img" aria-label="Cumulative cash for the selected layer">';
-  for(let k=0;k<=4;k++){ const v = lo + (hi-lo)*k/4; s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)" stroke-width="0.8"/><text x="'+(m.l-5)+'" y="'+(y(v)+3.5)+'" font-size="10" fill="var(--cap)" text-anchor="end">'+(v<0?'−':'')+Math.abs(v).toFixed(0)+'</text>'; }
+  for(let k=0;k<=4;k++){ const v = lo + (hi-lo)*k/4; s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)" stroke-width="0.8"/><text x="'+(m.l-5)+'" y="'+(y(v)+3.5)+'" font-size="10" fill="var(--cap)" text-anchor="end">'+(v<0?'−':'')+Math.abs(v).toFixed(moneyDecimals)+'</text>'; }
   s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--ink)" stroke-width="1.2"/>';
   o.cf.forEach((v,t) => { if(t<o.entry) return; const y0=y(0), y1=y(v); s += '<rect x="'+(x(t)-bw/2).toFixed(1)+'" y="'+Math.min(y0,y1).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.abs(y1-y0).toFixed(1)+'" fill="var(--navy-bg)" stroke="var(--hair)" stroke-width="0.5"/>'; });
   let d=''; o.cumArr.forEach((v,t) => { if(t<o.entry) return; d += (t===o.entry?'M':'L') + x(t).toFixed(1)+' '+y(v).toFixed(1); });
@@ -1301,7 +1302,19 @@ function guideFilter(){
   $('guideCount').textContent = n + ' of ' + rows.length + ' inputs';
 }
 // Info icons on the sliders take their text from the guide (single source).
-function fillGuideTips(){ document.querySelectorAll('.tip[data-guide]').forEach(t => { const g = GUIDE[t.dataset.guide]; t.textContent = g && g.tip ? g.tip : ''; }); }
+// In a case, sentences about the tool's placeholder defaults are left out (the inputs are case data).
+function fillGuideTips(){ document.querySelectorAll('.tip[data-guide]').forEach(t => { const g = GUIDE[t.dataset.guide]; let x = g && g.tip ? g.tip : '';
+  if(caseCtx) x = x.split(/(?<=\.)\s+/).filter(sn => !/placeholder/i.test(sn)).join(' ');
+  t.textContent = x; }); }
+// Header pill: "Placeholder data" in my own scenario, "Case data" in a case (its tooltip explains the bases).
+let phDefault = null;
+const CASE_DATA_TIP = 'Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored with hindsight. Not financial advice.';
+function setDataPill(inCase){
+  if(phDefault === null) phDefault = { text: $('phPill').textContent, html: $('phTip').innerHTML };
+  $('phPill').textContent = inCase ? 'Case data' : phDefault.text;
+  if(inCase) $('phTip').textContent = CASE_DATA_TIP; else $('phTip').innerHTML = phDefault.html;
+  if(typeof fillGuideTips === 'function' && document.querySelector('.tip[data-guide]')) fillGuideTips();
+}
 // Tabs: click or arrow keys (Left, Right, Home, End) move between tabs; the selected tab is the only one in the Tab order.
 function selectTab(tab, focus){
   const tabs = [...document.querySelectorAll('#behindModal [role="tab"]')];
@@ -1333,7 +1346,8 @@ function restoreMineDraft(mine){ snapStore.draftKill = mine.draftKill.map(k => O
 // Applies title, unit and page markers for a case context (or none); does not touch inputs.
 function setCaseContext(ctx){
   caseCtx = ctx;
-  moneyUnit = ctx ? ctx.c.moneyUnit : '$B';
+  moneyUnit = ctx ? ctx.c.moneyUnit : '$B'; moneyDecimals = ctx ? ctx.c.moneyDecimals || 0 : 0;
+  setDataPill(!!ctx);
   const name = ctx ? ctx.c.title : CASE_NAME;
   $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
   // The subtitle is hidden in a case (CSS); the full title stays available when the name is cut with an ellipsis.

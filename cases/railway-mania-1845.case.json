@@ -1,6 +1,6 @@
 {
  "format": "load-bearing-simulator-case",
- "schemaVersion": 3,
+ "schemaVersion": 4,
  "id": "railway-mania-1845",
  "title": "British railway mania, 1840s",
  "subtitle": "Original lines and lines authorised 1844-45",
@@ -9,6 +9,7 @@
  "asOfRule": "Last quarter-end before the primary railway share index peak (6 October 1845, per Campbell). Uses hindsight. To be applied the same way to later cases.",
  "hindsightDisclosure": "Scored by someone who knew the outcome: that railway shares peaked in 1845 and fell by about two-thirds by 1849, and that the new lines cost more and earned less than promised.",
  "moneyUnit": "£m",
+ "moneyDecimals": 1,
  "moneyRanges": {
   "pool": [
    1,
@@ -45,23 +46,31 @@
    "note": "Only the 1842-1844 values are used: £3,036, £3,081, £3,283. Publication date approximate."
   },
   {
-   "id": "C3",
-   "citation": "Odlyzko, A. (2010). Collective Hallucinations and Inefficient Markets: The British Railway Mania of the 1840s (SSRN 1537338).",
-   "publicationDate": "2010-01-15",
+   "id": "L1",
+   "citation": "Lewin, H. G. (1936). The Railway Mania and its aftermath, 1845-1852. London: Railway Gazette. As reported in the Wikipedia article \"1845 in rail transport\".",
+   "publicationDate": "1936-12-31",
    "kind": "compiled",
-   "seriesEndsOn": "1845-08-31",
-   "note": "Used for: long-term government bond yield of about 3% at the end of 1844; authorised mileage of 805 in 1844 and about 2,700 in 1845 (the 1845 figure differs across sources, 2,700 to 2,896; verify against the paper). Publication date approximate. Series end 1845-08-31 to verify: that the 1845 session closed in August 1845."
+   "seriesEndsOn": "1845-07-31",
+   "note": "Secondary: reported by Wikipedia; the original was not opened. Other sources give about 2,700 to 3,000. Used for: 2,816 miles authorised in 1845 (Royal Assent, 21 July 1845). Publication date approximate."
+  },
+  {
+   "id": "L2",
+   "citation": "The Peel Web, historyhome.co.uk/peel/railways/railways.htm",
+   "publicationDate": "2026-10-06",
+   "kind": "compiled",
+   "seriesEndsOn": "1844-12-31",
+   "note": "Secondary and low quality; the primary source was not found. Used for: 805 miles authorised in 1844. Publication date is the date accessed."
   },
   {
    "id": "O1",
-   "citation": "Odlyzko (2011), same paper as C2.",
+   "citation": "Odlyzko, A. (2011). The collapse of the Railway Mania, the development of capital markets, and the forgotten role of Robert Lucas Nash. Accounting History Review 21(3), 309-345.",
    "publicationDate": "2011-11-01",
    "kind": "outcome",
    "note": "York and North Midland shareholders' committee: lines authorised before 1845 earned 7.65% after interest on debt, those authorised in 1845 earned 4.15%, those authorised in 1846 earned 0.07%. Publication date approximate."
   },
   {
    "id": "O2",
-   "citation": "Odlyzko (2012), same paper as C1.",
+   "citation": "Odlyzko, A. (2012). The Railway Mania: Fraud, disappointed expectations, and the modern economy (revised 14 Aug 2012).",
    "publicationDate": "2012-08-14",
    "kind": "outcome",
    "note": "Share index fell from 167.9 in summer 1845 to 60.5 at the end of 1849, a drop of 64% (Gayer, Rostow and Schwartz, 1953, as reported); East Anglian lines planned at £8,786 and £1,070 revenue per mile, actual £18,342 per mile and £687 revenue per mile in 1855; revenue on new lines largely £1,000-1,500 per mile; actual costs 50% to 100% above promoters' estimates."
@@ -76,14 +85,15 @@
  ],
  "settings": {
   "pool": {
-   "value": 13.19,
+   "value": 13.39,
    "basis": "derived",
    "sourceIds": [
     "C1",
     "P1",
-    "C3"
+    "L1",
+    "L2"
    ],
-   "note": "(2,240 miles x £3,280 + 3,500 miles x £1,670) / 1,000 = £13.19m a year; new lines at the promoters' £1,670 a mile."
+   "note": "2,240 miles x £3,280 (1844, C1) + 3,621 miles x £1,670 (promoters' revenue per mile, P1) = £7,347,200 + £6,047,070 = £13,394,270 a year, rounded to £13.39m. Authorised miles 3,621 = 805 in 1844 (L2) + 2,816 in 1845 (L1)."
   },
   "speed": {
    "value": 4,
@@ -100,10 +110,8 @@
   "disc": {
    "value": 5,
    "basis": "judgement",
-   "sourceIds": [
-    "C3"
-   ],
-   "note": "Long-term government bonds yielded about 3% at the end of 1844 (C3); 2 points added for equity risk; no source for the premium."
+   "sourceIds": [],
+   "note": "5% is my choice: long-term government bonds paid about 3% in this period (not verified to a specific source here); I added 2 points for equity risk."
   },
   "rd": {
    "value": 7,
@@ -171,12 +179,15 @@
      "note": "Revenue per mile rose from £3,036 (1842) to £3,081 (1843) and £3,283 (1844)."
     },
     "share": {
-     "value": 55.7,
+     "value": 54.9,
      "basis": "derived",
      "sourceIds": [
-      "C1"
+      "C1",
+      "P1",
+      "L1",
+      "L2"
      ],
-     "note": "2,240 x £3,280 = £7.35m, divided by £13.19m."
+     "note": "2,240 x £3,280 = £7.347m, divided by the unrounded pool of £13.394m = 54.85%, rounded to 54.9%."
     },
     "offset": {
      "value": -6,
@@ -184,7 +195,7 @@
      "sourceIds": [
       "C1"
      ],
-     "note": "Chosen so the modelled year-0 revenue (about £7.08m) is close to the 1844 actual of £7.35m."
+     "note": "Chosen so the modelled year-0 revenue (about £7.09m at the current pool and share) is close to the 1844 actual of £7.35m."
     },
     "steepness": {
      "value": 1,
@@ -295,13 +306,14 @@
      "note": "Only promoters' claims; no measured traffic on the new lines."
     },
     "share": {
-     "value": 44.3,
+     "value": 45.1,
      "basis": "derived",
      "sourceIds": [
       "P1",
-      "C3"
+      "L1",
+      "L2"
      ],
-     "note": "3,500 x £1,670 = £5.85m, divided by £13.19m."
+     "note": "3,621 x £1,670 = £6.047m, divided by the unrounded pool of £13.394m = 45.15%, rounded to 45.1%. Authorised miles 3,621 = 805 (1844, L2) + 2,816 (1845, L1)."
     },
     "offset": {
      "value": 2,
@@ -316,13 +328,14 @@
      "note": "Neutral default, not used."
     },
     "capex": {
-     "value": 54.6,
+     "value": 56.5,
      "basis": "derived",
      "sourceIds": [
       "P1",
-      "C3"
+      "L1",
+      "L2"
      ],
-     "note": "3,500 miles x £15,600 per mile."
+     "note": "3,621 miles x £15,600 per mile (promoters' estimate, P1) = £56,487,600, rounded to £56.5m. Authorised miles 3,621 = 805 (1844, L2) + 2,816 (1845, L1)."
     },
     "buildStart": {
      "value": 0,
@@ -416,12 +429,14 @@
    "layers": {
     "authorised": {
      "capex": {
-      "value": 125.0,
+      "value": 129.3,
       "basis": "judgement",
       "sourceIds": [
-       "C1"
+       "C1",
+       "L1",
+       "L2"
       ],
-      "note": "3,500 miles x £35,700 = £124.95m, the cost per mile of the lines already built in 1844 (C1); assumes the new lines cost the same; a stress test, not a forecast."
+      "note": "3,621 miles x £35,700 = £129,269,700, rounded to £129.3m: the cost per mile of the lines already built in 1844 (C1); assumes the new lines cost the same; a stress test, not a forecast. Authorised miles 3,621 = 805 (1844, L2) + 2,816 (1845, L1)."
      }
     }
    }

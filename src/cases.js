@@ -12,10 +12,11 @@
 // and per-case money ranges for the value pool and build capex in the case's own money unit.
 
 const CASE_FORMAT = 'load-bearing-simulator-case';
-const CASE_SCHEMA_VERSION = 3;
+const CASE_SCHEMA_VERSION = 4;
 // Schema 2 adds two optional settings: tvMode ("multiple" or "perpetuity") and tvGrowth (an input record, long-run
 // growth in % a year). Schema 1 cases stay valid and open as "multiple" with growth 0.
-const CASE_SCHEMAS = [1, 2, 3];
+const CASE_SCHEMAS = [1, 2, 3, 4];
+// Schema 4 adds moneyDecimals (0, 1 or 2; default 0): decimals on every money label while the case is open.
 const CASE_MONEY_KEYS = ['pool', 'capex'];
 const CASE_DEFAULT_NOTE = 'Neutral default, not used.';
 const CASE_TV_MODES = ['multiple', 'perpetuity'];
@@ -42,9 +43,12 @@ function parseMoneyUnit(u){
   if (!m) return null;
   return { prefix: m[1], suffix: m[2], unit: m[1] + m[2] };
 }
-function formatMoney(x, unit){
+// decimals (optional, 0 to 2): a case's moneyDecimals; whole units otherwise.
+function formatMoney(x, unit, decimals){
   const u = parseMoneyUnit(unit) || { prefix: '$', suffix: 'B' };
-  return (x < 0 ? '−' : '') + u.prefix + Math.abs(x).toFixed(0) + u.suffix;
+  const d = decimals === 1 || decimals === 2 ? decimals : 0;
+  const v = Math.abs(x).toFixed(d);
+  return (x < 0 && Number(v) !== 0 ? '−' : '') + u.prefix + v + u.suffix;
 }
 
 /* ---------- Validation ---------- */
@@ -140,7 +144,7 @@ function phaseOrder(settings, where){
 
 function validateCase(raw, where0){
   const where = where0 || 'Case';
-  const schema3 = raw && raw.schemaVersion >= 3 ? ['description', 'baseLabel', 'moneyRanges'] : [];
+  const schema3 = (raw && raw.schemaVersion >= 3 ? ['description', 'baseLabel', 'moneyRanges'] : []).concat(raw && raw.schemaVersion >= 4 ? ['moneyDecimals'] : []);
   caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'].concat(schema3), where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
   if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
@@ -155,6 +159,8 @@ function validateCase(raw, where0){
   if (/\n/.test(c.hindsightDisclosure)) caseErr(where + ' hindsightDisclosure', 'must be one line');
   if (!parseMoneyUnit(raw.moneyUnit)) caseErr(where + ' moneyUnit', 'expected a currency symbol and an optional unit, e.g. "$B" or "£m"');
   c.moneyUnit = raw.moneyUnit;
+  c.moneyDecimals = raw.moneyDecimals === undefined ? 0 : raw.moneyDecimals;
+  if ([0, 1, 2].indexOf(c.moneyDecimals) < 0) caseErr(where + ' moneyDecimals', 'expected 0, 1 or 2');
   // Schema 3: description (context, not a finding), base version name, money ranges in the case's own unit.
   c.description = raw.description === undefined ? '' : caseText(raw.description, where + ' description', 600);
   if (/\n/.test(c.description)) caseErr(where + ' description', 'must be one paragraph');

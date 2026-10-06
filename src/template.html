@@ -283,6 +283,7 @@ body.case-mode .tb-sub{display:none}
 /* Phones: one header row (title, mode switch, More menu), not sticky. Behind the tool, Cases and Share sit in More;
    the placeholder notice moves from the header pill to a line under the header. */
 .phonenote{display:none}
+body:not(.case-mode) .caseonly{display:none !important}
 @media (max-width:599px){
   .topbar{position:static}
   .tb-in{flex-wrap:nowrap;gap:8px;padding:6px 12px;row-gap:0}
@@ -381,6 +382,7 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
 <main class="wrap">
 
 <p class="phonenote nocase"><b>Placeholders, not data.</b> Every number here was chosen to show the mechanics; none is sourced. Not financial advice.</p>
+<p class="phonenote caseonly"><b>Case data.</b> Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored with hindsight. Not financial advice.</p>
 <p class="notice slim analystnote">Analyst mode works best on a larger screen.</p>
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
 
