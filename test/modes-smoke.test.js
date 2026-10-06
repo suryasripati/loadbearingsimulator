@@ -42,7 +42,7 @@ test('layout: title with a case-name variable, subtitle, header buttons, footer;
   assert.equal(doc.querySelector('.tb-name').textContent, 'AI Stack: Load Bearing Simulator');
   assert.equal(doc.getElementById('caseName').textContent, Mo.CASE_NAME);
   assert.equal(doc.querySelector('.tb-sub').textContent, 'Which layers carry the weight, and who gets paid?');
-  assert.deepEqual([...doc.querySelectorAll('.tb-right button')].map(b => b.textContent), ['Basic', 'Advanced', 'Analyst', 'Placeholder data', 'Behind the tool', 'Cases']);
+  assert.deepEqual([...doc.querySelectorAll('.tb-right button')].map(b => b.textContent), ['Basic', 'Advanced', 'Analyst', 'Placeholder data', 'Behind the tool', 'Cases', 'Share', 'More', 'Share a link']);
   assert.equal(doc.getElementById('casesBtn').hidden, true, 'live build has no cases, so the Cases pill is hidden');
   assert.equal(doc.querySelector('footer.foot').textContent, 'Not financial advice.');
   assert.ok(![...doc.querySelectorAll('main h2, main h3')].some(h => /How it works/.test(h.textContent)), 'section removed from the page');

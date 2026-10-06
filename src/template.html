@@ -242,6 +242,17 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+/* Share popover (header) and the phone overflow menu */
+.popover{position:fixed;z-index:70;width:360px;max-width:calc(100vw - 16px);background:var(--card);color:var(--body);border:1px solid var(--hair);border-radius:8px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.popover[hidden]{display:none}
+.popover .modal-head h2{font-size:16px}
+.popover #shareOut{width:100%;margin-top:8px;box-sizing:border-box}
+.morewrap{display:none;position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 4px);z-index:71;min-width:160px;background:var(--card);border:1px solid var(--hair);border-radius:6px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.2);display:flex;flex-direction:column}
+.menu[hidden]{display:none}
+.menu [role="menuitem"]{text-align:left;background:none;border:none;padding:7px 10px;border-radius:4px;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.menu [role="menuitem"]:hover,.menu [role="menuitem"]:focus{background:var(--tint);outline:none}
+@media (max-width:599px){#shareBtn{display:none}.morewrap{display:inline-block}}
 .warnline{margin:2px 0 0;color:var(--amber);font-weight:700}
 /* Behind the tool: tabbed dialog, internal scroll */
 .modal.tall{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -318,6 +329,9 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
       <span class="tipwrap"><button class="pill" type="button" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
       <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
       <button class="pill behind" type="button" id="casesBtn" aria-haspopup="dialog" aria-controls="casesModal" hidden>Cases</button>
+      <button class="pill behind" type="button" id="shareBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="sharePop">Share</button>
+      <span class="morewrap"><button class="pill behind" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">More</button>
+        <span class="menu" id="moreMenu" role="menu" aria-label="More" hidden><button type="button" role="menuitem" id="moreShare" tabindex="-1">Share a link</button></span></span>
     </div>
   </div>
 </header>
@@ -511,6 +525,13 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
 </main>
 <footer class="foot">Not financial advice.</footer>
 
+<div class="popover" id="sharePop" role="dialog" aria-labelledby="shareTitle" hidden>
+  <div class="modal-head"><h2 id="shareTitle">Share</h2><button class="reset" type="button" id="shareClose" aria-label="Close">Close</button></div>
+  <p class="notice slim" id="shareWarn">A link carries your current settings and layer inputs in the address. Anyone who has the link can read them. It never includes your allocations, snapshot names, notes or kill criteria. In a case, it carries the case and only the inputs you changed.</p>
+  <div class="seg" style="align-items:center;margin:8px 0 0"><button class="pill" type="button" id="shareCopy">Copy link</button></div>
+  <input type="text" id="shareOut" class="txt" readonly aria-label="Link to the current settings" hidden>
+  <p class="legend" id="shareMsg" role="status"></p>
+</div>
 <div class="modal-back" id="behindModal" hidden>
   <div class="modal wide tall" role="dialog" aria-modal="true" aria-labelledby="behindTitle" tabindex="-1">
     <div class="modal-head"><h2 id="behindTitle">Behind the tool</h2><button class="reset" type="button" id="behindClose" aria-label="Close">Close</button></div>

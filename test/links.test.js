@@ -169,3 +169,55 @@ test('a malformed or incompatible link shows a plain message and changes nothing
   assert.equal(doc.getElementById('linkNotice').children.length, 0);
   win.close();
 });
+
+test('header Share: in every mode; the popover has the warning and Copy link; Esc or a click outside closes it and focus returns', async () => {
+  const { doc, win, errors, copied } = load({ hash: '#basic' });
+  const btn = doc.getElementById('shareBtn'), pop = doc.getElementById('sharePop');
+  assert.equal(btn.closest('[data-min]'), null, 'not tied to a mode');
+  assert.equal(btn.getAttribute('aria-haspopup'), 'dialog');
+  for (const m of ['basic', 'advanced', 'analyst']) {
+    click(win, doc.querySelector('[data-mode-btn="' + m + '"]'));
+    assert.equal(btn.hidden, false, m);
+  }
+  click(win, doc.querySelector('[data-mode-btn="basic"]'));
+  setVal(win, doc.getElementById('g_disc'), 11);
+  btn.focus(); click(win, btn);
+  assert.equal(pop.hidden, false); assert.equal(btn.getAttribute('aria-expanded'), 'true');
+  assert.equal(doc.activeElement, doc.getElementById('shareCopy'));
+  assert.match(doc.getElementById('shareWarn').textContent, /Anyone who has the link can read them\. It never includes your allocations/);
+  click(win, doc.getElementById('shareCopy'));
+  await new Promise(r => setTimeout(r, 10));
+  assert.match(win.location.hash, /^#s=/); assert.equal(copied[0], win.location.href);
+  assert.equal(doc.getElementById('shareOut').value, win.location.href);
+  assert.match(doc.getElementById('shareMsg').textContent, /Link copied/);
+  assert.equal(decode(win.location.hash).g.disc, 11);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(pop.hidden, true); assert.equal(btn.getAttribute('aria-expanded'), 'false'); assert.equal(doc.activeElement, btn);
+  click(win, btn); assert.equal(pop.hidden, false);
+  click(win, doc.querySelector('main'));
+  assert.equal(pop.hidden, true, 'a click outside closes it');
+  // The Analyst snapshots control is still there.
+  assert.ok(doc.getElementById('copyLink').closest('#snapshots'));
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('phones: Share moves into a "More" overflow menu (CSS below 600px); the menu item opens the same popover', () => {
+  const { doc, win } = load();
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(css.includes('@media (max-width:599px){#shareBtn{display:none}.morewrap{display:inline-block}}'));
+  assert.ok(/\.morewrap\{display:none/.test(css));
+  // jsdom has no media queries: show the phone menu the way the phone CSS does.
+  const st = doc.createElement('style'); st.textContent = '#shareBtn{display:none}.morewrap{display:inline-block}'; doc.head.appendChild(st);
+  const more = doc.getElementById('moreBtn'), menu = doc.getElementById('moreMenu');
+  assert.equal(more.getAttribute('aria-haspopup'), 'menu');
+  more.focus(); click(win, more);
+  assert.equal(menu.hidden, false); assert.equal(doc.activeElement, doc.getElementById('moreShare'));
+  assert.equal(doc.getElementById('moreShare').getAttribute('role'), 'menuitem');
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(menu.hidden, true); assert.equal(doc.activeElement, more);
+  click(win, more); click(win, doc.getElementById('moreShare'));
+  assert.equal(menu.hidden, true); assert.equal(doc.getElementById('sharePop').hidden, false);
+  assert.equal(doc.activeElement, doc.getElementById('shareCopy'));
+  win.close();
+});

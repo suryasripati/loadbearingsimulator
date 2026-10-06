@@ -948,14 +948,53 @@ function snapLabel(path){
 }
 /* ---------- links ---------- */
 // "Copy link" puts the current settings in the address (#s=...), never allocations or notes, and copies the address.
-function copyLink(){
+// Used by the header Share popover and by the Snapshots section (out, msg: where to show the link and the result).
+function copyLink(outId, msgId){
   const text = caseCtx ? makeLinkText(G, layers, { caseId: caseCtx.c.id, versionId: caseCtx.versionId, base: caseCtx.st }) : makeLinkText(G, layers);
   try{ history.replaceState(null, '', location.pathname + location.search + '#' + text); }catch(e){}
-  const url = location.href, out = $('linkOut');
+  const url = location.href, out = $(outId || 'linkOut'), msg = $(msgId || 'linkMsg');
   out.value = url; out.hidden = false;
-  const done = () => { $('linkMsg').textContent = 'Link copied. Anyone who has it can read these settings; your allocations are not in it.'; };
-  const manual = () => { out.focus(); out.select(); $('linkMsg').textContent = 'The browser did not allow copying. The link is selected above: copy it yourself.'; };
+  const done = () => { msg.textContent = 'Link copied. Anyone who has it can read these settings; your allocations are not in it.'; };
+  const manual = () => { out.focus(); out.select(); msg.textContent = 'The browser did not allow copying. The link is selected: copy it yourself.'; };
   try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, manual); else manual(); }catch(e){ manual(); }
+}
+/* Share popover in the header (every mode) and the phone overflow menu. Non-modal: Esc or a click outside closes it,
+   and focus returns to the button that opened it. */
+let shareReturn = null;
+function openShare(from){
+  closeMore(false);
+  shareReturn = from || $('shareBtn');
+  const p = $('sharePop'); p.hidden = false;
+  $('shareOut').hidden = true; $('shareMsg').textContent = '';
+  const a = (shareReturn.offsetParent ? shareReturn : $('moreBtn')).getBoundingClientRect(), r = p.getBoundingClientRect();
+  const pos = placeTip({ left: a.left, right: a.right, top: a.top, bottom: a.bottom }, { width: r.width, height: r.height }, { width: window.innerWidth, height: window.innerHeight });
+  p.style.left = pos.left + 'px'; p.style.top = pos.top + 'px';
+  $('shareBtn').setAttribute('aria-expanded', 'true');
+  $('shareCopy').focus();
+}
+function closeShare(focus){
+  if($('sharePop').hidden) return;
+  $('sharePop').hidden = true; $('shareBtn').setAttribute('aria-expanded', 'false');
+  if(focus !== false && shareReturn){ const r = shareReturn.offsetParent !== null || !shareReturn.checkVisibility ? shareReturn : $('moreBtn'); r.focus(); }
+  shareReturn = null;
+}
+function openMore(){ $('moreMenu').hidden = false; $('moreBtn').setAttribute('aria-expanded', 'true'); $('moreShare').focus(); }
+function closeMore(focus){ if($('moreMenu').hidden) return; $('moreMenu').hidden = true; $('moreBtn').setAttribute('aria-expanded', 'false'); if(focus) $('moreBtn').focus(); }
+function bindShare(){
+  $('shareBtn').addEventListener('click', () => { if($('sharePop').hidden) openShare($('shareBtn')); else closeShare(); });
+  $('shareClose').addEventListener('click', () => closeShare());
+  $('shareCopy').addEventListener('click', () => copyLink('shareOut', 'shareMsg'));
+  $('moreBtn').addEventListener('click', () => { if($('moreMenu').hidden) openMore(); else closeMore(true); });
+  $('moreShare').addEventListener('click', () => openShare($('moreBtn')));
+  document.addEventListener('keydown', e => {
+    if(e.key !== 'Escape') return;
+    if(!$('sharePop').hidden){ e.stopPropagation(); closeShare(); }
+    else if(!$('moreMenu').hidden) closeMore(true);
+  });
+  document.addEventListener('click', e => {
+    if(!$('sharePop').hidden && !$('sharePop').contains(e.target) && e.target !== $('shareBtn') && !$('moreMenu').contains(e.target)) closeShare(false);
+    if(!$('moreMenu').hidden && !e.target.closest('.morewrap')) closeMore(false);
+  });
 }
 // The address keeps the view mode only, once a link has been read.
 function clearLinkHash(){ try{ history.replaceState(null, '', location.pathname + location.search + '#' + mode); }catch(e){} }
@@ -1011,7 +1050,7 @@ function snapInit(){
   $('snapRespSkip').addEventListener('click', () => snapCommitSave(null));
   $('snapRespCancel').addEventListener('click', snapHideRespond);
   $('cmpGo').addEventListener('click', snapRenderCompare);
-  $('copyLink').addEventListener('click', copyLink);
+  $('copyLink').addEventListener('click', () => copyLink('linkOut', 'linkMsg'));
 }
 /* ---------- view modes, KPI tiles, hidden state ---------- */
 // Modes only change what is shown (CSS hides elements tagged data-min above the current mode). Every input stays in
@@ -1428,7 +1467,7 @@ function bindCases(){
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
-  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
+  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   showLoadNotes();
