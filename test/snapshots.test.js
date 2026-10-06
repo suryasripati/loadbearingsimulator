@@ -440,3 +440,22 @@ test('adoption speed range is 1 to 20 years; values below 3 are now valid; the m
   assert.match(require('../src/guide.js').guideRows().find(r => r.key === 'speed').range, /^1 to 20, step 0.5; default 8$/);
   assert.equal(M.MODEL_VERSION, 2);
 });
+
+test('adoption midpoint range is 0.5 to 14 years; values below 2 are now valid; the model handles them', () => {
+  assert.deepEqual(D.GLOBAL_RANGES.mid, [0.5, 14, 0.5]);
+  for (const v of [0.5, 1, 2, 14]) { const r = S.snapReadStoredText(mutate(f => { f.snapshots[0].inputs.G.mid = v; })); assert.equal(r.ok, true, v + ': ' + r.error); }
+  reject(mutate(f => { f.snapshots[0].inputs.G.mid = 0.4; }), /setting mid: value 0.4 is outside 0.5 to 14/);
+  const o = M.runLayer(baseLayers()[0], { ...baseG(), mid: 0.5, speed: 1 });
+  assert.ok(isFinite(o.npv));
+  // Links and cases use the same shared range.
+  assert.equal(S.parseLinkText(S.makeLinkText({ ...baseG(), mid: 1 }, baseLayers())).ok, true);
+  const bad = S.parseLinkText(S.makeLinkText({ ...baseG(), mid: 0.4 }, baseLayers()));
+  assert.equal(bad.ok, false); assert.match(bad.error, /setting mid: value 0.4 is outside 0.5 to 14/);
+  const C = require('../src/cases.js'), { makeCase } = require('./support/make-synthetic-cases.js');
+  const c = JSON.parse(JSON.stringify(makeCase(3, '£m'))); c.settings.mid.value = 1;
+  assert.doesNotThrow(() => C.validateCase(c));
+  c.settings.mid.value = 0.4; assert.throws(() => C.validateCase(c), /value 0.4 is outside the tool’s range 0.5 to 14/);
+  // The input guide reads the shared range.
+  assert.match(require('../src/guide.js').guideRows().find(r => r.key === 'mid').range, /^0.5 to 14, step 0.5; default 8$/);
+  assert.equal(M.MODEL_VERSION, 2);
+});
