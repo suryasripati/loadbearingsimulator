@@ -226,6 +226,12 @@ function buildInputs(){
 }
 // First-screen scorecard: layer, verdict, present value, headroom and an editable allocation. Built once so the
 // allocation box keeps focus while typing; values are refreshed in place on every render.
+// Phones (below 600px) show tables marked "cards" as one card per row; each cell carries its column name.
+function labelCells(t){
+  if(!t) return;
+  const heads = [...t.querySelectorAll('thead th')].map(h => h.textContent.trim());
+  t.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((td, i) => { if(heads[i]) td.setAttribute('data-label', heads[i]); }));
+}
 function buildScoreLite(){
   const r = LR('alloc');
   let h = '<thead><tr><th class="l">Layer</th><th class="l">Verdict</th><th>Present value</th><th>Headroom</th><th>My allocation</th></tr></thead><tbody>';
@@ -234,6 +240,7 @@ function buildScoreLite(){
       + '<td><input type="number" data-i="'+i+'" data-k="alloc" data-lite="1" min="'+r[0]+'" max="'+r[1]+'" step="'+r[2]+'" value="'+L.alloc+'" aria-label="'+L.name+': My allocation"></td></tr>';
   });
   $('scoreLite').innerHTML = h + '</tbody>';
+  labelCells($('scoreLite'));
   $('scoreLite').querySelectorAll('input').forEach(inp => inp.addEventListener('input', onLayerInput));
 }
 function updateScoreLite(res){
@@ -487,6 +494,7 @@ function scoreTable(res){
   });
   h += '</tbody>';
   $('score').innerHTML = h;
+  labelCells($('score'));
   $('beLegend').innerHTML = isB()
     ? '<b>Break-even multiple.</b> The most you could pay, as a multiple of year-'+(G.entry+1)+' operating cash, and still earn the discount rate. Headroom is that figure minus your multiple. “Not meaningful” means that year’s cash is close to zero, which is normal early on the S-curve and is itself a finding about early-stage multiples.'
     : '<b>Break-even premium.</b> The most you could pay above build cost and still earn the discount rate. Headroom is that figure minus your entry premium.';
@@ -591,6 +599,7 @@ function expoTable(){
   });
   h += '</tbody>';
   $('expo').innerHTML = h;
+  labelCells($('expo'));
   const cur = runAll(G);
   const gateFail = cur.reduce((a,o,i) => a + (o.merit ? 0 : w[i]), 0);
   const biggest = layers.reduce((b,L,i) => w[i]>w[b] ? i : b, 0);
@@ -621,7 +630,7 @@ function fragilityPanel(){
   const list = (a) => a.length ? a.join(', ') : 'none';
   let h = '<p style="margin:0 0 6px"><b>Verdict changes if the build starts two years later for: '+list(names('build-late'))+'.</b>';
   if(layers.some(L => L.offset!==0)) h += '<br><b>Verdict depends on the timing offset (set to 0) for: '+list(names('offset-zero'))+'.</b> Offsets are your judgement, not data.';
-  h += '</p><div class="scroll"><table class="frag"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Present value</th><th>Flips under</th><th class="l">Shocks that change the verdict (direction, new verdict)</th></tr></thead><tbody>';
+  h += '</p><div class="scroll"><table class="frag cards"><thead><tr><th class="l">Layer</th><th class="l">Verdict now</th><th>Present value</th><th>Flips under</th><th class="l">Shocks that change the verdict (direction, new verdict)</th></tr></thead><tbody>';
   fr.forEach((f,i) => {
     const L = layers[i];
     const split = f.n ? ': '+f.worse+' worse, '+f.better+' better'+(f.mixed ? ', '+f.mixed+' mixed' : '') : '';
@@ -632,6 +641,7 @@ function fragilityPanel(){
   });
   h += '</tbody></table></div>';
   $('fragility').innerHTML = h;
+  labelCells(document.querySelector('#fragility table'));
 }
 // Shown in any mode when a layer's share falls below the display threshold by year 15 at the current inputs.
 function lowShareNote(){

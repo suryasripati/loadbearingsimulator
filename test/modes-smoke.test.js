@@ -353,3 +353,30 @@ test('long-run growth: a warning shows above 4% a year (a display choice, not ev
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('phones (below 600px): scorecards, allocation and fragility tables become one card per layer; input grids say they scroll sideways', () => {
+  const { doc, win } = load({ hash: '#analyst' });
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(/@media \(max-width:599px\)\{\s*\.scrollhint\{display:block\}\s*table\.cards thead\{display:none\}/.test(css));
+  assert.ok(css.includes('table.cards td::before{content:attr(data-label);display:block'));
+  assert.ok(css.includes('.twocol,.twocol.small{grid-template-columns:1fr}'), 'chart pairs stack');
+  for (const sel of ['#scoreLite', '#score', '#expo', '#fragility table']) {
+    const t = doc.querySelector(sel);
+    assert.ok(t.classList.contains('cards'), sel);
+    const heads = [...t.querySelectorAll('thead th')].map(h => h.textContent.trim());
+    const rows = [...t.querySelectorAll('tbody tr')];
+    assert.ok(rows.length >= 3, sel + ' rows');
+    rows.forEach(tr => [...tr.children].forEach((td, i) => assert.equal(td.dataset.label, heads[i], sel + ' cell ' + i)));
+  }
+  // The same fields per mode: hidden columns stay hidden in the cards (the data-min rule still applies to cells).
+  assert.ok(doc.querySelector('#score tbody td[data-min="advanced"]'));
+  for (const id of ['inputs', 'phaseTable', 'killTable']) {
+    const hint = doc.getElementById(id).parentElement.querySelector('.scrollhint') || doc.getElementById(id).parentElement.previousElementSibling;
+    assert.ok(hint && hint.classList.contains('scrollhint'), id + ' has a hint');
+    assert.equal(hint.textContent, 'Scroll sideways to see every column →');
+  }
+  // Choosing a layer from a card still works.
+  click(win, doc.querySelectorAll('#score tbody .rowname')[3]);
+  assert.equal(doc.getElementById('detailTitle').textContent, 'Detail: ' + D.DEFAULT_LAYERS[3].name);
+  win.close();
+});
