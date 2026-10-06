@@ -1128,14 +1128,69 @@ function bindBehind(){
   });
 }
 // Input guide (in "Behind the tool"): meaning, where to look, recipe and hindsight trap for every input.
+// Input guide (the "Input guide" tab): one table from guideRows(), grouped by section, with a search by input name
+// and a "Case guidance" toggle for the as-of-date columns. On phones the CSS turns each row into a card.
+const GUIDE_COLS = [['label', 'Input', 'k'], ['meaning', 'What it means'], ['range', 'Range and default', 'rg'], ['shownIn', 'Shown in'],
+  ['where', 'Where to look at the as-of date', 'cg'], ['recipe', 'Recipe', 'cg'], ['trap', 'Hindsight trap', 'cg']];
+// Text with `formulas` in backticks: formulas go in <code>, everything as text nodes (never HTML).
+function guideText(t){
+  const f = document.createDocumentFragment();
+  String(t).split('`').forEach((part, i) => { if(part) f.appendChild(i % 2 ? el('code', {text: part}) : document.createTextNode(part)); });
+  return f;
+}
+const guideLabel = (t) => t.replace('$B', moneyUnit);
 function renderGuide(){
-  const box = $('inputGuide'); box.textContent = '';
-  GUIDE_INTRO.forEach(t => box.appendChild(el('p', {text: t})));
-  Object.keys(GUIDE).forEach(k => {
-    const g = GUIDE[k];
-    box.appendChild(el('h4', {text: g.label}));
-    [['Meaning. ', g.meaning], ['Where to look at the as-of date. ', g.where], ['Recipe. ', g.recipe], ['Hindsight trap. ', g.trap]].forEach(([b, t]) => box.appendChild(el('p', null, [el('b', {text: b}), t])));
+  const intro = $('guideIntro'); intro.textContent = '';
+  GUIDE_INTRO.forEach(t => intro.appendChild(el('p', {cls:'legend', text: t})));
+  const t = $('guideTable'); t.textContent = '';
+  t.appendChild(el('thead', null, [el('tr', null, GUIDE_COLS.map(c => el('th', {scope:'col', cls: c[2] === 'cg' ? 'cg' : '', text: c[1]})))]));
+  const tb = el('tbody');
+  let group = null;
+  guideRows().forEach(r => {
+    if(r.group !== group){ group = r.group; tb.appendChild(el('tr', {cls:'grp', 'data-group': group}, [el('th', {colspan: String(GUIDE_COLS.length), scope:'colgroup', text: group})])); }
+    tb.appendChild(el('tr', {'data-key': r.key, 'data-group': r.group, 'data-name': guideLabel(r.label).toLowerCase()}, GUIDE_COLS.map(c => {
+      const td = el('td', {cls: c[2] || '', 'data-label': c[1]});
+      td.appendChild(c[0] === 'label' ? document.createTextNode(guideLabel(r.label)) : guideText(r[c[0]]));
+      return td;
+    })));
   });
+  tb.appendChild(el('tr', {cls:'none', hidden:''}, [el('td', {colspan: String(GUIDE_COLS.length), text: 'No input matches.'})]));
+  t.appendChild(tb);
+  guideFilter();
+}
+// Search filters rows by input name; group headers show only when a row in the group matches.
+function guideFilter(){
+  const q = $('guideSearch').value.trim().toLowerCase(), cg = $('guideCase').checked;
+  let n = 0;
+  const rows = [...document.querySelectorAll('#guideTable tbody tr[data-key]')];
+  rows.forEach(tr => { const on = !q || tr.dataset.name.indexOf(q) >= 0; tr.hidden = !on; if(on) n++; });
+  document.querySelectorAll('#guideTable tbody tr.grp').forEach(tr => { tr.hidden = !rows.some(x => !x.hidden && x.dataset.group === tr.dataset.group); });
+  document.querySelector('#guideTable tr.none').hidden = n > 0;
+  document.querySelectorAll('#guideTable .cg').forEach(c => { c.hidden = !cg; });
+  $('guideCount').textContent = n + ' of ' + rows.length + ' inputs';
+}
+// Info icons on the sliders take their text from the guide (single source).
+function fillGuideTips(){ document.querySelectorAll('.tip[data-guide]').forEach(t => { const g = GUIDE[t.dataset.guide]; t.textContent = g && g.tip ? g.tip : ''; }); }
+// Tabs: click or arrow keys (Left, Right, Home, End) move between tabs; the selected tab is the only one in the Tab order.
+function selectTab(tab, focus){
+  const tabs = [...document.querySelectorAll('#behindModal [role="tab"]')];
+  tabs.forEach(t => { const on = t === tab; t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1; $(t.getAttribute('aria-controls')).hidden = !on; });
+  $('behindBody').scrollTop = 0;
+  if(focus) tab.focus();
+}
+function bindTabs(){
+  const tabs = [...document.querySelectorAll('#behindModal [role="tab"]')];
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => selectTab(t, true));
+    t.addEventListener('keydown', e => {
+      const k = e.key, n = tabs.length;
+      const j = k === 'ArrowRight' ? (i + 1) % n : k === 'ArrowLeft' ? (i - 1 + n) % n : k === 'Home' ? 0 : k === 'End' ? n - 1 : -1;
+      if(j < 0) return;
+      e.preventDefault(); selectTab(tabs[j], true);
+    });
+  });
+  $('guideSearch').addEventListener('input', guideFilter);
+  $('guideCase').addEventListener('change', guideFilter);
 }
 
 /* ---------- case library ---------- */
@@ -1154,6 +1209,7 @@ function setCaseContext(ctx){
   document.querySelector('.tb-name').title = ctx ? name + ': Load Bearing Simulator' : '';
   document.body.classList.toggle('case-mode', !!ctx);
   if(!ctx && modalOpen === 'whModal') closeModal(true);
+  renderGuide(); // labels carry the money unit
   $('caseBar').hidden = !ctx;
   $('whatHappened').hidden = !ctx;
   if(ctx) renderCaseBar();
@@ -1321,7 +1377,7 @@ function bindCases(){
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
-  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); renderGuide();
+  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   let rz = null;

@@ -298,10 +298,10 @@ test('snapshots in a case: saved with the case id; cannot be compared with my sc
   win.close();
 });
 
-test('Behind the tool carries the input guide (meaning, where to look, recipe, hindsight trap) for every input', () => {
-  const { doc } = load();
-  const g = $(doc, 'inputGuide');
-  const G = require('../src/guide.js');
-  assert.equal(g.querySelectorAll('h4').length, Object.keys(G.GUIDE).length);
-  assert.match(g.textContent, /Hindsight trap\./);
+test('the input guide labels follow the case money unit', () => {
+  const { doc, win } = load();
+  assert.match(doc.querySelector('#guideTable tr[data-key="capex"] td').textContent, /\$B/);
+  openCase(win, doc, 'synthetic-3-layer');
+  assert.match(doc.querySelector('#guideTable tr[data-key="capex"] td').textContent, /£m/);
+  win.close();
 });

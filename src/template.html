@@ -242,6 +242,36 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+/* Behind the tool: tabbed dialog, internal scroll */
+.modal.tall{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.modal.tall .modal-body{overflow:auto;flex:1 1 auto;min-height:0;margin:0 -20px;padding:0 20px 4px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--hair);margin:0 0 10px}
+.tabs [role="tab"]{border:1px solid transparent;border-bottom:none;background:none;color:var(--body);padding:6px 12px;border-radius:6px 6px 0 0;font:inherit;font-size:13.5px;cursor:pointer;margin-bottom:-1px}
+.tabs [role="tab"][aria-selected="true"]{border-color:var(--hair);background:var(--card);color:var(--ink);font-weight:700}
+.tabs [role="tab"]:focus-visible{outline:2px solid var(--copper);outline-offset:-2px}
+[role="tabpanel"]:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+.guidebar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;font-size:13px}
+.guidebar .srch input{margin-left:6px;width:200px;max-width:60vw;font:inherit;padding:3px 6px;border:1px solid var(--hair);border-radius:4px;background:var(--card);color:var(--ink)}
+.guidetable{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+.guidetable th,.guidetable td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--hair);white-space:normal}
+.guidetable thead th{position:sticky;top:0;background:var(--card);z-index:1;color:var(--ink);box-shadow:0 1px 0 var(--hair)}
+.guidetable tr.grp th{background:var(--tint);color:var(--ink);font-size:13px}
+.guidetable td.k{font-weight:700;color:var(--ink);min-width:140px}
+.guidetable td.rg{min-width:140px}
+.guidetable code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--tint);padding:0 3px;border-radius:3px;white-space:normal}
+@media (max-width:640px){
+  .modal-back{padding:8px}
+  .modal.wide{max-width:none}
+  .modal.tall{max-height:calc(100vh - 16px)}
+  .guidetable thead{display:none}
+  .guidetable,.guidetable tbody,.guidetable tr,.guidetable td,.guidetable th{display:block;width:auto}
+  .guidetable tr{border:1px solid var(--hair);border-radius:6px;margin:0 0 8px;padding:4px 0}
+  .guidetable tr.grp{border:none;padding:0;margin:12px 0 6px}
+  .guidetable td{border:none;padding:3px 10px}
+  .guidetable td[hidden]{display:none}
+  .guidetable td::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:var(--cap);text-transform:none}
+  .guidetable td.k::before{content:none}
+}
 .tb-name{overflow:hidden;text-overflow:ellipsis}
 .modal.wide{max-width:1000px}
 .modal.narrow{max-width:460px}
@@ -306,11 +336,11 @@ td .bchipwrap{margin-left:3px}
       <button data-s="base" aria-pressed="false">Base</button>
       <button data-s="fast" aria-pressed="false">Fast</button>
     </div>
-    <div class="cctl"><div class="cctl-h"><label for="g_speed">Adoption speed</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption speed" aria-expanded="false" aria-controls="tip3">i</button><span class="tip" role="tooltip" id="tip3">Years to go from 10% to 90% of full adoption.</span></span><output id="o_speed"></output></div><input type="range" id="g_speed"></div>
-    <div class="cctl"><div class="cctl-h"><label for="g_mid">Adoption midpoint</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption midpoint" aria-expanded="false" aria-controls="tip4">i</button><span class="tip" role="tooltip" id="tip4">Year in which adoption reaches half of its full level.</span></span><output id="o_mid"></output></div><input type="range" id="g_mid"></div>
-    <div class="cctl"><div class="cctl-h"><label for="g_pool">Value pool</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value pool" aria-expanded="false" aria-controls="tip5">i</button><span class="tip" role="tooltip" id="tip5">Yearly revenue, all layers combined. Scale of applications lives here.</span></span><output id="o_pool"></output></div><input type="range" id="g_pool"></div>
-    <div class="cctl" id="ctl_prem"><div class="cctl-h"><label for="g_prem">Entry premium</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry premium" aria-expanded="false" aria-controls="tip6">i</button><span class="tip" role="tooltip" id="tip6">0% means you pay what it costs to build. 100% means you pay double. This is the lever that asks whether money should go in at all.</span></span><output id="o_prem"></output></div><input type="range" id="g_prem"></div>
-    <div class="cctl"><div class="cctl-h"><label for="g_disc">Discount rate</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Discount rate" aria-expanded="false" aria-controls="tip7">i</button><span class="tip" role="tooltip" id="tip7">The return you need to be paid for the risk.</span></span><output id="o_disc"></output></div><input type="range" id="g_disc"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_speed">Adoption speed</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption speed" aria-expanded="false" aria-controls="tip3">i</button><span class="tip" role="tooltip" id="tip3" data-guide="speed"></span></span><output id="o_speed"></output></div><input type="range" id="g_speed"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_mid">Adoption midpoint</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Adoption midpoint" aria-expanded="false" aria-controls="tip4">i</button><span class="tip" role="tooltip" id="tip4" data-guide="mid"></span></span><output id="o_mid"></output></div><input type="range" id="g_mid"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_pool">Value pool</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value pool" aria-expanded="false" aria-controls="tip5">i</button><span class="tip" role="tooltip" id="tip5" data-guide="pool"></span></span><output id="o_pool"></output></div><input type="range" id="g_pool"></div>
+    <div class="cctl" id="ctl_prem"><div class="cctl-h"><label for="g_prem">Entry premium</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry premium" aria-expanded="false" aria-controls="tip6">i</button><span class="tip" role="tooltip" id="tip6" data-guide="premium"></span></span><output id="o_prem"></output></div><input type="range" id="g_prem"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_disc">Discount rate</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Discount rate" aria-expanded="false" aria-controls="tip7">i</button><span class="tip" role="tooltip" id="tip7" data-guide="disc"></span></span><output id="o_disc"></output></div><input type="range" id="g_disc"></div>
   </div>
   <div class="card" id="quadCard">
     <h2 class="ctitle"><span>Where each layer lands</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Where each layer lands" aria-expanded="false" aria-controls="tip8">i</button><span class="tip" role="tooltip" id="tip8">Up is stronger demand evidence. Right is more room between what capital pays and what the layer can return at your discount rate. Dot size is your allocation. A dashed ring means at least one fragility flag. Click any layer name or dot to see its detail.</span></span></h2>
@@ -335,16 +365,16 @@ td .bchipwrap{margin-left:3px}
       <button data-d="B" aria-pressed="false">Multiple of forward cash</button>
       <span class="tipwrap"><button class="info" type="button" aria-label="About: Entry price definition" aria-expanded="false" aria-controls="tip12">i</button><span class="tip" role="tooltip" id="tip12">How the entry price is set. <span id="defNote"></span></span></span>
     </div>
-    <div class="cctl"><div class="cctl-h"><label for="g_entry">Entry year</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry year" aria-expanded="false" aria-controls="tip13">i</button><span class="tip" role="tooltip" id="tip13">You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</span></span><output id="o_entry"></output></div><input type="range" id="g_entry"></div>
-    <div class="cctl" id="ctl_mult" hidden><div class="cctl-h"><label for="g_mult">Entry multiple</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry multiple" aria-expanded="false" aria-controls="tip14">i</button><span class="tip" role="tooltip" id="tip14">Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</span></span><output id="o_mult"></output></div><input type="range" id="g_mult"></div>
-    <div class="cctl"><div class="cctl-h"><label for="g_rd">Interest on debt</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Interest on debt" aria-expanded="false" aria-controls="tip15">i</button><span class="tip" role="tooltip" id="tip15">Debt is repaid evenly over eight years after the build ends.</span></span><output id="o_rd"></output></div><input type="range" id="g_rd"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_entry">Entry year</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry year" aria-expanded="false" aria-controls="tip13">i</button><span class="tip" role="tooltip" id="tip13" data-guide="entry"></span></span><output id="o_entry"></output></div><input type="range" id="g_entry"></div>
+    <div class="cctl" id="ctl_mult" hidden><div class="cctl-h"><label for="g_mult">Entry multiple</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry multiple" aria-expanded="false" aria-controls="tip14">i</button><span class="tip" role="tooltip" id="tip14" data-guide="mult"></span></span><output id="o_mult"></output></div><input type="range" id="g_mult"></div>
+    <div class="cctl"><div class="cctl-h"><label for="g_rd">Interest on debt</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Interest on debt" aria-expanded="false" aria-controls="tip15">i</button><span class="tip" role="tooltip" id="tip15" data-guide="rd"></span></span><output id="o_rd"></output></div><input type="range" id="g_rd"></div>
     <div class="seg compact" id="tvSwitch" role="group" aria-label="Value beyond year 15" style="margin-top:6px">
       <button data-t="multiple" aria-pressed="false">Multiple (v0.1)</button>
       <button data-t="perpetuity" aria-pressed="false">Growing perpetuity</button>
-      <span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15, mode" aria-expanded="false" aria-controls="tipTvMode">i</button><span class="tip" role="tooltip" id="tipTvMode">How value beyond year 15 is counted. <b>Multiple</b> (default): your multiple times year-15 cash after sustaining spend. <b>Growing perpetuity</b>: year-15 cash growing at a long-run rate g for ever, discounted at your rate r, which equals a multiple of (1 + g) ÷ (r − g). At g = 0 that is 1 ÷ r, so 10x at 10%, twice the default multiple of 5. Growth must stay at least 1 point below the discount rate.</span></span>
+      <span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15, mode" aria-expanded="false" aria-controls="tipTvMode">i</button><span class="tip" role="tooltip" id="tipTvMode" data-guide="tvMode"></span></span>
     </div>
-    <div class="cctl" id="ctl_tv"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16">Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
-    <div class="cctl" id="ctl_tvg" hidden><div class="cctl-h"><label for="g_tvg">Long-run growth</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Long-run growth" aria-expanded="false" aria-controls="tipTvg">i</button><span class="tip" role="tooltip" id="tipTvg">Growth of year-15 cash for ever, in % a year, used only in the growing-perpetuity mode. Default 0 is a placeholder with no view behind it, unsourced. The value shows the multiple it implies at your discount rate. Kept at least 1 point below the discount rate.</span></span><output id="o_tvg"></output></div><input type="range" id="g_tvg"></div>
+    <div class="cctl" id="ctl_tv"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16" data-guide="tv"></span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
+    <div class="cctl" id="ctl_tvg" hidden><div class="cctl-h"><label for="g_tvg">Long-run growth</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Long-run growth" aria-expanded="false" aria-controls="tipTvg">i</button><span class="tip" role="tooltip" id="tipTvg" data-guide="tvGrowth"></span></span><output id="o_tvg"></output></div><input type="range" id="g_tvg"></div>
     <div class="seg compact" id="capexSwitch" role="group" aria-label="Capex model" style="margin-top:6px">
       <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
       <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
@@ -475,23 +505,50 @@ td .bchipwrap{margin-left:3px}
 <footer class="foot">Not financial advice.</footer>
 
 <div class="modal-back" id="behindModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="behindTitle" tabindex="-1">
-    <div class="modal-head"><h2 id="behindTitle">Behind the tool: how it works and where it is weak</h2><button class="reset" type="button" id="behindClose" aria-label="Close">Close</button></div>
-    <ul class="note">
+  <div class="modal wide tall" role="dialog" aria-modal="true" aria-labelledby="behindTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="behindTitle">Behind the tool</h2><button class="reset" type="button" id="behindClose" aria-label="Close">Close</button></div>
+    <div class="tabs" role="tablist" aria-label="Behind the tool">
+      <button type="button" role="tab" id="btab-how" aria-controls="bpanel-how" aria-selected="true" tabindex="0">How it works</button>
+      <button type="button" role="tab" id="btab-weak" aria-controls="bpanel-weak" aria-selected="false" tabindex="-1">Where it is weak</button>
+      <button type="button" role="tab" id="btab-guide" aria-controls="bpanel-guide" aria-selected="false" tabindex="-1">Input guide</button>
+      <button type="button" role="tab" id="btab-research" aria-controls="bpanel-research" aria-selected="false" tabindex="-1">Research</button>
+    </div>
+    <div class="modal-body" id="behindBody">
+      <div role="tabpanel" id="bpanel-how" aria-labelledby="btab-how" tabindex="0">
+        <ul class="note">
       <li>Adoption follows one S-curve for end demand. Each layer follows that curve shifted by its timing offset and scaled by its steepness, so upstream revenue is derived from the same demand rather than an independent forecast. Layer revenue is the value pool times layer adoption times the layer's share, with the share drifting each year at the rate set for that phase (negative drift stands for commoditisation).</li>
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
       <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. Caveat: pass-through lowers a layer’s revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; price elasticity is not modelled. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
       <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
       <li>Value beyond year 15. By default (the v0.1 model) it is your multiple times year-15 cash after sustaining spend, floored at zero. The opt-in growing perpetuity instead treats year-15 cash as growing for ever at a long-run rate g, discounted at your rate r: a multiple of (1 + g) ÷ (r − g). Growth is a placeholder input (default 0, unsourced) and must stay at least 1 point below the discount rate. At g = 0 the perpetuity is 1 ÷ r, 10x at 10%, twice the default multiple of 5, so switching mode at default settings raises every layer’s value. Asset life runs to 100 years and the multiple to 30x, so long-lived assets can be represented; with a 15-year horizon a longer life changes only sustaining spend, the life flag and the terminal value.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
+        </ul>
+      </div>
+      <div role="tabpanel" id="bpanel-weak" aria-labelledby="btab-weak" tabindex="0" hidden>
+        <ul class="note">
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
-      <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
-    </ul>
-    <h3 style="margin-top:14px">Input guide</h3>
-    <div id="inputGuide" class="guide"></div>
-    <p class="src">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
+      <li>One discount rate for every layer, and no probabilities: each scenario is a single path, not a distribution.</li>
+      <li>Past episodes: the case library can hold historical cases filled in as of a date with cited sources, but none is published yet. Until there are scored cases, treat outputs as a way to see which assumptions carry the result, not as calibrated odds. Even then, a handful of cases scored by people who know the outcome is a sanity check, not calibration.</li>
+        </ul>
+      </div>
+      <div role="tabpanel" id="bpanel-guide" aria-labelledby="btab-guide" tabindex="0" hidden>
+        <div id="guideIntro"></div>
+        <div class="guidebar"><label class="srch">Search inputs <input type="search" id="guideSearch" aria-controls="guideTable" autocomplete="off"></label><label class="chk"><input type="checkbox" id="guideCase"> Case guidance</label><span class="muted" id="guideCount" aria-live="polite"></span></div>
+        <table id="guideTable" class="guidetable" aria-label="Input guide"></table>
+      </div>
+      <div role="tabpanel" id="bpanel-research" aria-labelledby="btab-research" tabindex="0" hidden>
+        <p>Research behind the design:</p>
+        <ul class="note">
+          <li>Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009).</li>
+          <li>Odlyzko, Collective Hallucinations and Inefficient Markets: The British Railway Mania of 1845 (2010).</li>
+          <li>Quinn and Turner, Boom and Bust (2020).</li>
+          <li>Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019).</li>
+          <li>Hobijn and Jovanovic, The Information-Technology Revolution and the Stock Market (NBER, 2000).</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 <div class="modal-back" id="casesModal" hidden>
