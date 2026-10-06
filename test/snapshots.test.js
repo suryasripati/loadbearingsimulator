@@ -412,3 +412,11 @@ test('schema 5: terminal-value mode and growth are saved and checked; older sche
   const d = S.diffInputs(snap().inputs, s.inputs).map(x => x.path);
   assert.ok(d.includes('settings.tvMode') && d.includes('settings.tvGrowth'));
 });
+
+test('timing offset range is -10 to 10 years; older snapshots inside -5..5 stay valid', () => {
+  assert.deepEqual(D.LAYER_RANGES.offset, [-10, 10, 0.5]);
+  for (const v of [-10, -6, 0, 5, 10]) { const r = S.snapReadStoredText(mutate(f => { f.snapshots[0].inputs.layers[0].offset = v; })); assert.equal(r.ok, true, v + ': ' + r.error); }
+  reject(mutate(f => { f.snapshots[0].inputs.layers[0].offset = -10.5; }), /layer 1 offset: value -10.5 is outside -10 to 10/);
+  reject(mutate(f => { f.snapshots[0].inputs.layers[0].offset = 11; }), /outside -10 to 10/);
+  assert.equal(M.MODEL_VERSION, 2);
+});
