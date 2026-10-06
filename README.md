@@ -39,14 +39,14 @@ Details by feature:
 - Low-share warning: in any mode, the page warns when a layer's share falls below 5% of its starting level by year 15 at the current inputs. The 5% is a display threshold, not evidence.
 - Caveat: pass-through lowers a layer's revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; that is not modelled.
 - Snapshots: save a named, dated view of every input and result with a note and per-layer kill criteria ("what would make me revise this layer", an optional trigger and review-by date). At review time mark each criterion: unanswered or "unknown" after its date is overdue; "no" records the review date and lets you set the next one; "yes" shows "Triggered: revise this layer" until you save a new snapshot. **Load into simulator** restores a snapshot's inputs (with one-step undo) and fills the form with its criteria. Saving while a criterion is triggered asks whether you revised (the changed inputs are listed for you) or kept your view (with a short reason); you can still save without recording. Compare two snapshots, or a snapshot with the current settings, to see which inputs moved and which verdicts changed. Snapshots stay in your browser (at most 50). Export and import as `.snapshot.json` files; allocations are left out of exports unless you tick the box. Import is strict and says exactly what it rejected.
-- Calibration scaffold: a separate page, `calibration.html`, for scoring past episodes using only what was knowable at the time. It holds **no episode data**. Every numeric input needs a basis: sourced and derived values need a cited source published by the as-of date; a judgement needs a rationale and may be uncited, in which case it is labelled "uncited judgement" and the export is named `.private.json` (gitignored) so it stays out of this public repository; inputs are locked with a hash before outcomes can be recorded. Locking an episode that is judgement-heavy or has uncited inputs asks first ("Lock anyway" or "Cancel") and records the acknowledgement and counts in the lock; the comparison shows each result's judgement share and uncited count; results always carry the banner "Scored by someone who knew the outcome. Treat as a sanity check, not calibration." The scorer answers a checklist of what they already knew (peak date, size of the fall, failures, final figures, later sources, outcomes seen first) before locking, and it is part of the lock hash. Every input has in-page help and a guide (`calibration/GUIDE.md`) with symbolic recipes and the hindsight trap. A doubling-time helper turns an early-phase doubling time into adoption speed. An episode can be scored with up to four input versions (for example hype against measured), each locked separately and compared side by side. See `calibration/README.md` for the schema and the rules for what may be committed.
+- Case library: past episodes packaged as case files and bundled into the page at build time. **No cases are published yet**, so the live page hides the Cases button. A case loads its own layers (1 to 6), names and money unit; your own scenario is kept in memory for "Return to my scenario". Every input in a case shows its basis (sourced, derived or judgement) with the citation, calculation or rationale in its note; judgement inputs are labelled as judgement. A "What happened" card in Advanced and Analyst sets each layer's recorded outcome beside the model's verdict, with the banner "Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." and counts, never a hit rate. The rule for case files: factual claims cite public sources published by the case's as-of date (outcomes cite sources published after it); judgement inputs need a rationale and a visible label. The build fails on any breach. See `cases/README.md`.
 - Outputs: a quadrant chart, a scorecard with three fragility flags (life, debt, tail), cumulative cash, a sensitivity chart, a heatmap of value by entry year and price with the break-even line, and your allocation across slow, base and fast adoption.
 
 It does not say whether there is a bubble. It shows which assumptions carry the answer.
 
 ## Run it
 
-Open `docs/index.html` in a browser. No server needed. The calibration scaffold is `docs/calibration.html`.
+Open `docs/index.html` in a browser. No server needed.
 
 ## Develop
 
@@ -56,8 +56,9 @@ Supported Node versions for tests and build: 22.22.2 or later on 22.x, 24.15.0 o
 
 ```
 npm install     # once, installs jsdom for the smoke test
-npm run build   # assembles docs/index.html from src/
-npm test        # model, snapshot and model-version tests, plus a UI smoke test against docs/index.html
+npm run build   # assembles docs/index.html from src/ and cases/ (fails on any invalid case)
+npm run build:dev   # docs-dev/index.html (gitignored) with the synthetic test cases, for reviewing the case interface
+npm test        # model, snapshot, case and model-version tests, plus UI smoke tests against the built page
 npm run fixture:model   # only after bumping MODEL_VERSION: regenerates the canonical model fixture
 ```
 

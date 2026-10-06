@@ -12,3 +12,5 @@ calibration/private/
 
 # Local tooling for the in-app browser (not part of the project)
 .claude/
+# Dev build with synthetic case fixtures (never published)
+docs-dev/

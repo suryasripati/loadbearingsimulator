@@ -1,0 +1,1053 @@
+{
+ "format": "load-bearing-simulator-case",
+ "schemaVersion": 1,
+ "id": "synthetic-6-layer",
+ "title": "Synthetic 6-layer case",
+ "subtitle": "Test fixture, not data: placeholder values and fictitious sources.",
+ "asOfDate": "1845-06-30",
+ "asOfRule": "Synthetic: only material dated on or before the as-of date.",
+ "hindsightDisclosure": "Synthetic fixture: the author knew the fictitious outcome.",
+ "moneyUnit": "€bn",
+ "sources": [
+  {
+   "id": "SYN-P1",
+   "citation": "Synthetic period source (fictitious, not data)",
+   "publicationDate": "1845-01-15",
+   "kind": "period"
+  },
+  {
+   "id": "SYN-C1",
+   "citation": "Synthetic compiled series (fictitious, not data)",
+   "publicationDate": "1990-05-01",
+   "kind": "compiled",
+   "seriesEndsOn": "1845-06-30"
+  },
+  {
+   "id": "SYN-O1",
+   "citation": "Synthetic outcome source (fictitious, not data)",
+   "publicationDate": "1856-01-01",
+   "kind": "outcome"
+  },
+  {
+   "id": "SYN-O2",
+   "citation": "Second synthetic outcome source (fictitious, not data)",
+   "publicationDate": "1860-01-01",
+   "kind": "outcome"
+  }
+ ],
+ "settings": {
+  "pool": {
+   "value": 1200,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "mid": {
+   "value": 8,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "disc": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "rd": {
+   "value": 7,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "tv": {
+   "value": 5,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "premium": {
+   "value": 0,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "entry": {
+   "value": 0,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "mult": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "speed": {
+   "value": 8,
+   "basis": "derived",
+   "sourceIds": [
+    "SYN-P1",
+    "SYN-C1"
+   ],
+   "note": "Synthetic calculation: a / b (fictitious)."
+  },
+  "phase2Start": {
+   "value": 5,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "phase3Start": {
+   "value": 10,
+   "basis": "sourced",
+   "sourceIds": [
+    "SYN-P1"
+   ],
+   "note": ""
+  },
+  "entryDef": "A",
+  "capexModel": "sustaining"
+ },
+ "layers": [
+  {
+   "id": "syn-1",
+   "name": "Synthetic layer 1",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 25,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 120,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 8,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "syn-2",
+   "name": "Synthetic layer 2",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 220,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 50,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -2,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "syn-3",
+   "name": "Synthetic layer 3",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 100,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -3,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 35,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "syn-4",
+   "name": "Synthetic layer 4",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 30,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 60,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 3,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 30,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 30,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 30,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "syn-5",
+   "name": "Synthetic layer 5",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 15,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 2,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 0,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 15,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 15,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 15,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "syn-6",
+   "name": "Synthetic layer 6",
+   "inputs": {
+    "evidence": {
+     "value": 3,
+     "basis": "judgement",
+     "sourceIds": [],
+     "note": "Synthetic rationale: placeholder judgement, not data."
+    },
+    "share": {
+     "value": 25,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "offset": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "steepness": {
+     "value": 1,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "capex": {
+     "value": 120,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildStart": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "buildYears": {
+     "value": 4,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "unitCostDecline": {
+     "value": 0,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "passThrough": {
+     "value": 0.5,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "life": {
+     "value": 8,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "debt": {
+     "value": 10,
+     "basis": "sourced",
+     "sourceIds": [
+      "SYN-P1"
+     ],
+     "note": ""
+    },
+    "driftP": [
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": -1,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ],
+    "marginP": [
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     },
+     {
+      "value": 45,
+      "basis": "sourced",
+      "sourceIds": [
+       "SYN-P1"
+      ],
+      "note": ""
+     }
+    ]
+   }
+  }
+ ],
+ "versions": [],
+ "outcomes": [
+  {
+   "layer": "syn-1",
+   "status": "yes",
+   "summary": "Synthetic outcome summary (fictitious, not data).",
+   "sourceIds": [
+    "SYN-O1"
+   ],
+   "horizon": "Synthetic: ten years after the as-of date."
+  },
+  {
+   "layer": "syn-2",
+   "status": "no",
+   "summary": "Synthetic outcome summary (fictitious, not data).",
+   "sourceIds": [
+    "SYN-O1"
+   ],
+   "horizon": "Synthetic: ten years after the as-of date."
+  },
+  {
+   "layer": "syn-3",
+   "status": "contested",
+   "summary": "Synthetic. For: one fictitious source says capital earned its cost. Against: another says it did not.",
+   "sourceIds": [
+    "SYN-O1",
+    "SYN-O2"
+   ],
+   "horizon": "Synthetic: ten years after the as-of date."
+  },
+  {
+   "layer": "syn-4",
+   "status": "unknown",
+   "summary": "Synthetic outcome summary (fictitious, not data).",
+   "sourceIds": [],
+   "horizon": "Synthetic: ten years after the as-of date."
+  },
+  {
+   "layer": "syn-5",
+   "status": "no",
+   "summary": "Synthetic outcome summary (fictitious, not data).",
+   "sourceIds": [
+    "SYN-O1"
+   ],
+   "horizon": "Synthetic: ten years after the as-of date."
+  },
+  {
+   "layer": "syn-6",
+   "status": "yes",
+   "summary": "Synthetic outcome summary (fictitious, not data).",
+   "sourceIds": [
+    "SYN-O1"
+   ],
+   "horizon": "Synthetic: ten years after the as-of date."
+  }
+ ]
+}

@@ -237,6 +237,29 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
   .tile{max-height:none}
   .tile .lab > span:first-child,.tile .sub{white-space:normal;overflow:visible}
 }
+
+/* ---------- Case library ---------- */
+body.case-mode .intro{display:none}
+body.case-mode .nocase{display:none !important}
+.casebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 0;padding:5px 10px;border:1px solid var(--copper);border-radius:8px;background:var(--tint);font-size:13px;color:var(--ink)}
+.casebar[hidden]{display:none}
+.casebar .seg{margin:0}
+.casebtns{display:inline-flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.casebtns button{font-size:12.5px;padding:3px 10px}
+.modmark{font-size:11.5px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:1px 8px}
+.modmark[hidden]{display:none}
+.bchip{font-size:10px;line-height:14px;height:16px;min-width:16px;padding:0 4px;border-radius:4px;font-weight:700;border:1px solid currentColor;background:var(--card);cursor:help}
+.bchip.b-sourced{color:var(--green)}
+.bchip.b-derived{color:var(--ink)}
+.bchip.b-judgement{color:var(--amber);background:var(--amber-bg)}
+.bchip.edited{border-style:dashed;opacity:.7}
+td .bchipwrap{margin-left:3px}
+.cctl-h .bchipwrap{margin-left:2px}
+#outcomeTable td{white-space:normal;vertical-align:top}
+.guide h4{margin:10px 0 2px;font-size:14px;color:var(--ink)}
+.guide p{margin:0 0 3px;font-size:12.5px}
+.caselist .case{border-top:1px solid var(--hair);padding:10px 0;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.caselist .case h3{margin:0;font-size:15px}
 </style>
 </head>
 <body data-mode="basic">
@@ -249,12 +272,20 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
       </div>
       <span class="tipwrap"><button class="pill" type="button" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
       <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
+      <button class="pill behind" type="button" id="casesBtn" aria-haspopup="dialog" aria-controls="casesModal" hidden>Cases</button>
     </div>
   </div>
 </header>
 <main class="wrap">
 
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
+
+<div class="casebar" id="caseBar" hidden>
+  <span class="casebadge"><b>Case:</b> <span id="caseBadgeText"></span><span class="tipwrap"><button class="info" type="button" aria-label="About this case" aria-expanded="false" aria-controls="caseTip">i</button><span class="tip" role="tooltip" id="caseTip"></span></span></span>
+  <span class="seg compact" id="caseVersions" role="group" aria-label="Case version"></span>
+  <span class="modmark" id="caseModified" hidden>modified from case</span>
+  <span class="casebtns"><button class="pill" type="button" id="caseSources" aria-haspopup="dialog" aria-controls="sourcesModal">Sources</button><button class="reset" type="button" id="caseReset">Reset to case</button><button class="reset" type="button" id="caseReturn">Return to my scenario</button></span>
+</div>
 
 <section class="kpis" id="kpis" aria-label="Key figures"></section>
 <div class="notice slim" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
@@ -308,6 +339,16 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
   </div>
 </div>
 
+<section data-min="advanced" id="whatHappened" hidden>
+  <h2 class="ctitle"><span>What happened</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What happened" aria-expanded="false" aria-controls="whTip">i</button><span class="tip" role="tooltip" id="whTip">Each layer's recorded outcome (did capital earn its cost?), with its summary, sources and horizon, set beside the model's verdict for the inputs on screen now. Outcome sources are published after the case's as-of date. Contested outcomes state both positions. There is no hit rate: one case is far too few for one.</span></span></h2>
+  <div class="card">
+    <p class="notice slim" id="whBanner" style="margin-top:0"></p>
+    <p class="legend" id="whHindsight"></p>
+    <div class="scroll"><table id="outcomeTable" aria-label="What happened, by layer"></table></div>
+    <p class="legend" id="whCounts"></p>
+  </div>
+</section>
+
 <section data-min="advanced" id="detailScore">
   <h2 class="ctitle"><span>Detailed scorecard</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Detailed scorecard" aria-expanded="false" aria-controls="tip18">i</button><span class="tip" role="tooltip" id="tip18">
       <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
@@ -343,8 +384,8 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
     <div class="seg" style="margin-top:10px;margin-bottom:0">
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
-      <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
-      <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
+      <button id="leadlag" class="nocase" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
+      <button id="ucdExample" class="nocase" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <span class="tipwrap"><button class="info" type="button" aria-label="About: Example buttons" aria-expanded="false" aria-controls="tip24">i</button><span class="tip" role="tooltip" id="tip24">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</span></span>
       <button id="reset" class="reset">Reset everything</button>
     </div>
@@ -433,7 +474,22 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
+    <h3 style="margin-top:14px">Input guide</h3>
+    <div id="inputGuide" class="guide"></div>
     <p class="src">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
+  </div>
+</div>
+<div class="modal-back" id="casesModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="casesTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="casesTitle">Cases</h2><button class="reset" type="button" id="casesClose" aria-label="Close">Close</button></div>
+    <p class="legend">Historical cases, each filled in as of a date with cited sources. Opening one keeps your own scenario in memory so you can return to it.</p>
+    <div id="casesList"></div>
+  </div>
+</div>
+<div class="modal-back" id="sourcesModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sourcesTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="sourcesTitle">Sources</h2><button class="reset" type="button" id="sourcesClose" aria-label="Close">Close</button></div>
+    <div class="scroll"><table id="sourcesTable" aria-label="Sources for this case"></table></div>
   </div>
 </div>
 <script>

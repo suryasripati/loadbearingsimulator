@@ -237,6 +237,29 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
   .tile{max-height:none}
   .tile .lab > span:first-child,.tile .sub{white-space:normal;overflow:visible}
 }
+
+/* ---------- Case library ---------- */
+body.case-mode .intro{display:none}
+body.case-mode .nocase{display:none !important}
+.casebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 0;padding:5px 10px;border:1px solid var(--copper);border-radius:8px;background:var(--tint);font-size:13px;color:var(--ink)}
+.casebar[hidden]{display:none}
+.casebar .seg{margin:0}
+.casebtns{display:inline-flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.casebtns button{font-size:12.5px;padding:3px 10px}
+.modmark{font-size:11.5px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:1px 8px}
+.modmark[hidden]{display:none}
+.bchip{font-size:10px;line-height:14px;height:16px;min-width:16px;padding:0 4px;border-radius:4px;font-weight:700;border:1px solid currentColor;background:var(--card);cursor:help}
+.bchip.b-sourced{color:var(--green)}
+.bchip.b-derived{color:var(--ink)}
+.bchip.b-judgement{color:var(--amber);background:var(--amber-bg)}
+.bchip.edited{border-style:dashed;opacity:.7}
+td .bchipwrap{margin-left:3px}
+.cctl-h .bchipwrap{margin-left:2px}
+#outcomeTable td{white-space:normal;vertical-align:top}
+.guide h4{margin:10px 0 2px;font-size:14px;color:var(--ink)}
+.guide p{margin:0 0 3px;font-size:12.5px}
+.caselist .case{border-top:1px solid var(--hair);padding:10px 0;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.caselist .case h3{margin:0;font-size:15px}
 </style>
 </head>
 <body data-mode="basic">
@@ -249,12 +272,20 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
       </div>
       <span class="tipwrap"><button class="pill" type="button" id="phPill" aria-expanded="false" aria-controls="phTip">Placeholder data</button><span class="tip" role="tooltip" id="phTip"><b>Placeholders, not data.</b> Every number loaded here was chosen to make the mechanics visible. None is sourced, and none describes a real company. Replace them with your own views. Not financial advice.</span></span>
       <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
+      <button class="pill behind" type="button" id="casesBtn" aria-haspopup="dialog" aria-controls="casesModal" hidden>Cases</button>
     </div>
   </div>
 </header>
 <main class="wrap">
 
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
+
+<div class="casebar" id="caseBar" hidden>
+  <span class="casebadge"><b>Case:</b> <span id="caseBadgeText"></span><span class="tipwrap"><button class="info" type="button" aria-label="About this case" aria-expanded="false" aria-controls="caseTip">i</button><span class="tip" role="tooltip" id="caseTip"></span></span></span>
+  <span class="seg compact" id="caseVersions" role="group" aria-label="Case version"></span>
+  <span class="modmark" id="caseModified" hidden>modified from case</span>
+  <span class="casebtns"><button class="pill" type="button" id="caseSources" aria-haspopup="dialog" aria-controls="sourcesModal">Sources</button><button class="reset" type="button" id="caseReset">Reset to case</button><button class="reset" type="button" id="caseReturn">Return to my scenario</button></span>
+</div>
 
 <section class="kpis" id="kpis" aria-label="Key figures"></section>
 <div class="notice slim" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
@@ -308,6 +339,16 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
   </div>
 </div>
 
+<section data-min="advanced" id="whatHappened" hidden>
+  <h2 class="ctitle"><span>What happened</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What happened" aria-expanded="false" aria-controls="whTip">i</button><span class="tip" role="tooltip" id="whTip">Each layer's recorded outcome (did capital earn its cost?), with its summary, sources and horizon, set beside the model's verdict for the inputs on screen now. Outcome sources are published after the case's as-of date. Contested outcomes state both positions. There is no hit rate: one case is far too few for one.</span></span></h2>
+  <div class="card">
+    <p class="notice slim" id="whBanner" style="margin-top:0"></p>
+    <p class="legend" id="whHindsight"></p>
+    <div class="scroll"><table id="outcomeTable" aria-label="What happened, by layer"></table></div>
+    <p class="legend" id="whCounts"></p>
+  </div>
+</section>
+
 <section data-min="advanced" id="detailScore">
   <h2 class="ctitle"><span>Detailed scorecard</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Detailed scorecard" aria-expanded="false" aria-controls="tip18">i</button><span class="tip" role="tooltip" id="tip18">
       <b>Evidence gate.</b> Layers scoring below 3 are treated as forecast bets, not buildouts.<br>
@@ -343,8 +384,8 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
     <div class="seg" style="margin-top:10px;margin-bottom:0">
       <button id="arch_rail" title="Stylised long-lived, commoditising, debt-funded layer">Load rail or fibre-like profile on selected layer</button>
       <button id="arch_app" title="Stylised short-lived, equity-funded layer">Load app-like profile on selected layer</button>
-      <button id="leadlag" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
-      <button id="ucdExample" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
+      <button id="leadlag" class="nocase" title="Placeholder example, not data: chips −1, data centres −2, models 0, applications +1, services +2 years">Load lead/lag example</button>
+      <button id="ucdExample" class="nocase" title="Placeholder example, invented, not data: chips 5%, data centres 2%, models 8%, applications 0%, services 0% a year. Switches on Vintage cohorts.">Load unit-cost-decline example</button>
       <span class="tipwrap"><button class="info" type="button" aria-label="About: Example buttons" aria-expanded="false" aria-controls="tip24">i</button><span class="tip" role="tooltip" id="tip24">The two profiles are stylised shapes, not data from any episode. They overwrite the selected layer's life, drift and margin (all phases), debt and build period. The lead/lag example is also a placeholder, not data: it sets every layer's timing offset (infrastructure leads end demand, applications and services lag) so you can see how much timing alone moves a verdict. The unit-cost-decline example is invented round numbers, not data (chips 5%, data centres 2%, models 8%, applications and services 0% a year); it switches on Vintage cohorts, because decline has no effect in the v0.1 capex model.</span></span>
       <button id="reset" class="reset">Reset everything</button>
     </div>
@@ -433,7 +474,22 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
       <li>Demand evidence is your judgement on a 1 to 5 scale. The model does not verify it.</li>
       <li>Not yet done: scoring past episodes (British railways, fibre, dot-com applications) blind, using only what was knowable at the time. Until episodes are scored with cited sources, treat outputs as a way to see which assumptions carry the result, not as calibrated odds.</li>
     </ul>
+    <h3 style="margin-top:14px">Input guide</h3>
+    <div id="inputGuide" class="guide"></div>
     <p class="src">Research behind the design: Pastor and Veronesi, Technological Revolutions and Stock Prices (AER, 2009). Odlyzko, Collective Hallucinations and Inefficient Markets (2010). Quinn and Turner, Boom and Bust (2020). Greenwood, Shleifer and You, Bubbles for Fama (JFE, 2019). Hobijn and Jovanovic, The IT Revolution and the Stock Market (NBER, 2000).</p>
+  </div>
+</div>
+<div class="modal-back" id="casesModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="casesTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="casesTitle">Cases</h2><button class="reset" type="button" id="casesClose" aria-label="Close">Close</button></div>
+    <p class="legend">Historical cases, each filled in as of a date with cited sources. Opening one keeps your own scenario in memory so you can return to it.</p>
+    <div id="casesList"></div>
+  </div>
+</div>
+<div class="modal-back" id="sourcesModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sourcesTitle" tabindex="-1">
+    <div class="modal-head"><h2 id="sourcesTitle">Sources</h2><button class="reset" type="button" id="sourcesClose" aria-label="Close">Close</button></div>
+    <div class="scroll"><table id="sourcesTable" aria-label="Sources for this case"></table></div>
   </div>
 </div>
 <script>
@@ -791,6 +847,405 @@ const GLOBAL_RANGES = {
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
 
+// Input guide: for every input, what it means, where to look at a case's as-of date, a recipe, and the hindsight trap.
+// Shown in the "Behind the tool" dialog. Examples are symbolic (P, C, T and so on); no real numbers, ever.
+// CommonJS export for tests; stripped by the build and inlined before the UI code.
+
+const GUIDE_INTRO = [
+  'What each input means, where to look for it at a chosen as-of date, a recipe for estimating it, and the hindsight trap to avoid.',
+  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled.',
+  'Examples below are symbolic. They show the shape of a calculation, never a figure from a real episode.'
+];
+
+const GUIDE = {
+  pool: { label: 'Value pool at full adoption ($B a year)',
+    meaning: 'Yearly revenue all layers together would earn once the technology is fully adopted.',
+    where: 'Contemporary market-size estimates, trade press forecasts, prospectuses, government or industry statistics on the activity being replaced.',
+    recipe: 'Take the size of the activity being displaced (A) times the share the new technology was expected to take (s), at prices quoted at the time: pool = A x s. Show both terms as sourced or derived.',
+    trap: 'Using the eventual market size. The pool must be what could reasonably be estimated at the as-of date, not what the market became.' },
+  speed: { label: 'Adoption speed (years from 10% to 90%)',
+    meaning: 'How long adoption takes to go from 10% to 90% of its full level. Shorter is faster.',
+    where: 'Early growth figures for users, traffic, mileage or sales published by the as-of date; contemporary forecasts of rollout.',
+    recipe: 'From an early-phase doubling time T (years): speed = ln(81) / ln(2) x T, about 6.34 x T. Use the doubling-time helper; it fills the calculation for a derived value. This uses the early phase only; the midpoint is a separate input.',
+    trap: 'Reading speed off the full adoption curve you now know. At the as-of date only the early phase was visible, and early growth often looks faster or slower than the whole curve turned out.' },
+  mid: { label: 'Adoption midpoint (year of 50% adoption)',
+    meaning: 'The year, counted from year 0 of the model, in which adoption reaches half of its full level.',
+    where: 'Contemporary forecasts of when the technology would be "mainstream"; current adoption level against the expected full level.',
+    recipe: 'If adoption at the as-of date is a (as a share of full) and speed is S, the logistic curve gives midpoint = t0 + (S / ln(81)) x ln((1 - a) / a), where t0 is the as-of year counted from year 0.',
+    trap: 'Placing the midpoint where it actually fell. Use the adoption level and expectations visible at the as-of date.' },
+  disc: { label: 'Discount rate (%)',
+    meaning: 'The return investors needed to be paid for the risk.',
+    where: 'Contemporary yields on government debt and on comparable risky investments; required returns quoted by investors or regulators at the time.',
+    recipe: 'Risk-free yield at the as-of date (r) plus a risk premium (p) justified from period sources: disc = r + p.',
+    trap: 'Using the rate implied by what happened next (for example a crash in prices). The rate must be the one demanded at the time.' },
+  rd: { label: 'Interest on debt (%)',
+    meaning: 'The interest rate on borrowing used to fund the build.',
+    where: 'Bond prospectuses, loan terms, contemporary corporate bond yields for similar borrowers.',
+    recipe: 'Quoted coupon or yield on comparable debt at the as-of date.',
+    trap: 'Using rates after a default wave or a policy change that came later.' },
+  tv: { label: 'Value beyond year 15 (multiple of year-15 cash flow)',
+    meaning: 'How much value the layer keeps after the 15-year horizon, as a multiple of its year-15 cash flow.',
+    where: 'Contemporary valuations of mature, comparable businesses; dividend yields of established utilities or carriers at the time.',
+    recipe: 'If mature comparables traded at a cash yield y, a multiple of about 1 / y is a starting point; state y and its source.',
+    trap: 'Choosing a low multiple because you know the layer later struggled.' },
+  premium: { label: 'Entry premium over build cost (%)',
+    meaning: 'Under the replacement-cost definition, how much above build cost an investor paid at entry.',
+    where: 'Share prices against the book value of assets built; market-to-book ratios reported at the time.',
+    recipe: 'premium = (price paid / build cost spent) - 1, from period prices and accounts.',
+    trap: 'Using the bubble peak or the trough you know about instead of the price at the as-of date.' },
+  entry: { label: 'Entry year',
+    meaning: 'The model year in which the investor buys in. Cash flows from this year on are the investor\'s.',
+    where: 'Set by the as-of rule: usually the model year corresponding to the as-of date.',
+    recipe: 'entry = as-of year - year 0 of the model, as whole years.',
+    trap: 'Moving the entry to a convenient year after seeing how prices moved.' },
+  mult: { label: 'Entry multiple of next-year operating cash',
+    meaning: 'Under the forward-cash definition, the price paid as a multiple of next year\'s operating cash.',
+    where: 'Contemporary price-to-cash-flow or price-to-earnings figures; analysts\' forward estimates published by the as-of date.',
+    recipe: 'multiple = price paid / expected next-year operating cash, both from period sources.',
+    trap: 'Dividing by the cash flow that was actually realised rather than the one expected at the time.' },
+  phase2Start: { label: 'Phase 2 starts (year)',
+    meaning: 'The first model year of the second calendar phase for drift and margin.',
+    where: 'Contemporary expectations of when competition, regulation or capacity would change conditions.',
+    recipe: 'Pick the year a period source expected conditions to change; leave the default split only if no source says otherwise, and record that as a judgement.',
+    trap: 'Placing the phase break at the turning point you now know.' },
+  phase3Start: { label: 'Phase 3 starts (year)',
+    meaning: 'The first model year of the third calendar phase.',
+    where: 'As for phase 2.',
+    recipe: 'As for phase 2; it must come after phase 2.',
+    trap: 'As for phase 2.' },
+  evidence: { label: 'Demand evidence (1 to 5)',
+    meaning: 'How much observed, paid, growing usage existed at the as-of date. 1 is forecast only; 5 is observed, paid, growing usage.',
+    where: 'Traffic returns, paid usage, revenue reports and customer counts published by the as-of date.',
+    recipe: 'Score against what was observed, not forecast: no paying users = 1; small paid pilots = 2; paid usage growing in more than one market = 4 or 5. Record the reason as a judgement.',
+    trap: 'Scoring higher because demand later proved real, or lower because it later disappointed.' },
+  share: { label: 'Share of pool at the start (%)',
+    meaning: 'The share of the value pool this layer captures in year 0.',
+    where: 'Contemporary breakdowns of spending by segment; company revenues against the market total at the time.',
+    recipe: 'share = layer revenue R / pool revenue P, both at the as-of date.',
+    trap: 'Using the share the layer ended up with.' },
+  offset: { label: 'Timing offset (years; negative leads, positive lags)',
+    meaning: 'How far this layer\'s revenue runs ahead of (negative) or behind (positive) end demand.',
+    where: 'Order books, construction schedules and lead times reported at the time.',
+    recipe: 'If period sources show this layer\'s orders arriving L years before end use, offset = -L.',
+    trap: 'Fitting the offset to the revenue peaks you now know.' },
+  steepness: { label: 'Curve steepness (1 = same as demand)',
+    meaning: 'How much steeper (above 1) or flatter (below 1) this layer\'s adoption is than end demand.',
+    where: 'Contemporary evidence that this layer saturates faster or slower than end use.',
+    recipe: 'If the layer is expected to go from 10% to 90% in S_L years while demand takes S, steepness = S / S_L.',
+    trap: 'Matching the steepness to the realised shape.' },
+  capex: { label: 'Build capex ($B)',
+    meaning: 'Total capital spent to build the layer\'s capacity.',
+    where: 'Prospectuses, authorised capital, construction budgets and announced investment programmes published by the as-of date.',
+    recipe: 'Sum the announced or authorised budgets (B1 + B2 + ...) for the capacity in scope, in the model\'s currency units.',
+    trap: 'Using the final out-turn cost, including overruns that only became known later.' },
+  buildStart: { label: 'Build starts (year)',
+    meaning: 'The model year in which capital starts going in.',
+    where: 'Announced construction start dates.',
+    recipe: 'buildStart = announced start year - year 0 of the model.',
+    trap: 'Using actual start dates that slipped after the as-of date.' },
+  buildYears: { label: 'Build years',
+    meaning: 'How many years the initial build takes.',
+    where: 'Announced construction schedules.',
+    recipe: 'Planned completion year - planned start year.',
+    trap: 'Using the realised schedule, including delays not known at the time.' },
+  unitCostDecline: { label: 'Unit-cost decline (% a year, Vintage mode)',
+    meaning: 'How fast the cost of the same capacity was expected to fall each year.',
+    where: 'Contemporary engineering or trade estimates of cost per unit of capacity over time.',
+    recipe: 'If cost per unit was expected to fall from c0 to c1 over n years: decline = 1 - (c1 / c0)^(1 / n).',
+    trap: 'Using the realised cost curve, which may have fallen much faster or slower than expected.' },
+  passThrough: { label: 'Pass-through to prices (0 to 1, Vintage mode)',
+    meaning: 'The share of the unit-cost decline that competition was expected to hand to customers as lower prices.',
+    where: 'Contemporary pricing rules, regulation, tariff schedules and the degree of competition at the time.',
+    recipe: 'Regulated pass-through rules give it directly; otherwise record a judgement with a rationale about competition at the time.',
+    trap: 'Setting it from the price war that later happened.' },
+  life: { label: 'Asset life (years)',
+    meaning: 'How long the built asset lasts before it must be replaced.',
+    where: 'Depreciation policies, engineering life estimates and replacement schedules in period accounts.',
+    recipe: 'Use the depreciation life in period accounts, or the engineering life quoted at the time.',
+    trap: 'Shortening the life because you know the technology was superseded early.' },
+  debt: { label: 'Debt (% of build)',
+    meaning: 'The share of the build funded by borrowing.',
+    where: 'Capital structure in prospectuses and accounts at the time.',
+    recipe: 'debt = borrowing D / total build funding F.',
+    trap: 'Using the debt load after later refinancing or distress.' },
+  driftP: { label: 'Share drift (% a year, per phase)',
+    meaning: 'How the layer\'s share of the pool was expected to change each year in each phase; negative is commoditisation.',
+    where: 'Contemporary expectations of competition, new entrants and price pressure.',
+    recipe: 'If the share was expected to move from s0 to s1 over n years: drift = (s1 / s0)^(1 / n) - 1.',
+    trap: 'Matching drift to the share loss that actually happened.' },
+  marginP: { label: 'Cash margin (% per phase)',
+    meaning: 'Operating cash as a share of revenue, per phase.',
+    where: 'Period accounts of comparable operators; operating ratios published at the time.',
+    recipe: 'margin = operating cash C / revenue R, from period accounts.',
+    trap: 'Using margins from after the shake-out.' }
+};
+
+
+// Case library: plain case files (cases/*.case.json) bundled into the page at build time. Users never import or edit
+// them. This file validates a case (the build fails on any error), turns a case and version into page state, formats
+// the case's money unit, and lines up the model's verdicts against recorded outcomes. Pure functions, no DOM.
+// CommonJS export for tests and the build; stripped by the build and inlined before the UI code.
+//
+// Rules (also in CLAUDE.md): factual claims cite public sources. Inputs may cite only sources available at the as-of
+// date (a period source published on or before it, or a compiled series that ends on or before it). Outcomes cite
+// sources published after it. Sourced and derived values need sources; derived values show their calculation in the
+// note; judgement values need a rationale in the note, may have no source, and are always labelled on the page.
+
+const CASE_FORMAT = 'load-bearing-simulator-case';
+const CASE_SCHEMA_VERSION = 1;
+const CASE_MAX_LAYERS = 6;
+const CASE_MAX_VERSIONS = 3;
+const CASE_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
+const CASE_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline', 'passThrough', 'life', 'debt'];
+const CASE_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
+const CASE_BASIS = ['sourced', 'derived', 'judgement'];
+const CASE_SOURCE_KINDS = ['period', 'compiled', 'outcome'];
+const CASE_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
+const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
+const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
+
+function caseDeps(){
+  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'));
+  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES };
+}
+
+/* ---------- Money unit ---------- */
+// "$B", "£m", "€bn": leading symbol, then a letter suffix. Used in every money label.
+function parseMoneyUnit(u){
+  const m = /^([^\sA-Za-z0-9]{1,3})([A-Za-z]{0,3})$/.exec(String(u || ''));
+  if (!m) return null;
+  return { prefix: m[1], suffix: m[2], unit: m[1] + m[2] };
+}
+function formatMoney(x, unit){
+  const u = parseMoneyUnit(unit) || { prefix: '$', suffix: 'B' };
+  return (x < 0 ? '−' : '') + u.prefix + Math.abs(x).toFixed(0) + u.suffix;
+}
+
+/* ---------- Validation ---------- */
+function caseErr(where, what){ throw new Error(where + ': ' + what); }
+const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+function caseKeys(o, required, optional, where){
+  if (!isObj(o)) caseErr(where, 'expected an object');
+  const ok = required.concat(optional || []);
+  Object.keys(o).forEach(k => { if (ok.indexOf(k) < 0) caseErr(where, 'unknown field "' + k + '"'); });
+  required.forEach(k => { if (!Object.prototype.hasOwnProperty.call(o, k)) caseErr(where, 'missing field "' + k + '"'); });
+}
+function caseText(v, where, max, allowEmpty){
+  if (typeof v !== 'string') caseErr(where, 'expected text');
+  if (!allowEmpty && !v.trim()) caseErr(where, 'must not be empty');
+  if (v.length > (max || 2000)) caseErr(where, 'text longer than ' + (max || 2000) + ' characters');
+  return v;
+}
+function caseDay(v, where){
+  caseText(v, where, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) caseErr(where, 'expected a date (YYYY-MM-DD)');
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dim = [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (mo < 1 || mo > 12 || d < 1 || d > dim[mo - 1]) caseErr(where, 'not a real calendar date');
+  return v;
+}
+function caseNum(v, range, where, integer){
+  if (typeof v !== 'number' || !isFinite(v)) caseErr(where, 'expected a number');
+  if (v < range[0] || v > range[1]) caseErr(where, 'value ' + v + ' is outside the tool’s range ' + range[0] + ' to ' + range[1]);
+  if (integer && Math.round(v) !== v) caseErr(where, 'expected a whole number');
+  return v;
+}
+// Can this source back an input? Only what was available at the as-of date.
+function sourceForInput(src, asOfDate){
+  if (src.kind === 'period') return src.publicationDate <= asOfDate;
+  if (src.kind === 'compiled') return !!src.seriesEndsOn && src.seriesEndsOn <= asOfDate;
+  return false; // outcome sources never back inputs
+}
+// Can this source back an outcome? Only evidence published after the as-of date.
+function sourceForOutcome(src, asOfDate){ return src.publicationDate > asOfDate; }
+
+function caseRecord(r, where, range, integer, ctx){
+  caseKeys(r, ['value', 'basis', 'sourceIds', 'note'], [], where);
+  const out = { value: caseNum(r.value, range, where + ' value', integer), basis: r.basis, sourceIds: [], note: caseText(r.note, where + ' note', 2000, true) };
+  if (CASE_BASIS.indexOf(r.basis) < 0) caseErr(where + ' basis', 'expected sourced, derived or judgement');
+  if (!Array.isArray(r.sourceIds)) caseErr(where + ' sourceIds', 'expected a list');
+  r.sourceIds.forEach(id => {
+    const s = ctx.byId[id];
+    if (!s) caseErr(where + ' sourceIds', 'unknown source "' + id + '"');
+    if (!sourceForInput(s, ctx.asOfDate)) caseErr(where, 'source "' + id + '" was not available at the as-of date ' + ctx.asOfDate
+      + (s.kind === 'compiled' ? ' (a compiled series must end on or before it)' : s.kind === 'outcome' ? ' (an outcome source cannot back an input)' : ' (published ' + s.publicationDate + ')'));
+    out.sourceIds.push(id);
+  });
+  if (out.basis !== 'judgement' && !out.sourceIds.length) caseErr(where, 'a ' + out.basis + ' value needs at least one source');
+  if (out.basis === 'derived' && !out.note.trim()) caseErr(where, 'a derived value needs its calculation in the note');
+  if (out.basis === 'judgement' && !out.note.trim()) caseErr(where, 'a judgement needs a rationale in the note');
+  return out;
+}
+function settingRange(k, d){ return k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k]; }
+function caseSettings(S, where, ctx, partial){
+  const d = caseDeps();
+  caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : [], where);
+  const out = {};
+  CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  if ('entryDef' in S) { if (['A', 'B'].indexOf(S.entryDef) < 0) caseErr(where + ' entryDef', 'expected "A" or "B"'); out.entryDef = S.entryDef; }
+  if ('capexModel' in S) { if (['sustaining', 'vintage'].indexOf(S.capexModel) < 0) caseErr(where + ' capexModel', 'expected "sustaining" or "vintage"'); out.capexModel = S.capexModel; }
+  return out;
+}
+function caseInputs(I, where, ctx, partial){
+  const d = caseDeps(), all = CASE_LAYER_KEYS.concat(['driftP', 'marginP']);
+  caseKeys(I, partial ? [] : all, partial ? all : [], where);
+  const out = {};
+  CASE_LAYER_KEYS.forEach(k => { if (k in I) out[k] = caseRecord(I[k], where + ' ' + k, d.LAYER_RANGES[k], CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  ['driftP', 'marginP'].forEach(k => {
+    if (!(k in I)) return;
+    if (!Array.isArray(I[k]) || I[k].length !== 3) caseErr(where + ' ' + k, 'expected three phase values');
+    out[k] = I[k].map((r, j) => caseRecord(r, where + ' ' + k + '[' + j + ']', d.LAYER_RANGES[k], false, ctx));
+  });
+  return out;
+}
+function phaseOrder(settings, where){
+  const p2 = settings.phase2Start && settings.phase2Start.value, p3 = settings.phase3Start && settings.phase3Start.value;
+  if (p2 != null && p3 != null && p2 >= p3) caseErr(where, 'phase 2 must start before phase 3');
+}
+
+function validateCase(raw, where0){
+  const where = where0 || 'Case';
+  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'], where);
+  if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
+  if (raw.schemaVersion !== CASE_SCHEMA_VERSION) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMA_VERSION);
+  const c = { format: CASE_FORMAT, schemaVersion: CASE_SCHEMA_VERSION };
+  c.id = caseText(raw.id, where + ' id', 60);
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(c.id)) caseErr(where + ' id', 'use lower-case letters, digits and hyphens');
+  c.title = caseText(raw.title, where + ' title', 60);
+  c.subtitle = caseText(raw.subtitle, where + ' subtitle', 160);
+  c.asOfDate = caseDay(raw.asOfDate, where + ' asOfDate');
+  c.asOfRule = caseText(raw.asOfRule, where + ' asOfRule', 1000);
+  c.hindsightDisclosure = caseText(raw.hindsightDisclosure, where + ' hindsightDisclosure', 240);
+  if (/\n/.test(c.hindsightDisclosure)) caseErr(where + ' hindsightDisclosure', 'must be one line');
+  if (!parseMoneyUnit(raw.moneyUnit)) caseErr(where + ' moneyUnit', 'expected a currency symbol and an optional unit, e.g. "$B" or "£m"');
+  c.moneyUnit = raw.moneyUnit;
+  // Sources
+  if (!Array.isArray(raw.sources) || raw.sources.length > 200) caseErr(where + ' sources', 'expected a list');
+  const byId = {};
+  c.sources = raw.sources.map((s, i) => {
+    const w = where + ' source ' + (i + 1);
+    caseKeys(s, ['id', 'citation', 'publicationDate', 'kind'], ['seriesEndsOn'], w);
+    const o = { id: caseText(s.id, w + ' id', 40), citation: caseText(s.citation, w + ' citation', 1000), publicationDate: caseDay(s.publicationDate, w + ' publicationDate'), kind: s.kind, seriesEndsOn: null };
+    if (!/^[A-Za-z0-9_-]+$/.test(o.id)) caseErr(w + ' id', 'use letters, digits, hyphens and underscores');
+    if (byId[o.id]) caseErr(w + ' id', 'duplicate source id "' + o.id + '"');
+    if (CASE_SOURCE_KINDS.indexOf(s.kind) < 0) caseErr(w + ' kind', 'expected period, compiled or outcome');
+    if (s.kind === 'compiled') { if (s.seriesEndsOn == null) caseErr(w, 'a compiled source needs seriesEndsOn'); o.seriesEndsOn = caseDay(s.seriesEndsOn, w + ' seriesEndsOn'); }
+    else if (s.seriesEndsOn != null) caseErr(w, 'only a compiled source has seriesEndsOn');
+    if (s.kind === 'outcome' && !(o.publicationDate > c.asOfDate)) caseErr(w, 'an outcome source must be published after the as-of date ' + c.asOfDate);
+    byId[o.id] = o;
+    return o;
+  });
+  const ctx = { byId, asOfDate: c.asOfDate };
+  // Settings and layers
+  c.settings = caseSettings(raw.settings, where + ' settings', ctx, false);
+  phaseOrder(c.settings, where + ' settings');
+  if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > CASE_MAX_LAYERS) caseErr(where + ' layers', 'expected 1 to ' + CASE_MAX_LAYERS + ' layers');
+  const ids = new Set();
+  c.layers = raw.layers.map((L, i) => {
+    const w = where + ' layer ' + (i + 1);
+    caseKeys(L, ['id', 'name', 'inputs'], [], w);
+    const id = caseText(L.id, w + ' id', 30);
+    if (!/^[a-z][a-z0-9-]*$/.test(id)) caseErr(w + ' id', 'use lower-case letters, digits and hyphens, starting with a letter');
+    if (ids.has(id)) caseErr(w + ' id', 'duplicate layer id "' + id + '"');
+    ids.add(id);
+    const name = caseText(L.name, w + ' name', 40);
+    // Layer names are drawn into charts and tables, so markup characters are refused.
+    if (/[<>&"]/.test(name)) caseErr(w + ' name', 'must not contain < > & or "');
+    return { id, name, inputs: caseInputs(L.inputs, w, ctx, false) };
+  });
+  // Versions: labelled overrides of settings or layer inputs, selected with a pill.
+  const vs = raw.versions === undefined ? [] : raw.versions;
+  if (!Array.isArray(vs) || vs.length > CASE_MAX_VERSIONS) caseErr(where + ' versions', 'expected at most ' + CASE_MAX_VERSIONS + ' versions');
+  const labels = new Set();
+  c.versions = vs.map((v, i) => {
+    const w = where + ' version ' + (i + 1);
+    caseKeys(v, ['id', 'label'], ['settings', 'layers'], w);
+    const o = { id: caseText(v.id, w + ' id', 30), label: caseText(v.label, w + ' label', 30), settings: {}, layers: {} };
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(o.id) || o.id === 'base') caseErr(w + ' id', 'use lower-case letters, digits and hyphens (not "base")');
+    if (labels.has(o.label)) caseErr(w + ' label', 'duplicate version label');
+    labels.add(o.label);
+    if (v.settings !== undefined) o.settings = caseSettings(v.settings, w + ' settings', ctx, true);
+    if (v.layers !== undefined) {
+      if (!isObj(v.layers)) caseErr(w + ' layers', 'expected an object keyed by layer id');
+      Object.keys(v.layers).forEach(lid => {
+        if (!ids.has(lid)) caseErr(w + ' layers', 'unknown layer "' + lid + '"');
+        o.layers[lid] = caseInputs(v.layers[lid], w + ' layer ' + lid, ctx, true);
+      });
+    }
+    if (!Object.keys(o.settings).length && !Object.keys(o.layers).length) caseErr(w, 'a version must override at least one input');
+    phaseOrder(Object.assign({}, c.settings, o.settings), w + ' settings');
+    return o;
+  });
+  // Outcomes per layer
+  if (!Array.isArray(raw.outcomes)) caseErr(where + ' outcomes', 'expected a list');
+  const seen = new Set();
+  c.outcomes = raw.outcomes.map((o, i) => {
+    const w = where + ' outcome ' + (i + 1);
+    caseKeys(o, ['layer', 'status', 'summary', 'sourceIds', 'horizon'], [], w);
+    if (!ids.has(o.layer)) caseErr(w + ' layer', 'unknown layer "' + o.layer + '"');
+    if (seen.has(o.layer)) caseErr(w + ' layer', 'layer "' + o.layer + '" already has an outcome');
+    seen.add(o.layer);
+    if (CASE_OUTCOMES.indexOf(o.status) < 0) caseErr(w + ' status', 'expected yes, no, unknown or contested');
+    const out = { layer: o.layer, status: o.status, summary: caseText(o.summary, w + ' summary', 1500), sourceIds: [], horizon: caseText(o.horizon, w + ' horizon', 200) };
+    if (!Array.isArray(o.sourceIds)) caseErr(w + ' sourceIds', 'expected a list');
+    o.sourceIds.forEach(id => {
+      const s = byId[id];
+      if (!s) caseErr(w + ' sourceIds', 'unknown source "' + id + '"');
+      if (!sourceForOutcome(s, c.asOfDate)) caseErr(w, 'outcome source "' + id + '" must be published after the as-of date ' + c.asOfDate);
+      out.sourceIds.push(id);
+    });
+    if ((out.status === 'yes' || out.status === 'no') && !out.sourceIds.length) caseErr(w, 'an outcome of ' + out.status + ' needs a source');
+    if (out.status === 'contested') {
+      if (out.sourceIds.length < 2) caseErr(w, 'a contested outcome needs at least two sources');
+      if (!/\bFor:/.test(out.summary) || !/\bAgainst:/.test(out.summary)) caseErr(w, 'a contested outcome states both positions in the summary ("For: … Against: …")');
+    }
+    return out;
+  });
+  return c;
+}
+
+/* ---------- Case to page state ---------- */
+// Apply a version's overrides on top of the base case. Returns plain inputs for the page plus the record (basis,
+// sources, note) behind every input, keyed like "settings.pool" or "layer chips.driftP[2]".
+function caseState(c, versionId){
+  const v = c.versions.find(x => x.id === versionId) || null;
+  const settings = Object.assign({}, c.settings, v ? v.settings : {});
+  const recs = {};
+  const G = {};
+  ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult'].forEach(k => { G[k] = settings[k].value; recs['settings.' + k] = settings[k]; });
+  G.phases = [settings.phase2Start.value, settings.phase3Start.value];
+  recs['settings.phase2Start'] = settings.phase2Start; recs['settings.phase3Start'] = settings.phase3Start;
+  G.entryDef = settings.entryDef; G.capexModel = settings.capexModel;
+  const layers = c.layers.map(L => {
+    const inp = Object.assign({}, L.inputs, v && v.layers[L.id] ? v.layers[L.id] : {});
+    const o = { id: L.id, name: L.name, alloc: CASE_DEFAULT_ALLOC };
+    CASE_LAYER_KEYS.forEach(k => { o[k] = inp[k].value; recs['layer ' + L.id + '.' + k] = inp[k]; });
+    o.driftP = inp.driftP.map(r => r.value); o.marginP = inp.marginP.map(r => r.value);
+    inp.driftP.forEach((r, j) => { recs['layer ' + L.id + '.driftP[' + j + ']'] = r; });
+    inp.marginP.forEach((r, j) => { recs['layer ' + L.id + '.marginP[' + j + ']'] = r; });
+    return o;
+  });
+  return { G, layers, recs, versionId: v ? v.id : 'base', versionLabel: v ? v.label : 'Base' };
+}
+
+/* ---------- What happened ---------- */
+// The model's verdict (from the page's current results) against each layer's recorded outcome, with counts by status.
+// No hit rate: one case is far too few for one.
+function caseOutcomeRows(c, layers, results){
+  const rows = layers.map((L, i) => {
+    const o = c.outcomes.find(x => x.layer === L.id) || null;
+    return { layer: L.name, verdict: results[i].bin, earnsCost: results[i].npv >= 0, outcome: o ? o.status : null, summary: o ? o.summary : '', horizon: o ? o.horizon : '', sourceIds: o ? o.sourceIds.slice() : [] };
+  });
+  const counts = { layers: rows.length, yes: 0, no: 0, unknown: 0, contested: 0, none: 0 };
+  rows.forEach(r => { counts[r.outcome || 'none']++; });
+  return { rows, counts, banner: CASE_BANNER };
+}
+
+
+// Case library, bundled at build time.
+const CASES = [];
+
 // View modes (Basic, Advanced, Analyst), KPI tiles and the hidden-state check. Pure functions, no DOM; no new
 // maths: everything here reads existing model outputs (runLayer, verdictFragility). Modes only change what is
 // shown, never an input or a result. CommonJS export for tests; stripped by the build and inlined before the UI.
@@ -808,8 +1263,14 @@ function modeDeps(){
 }
 
 // KPI tiles. Status chips are text, never colour alone. Chip rules use signs and counts only, no invented thresholds.
-function kpiTiles(layers, G){
+// base (optional): { G, layers } to compare against, for example an open case; defaults otherwise.
+function modeBase(base){
   const d = modeDeps();
+  if (base) return base;
+  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
+}
+function kpiTiles(layers, G, base){
+  const d = modeDeps(), b = modeBase(base);
   const res = layers.map(L => d.runLayer(L, G));
   const N = layers.length;
   // (a) Layers that earn their cost (present value at or above zero).
@@ -821,7 +1282,7 @@ function kpiTiles(layers, G){
   if (tight) { tight.unit = G.entryDef === 'B' ? 'x' : '%'; tight.chip = tight.headroom < 0 ? 'Fragile' : 'Stable'; }
   // (c) Share of my allocation in layers that do not earn their cost.
   const tot = layers.reduce((a, L) => a + (L.alloc || 0), 0);
-  const placeholder = layers.every(L => { const def = d.DEFAULT_LAYERS.find(x => x.id === L.id); return def && L.alloc === def.alloc; });
+  const placeholder = layers.every(L => { const def = b.layers.find(x => x.id === L.id); return def && L.alloc === def.alloc; });
   let alloc;
   if (tot <= 0) alloc = { pct: null, placeholder, chip: 'No allocation' };
   else {
@@ -842,13 +1303,13 @@ const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entr
 const ANALYST_LAYER_KEYS = [['evidence', 'demand evidence'], ['share', 'share of pool'], ['capex', 'build capex'], ['life', 'asset life'], ['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
   ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
 const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-function analystDiffs(G, layers){
-  const d = modeDeps(), out = [];
-  const defG = Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX });
+function analystDiffs(G, layers, base){
+  const b = modeBase(base), out = [];
+  const defG = b.G;
   ANALYST_GLOBALS.forEach(([k, label]) => { if (G[k] !== defG[k]) out.push({ scope: 'settings', key: k, label }); });
-  if (!sameArr(G.phases, d.DEFAULT_PHASES)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
+  if (!sameArr(G.phases, defG.phases)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
   layers.forEach(L => {
-    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id);
+    const def = b.layers.find(x => x.id === L.id);
     if (!def) return;
     ANALYST_LAYER_KEYS.forEach(([k, label]) => { if (L[k] !== def[k]) out.push({ scope: L.id, key: k, label: L.name + ': ' + label }); });
     if (!sameArr(L.driftP, def.driftP)) out.push({ scope: L.id, key: 'driftP', label: L.name + ': share drift' });
@@ -857,12 +1318,12 @@ function analystDiffs(G, layers){
   return out;
 }
 // Reset only the analyst-only settings. Never touches first-screen inputs, allocations or snapshots.
-function resetAnalyst(G, layers){
-  const d = modeDeps();
-  const g = Object.assign({}, G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() });
-  ANALYST_GLOBALS.forEach(([k]) => { if (k in d.DEFAULT_G) g[k] = d.DEFAULT_G[k]; });
+function resetAnalyst(G, layers, base){
+  const b = modeBase(base);
+  const g = Object.assign({}, G, { entryDef: b.G.entryDef, capexModel: b.G.capexModel, phases: b.G.phases.slice() });
+  ANALYST_GLOBALS.forEach(([k]) => { if (k in b.G) g[k] = b.G[k]; });
   const ls = layers.map(L => {
-    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id), o = Object.assign({}, L, { driftP: L.driftP.slice(), marginP: L.marginP.slice() });
+    const def = b.layers.find(x => x.id === L.id), o = Object.assign({}, L, { driftP: L.driftP.slice(), marginP: L.marginP.slice() });
     if (!def) return o;
     ANALYST_LAYER_KEYS.forEach(([k]) => { o[k] = def[k]; });
     o.driftP = def.driftP.slice();
@@ -893,10 +1354,13 @@ function placeTip(anchor, tip, vp, margin, gap){
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 3;
+const SNAP_SCHEMA_VERSION = 4;
 // Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
 // had no trigger response (filled in as null).
-const SNAP_SCHEMA_READABLE = [1, 2, 3];
+const SNAP_SCHEMA_READABLE = [1, 2, 3, 4];
+// Schema 4 adds caseId (null for your own scenario, or the id of a bundled case) and layer names, and allows 1 to 6
+// layers. Older schemas are your own five-layer scenario: caseId null, names from the defaults.
+const SNAP_MAX_LAYERS = 6;
 const SNAP_RESPONSE_KINDS = ['revised', 'kept'];
 const SNAP_REASON_MAX = 500;
 const SNAP_MAX_BYTES = 1024 * 1024;
@@ -921,8 +1385,8 @@ function snapDeps(){
   return { MODEL_VERSION, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
 }
 
-function snapBlankKill(){
-  return snapDeps().DEFAULT_LAYERS.map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
+function snapBlankKill(layers){
+  return (layers || snapDeps().DEFAULT_LAYERS).map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
 }
 const snapFinite = (v) => typeof v === 'number' && isFinite(v) ? v : null;
 
@@ -941,7 +1405,7 @@ function snapInputs(G, layers){
   SNAP_GLOBAL_KEYS.forEach(k => { g[k] = G[k]; });
   g.entryDef = G.entryDef; g.capexModel = G.capexModel; g.phases = [G.phases[0], G.phases[1]];
   const ls = layers.map(L => {
-    const o = { id: L.id };
+    const o = { id: L.id, name: L.name };
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = L[k]; });
     o.driftP = L.driftP.slice(0, 3); o.marginP = L.marginP.slice(0, 3);
     if (typeof L.alloc === 'number') o.alloc = L.alloc;
@@ -982,8 +1446,9 @@ function makeSnapshot(opts){
     created: (opts.now || new Date()).toISOString(), // ISO, UTC
     note: String(opts.note || '').slice(0, SNAP_TEXT_MAX.note),
     modelVersion: snapDeps().MODEL_VERSION,
+    caseId: opts.caseId || null,
     inputs, outputs: snapOutputs(inputs),
-    kill: (opts.kill || snapBlankKill()).map(snapKillCopy),
+    kill: (opts.kill || snapBlankKill(opts.layers)).map(snapKillCopy),
     response: opts.response ? snapResponseCopy(opts.response) : null
   };
 }
@@ -1080,15 +1545,19 @@ function snapCheckFile(data, opts){
 }
 // Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
 function snapCheckOne(s, where, withAlloc){
-  const d = snapDeps(), ids = d.DEFAULT_LAYERS.map(L => L.id);
+  const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
   const schema = snapSchema(s.schemaVersion, where);
   snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
   if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
-  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : []), [], where);
+  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : [], schema >= 4 ? ['caseId'] : []), [], where);
   const out = { schemaVersion: SNAP_SCHEMA_VERSION, name: snapStr(s.name, SNAP_TEXT_MAX.name, where + ' name'),
     created: snapDate(s.created, where + ' created'), note: snapStr(s.note, SNAP_TEXT_MAX.note, where + ' note'),
-    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
+    modelVersion: s.modelVersion, caseId: null, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
+  if (schema >= 4 && s.caseId !== null) {
+    out.caseId = snapStr(s.caseId, 60, where + ' caseId');
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(out.caseId)) snapErr(where + ' caseId', 'unexpected case id');
+  }
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
@@ -1101,11 +1570,21 @@ function snapCheckOne(s, where, withAlloc){
   const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
   if (p1 >= p2) snapErr(where + ' setting phases', 'phase 2 must start before phase 3');
   out.inputs.G.phases = [p1, p2];
-  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length !== ids.length) snapErr(where + ' layers', 'expected ' + ids.length + ' layers');
+  // Layers: your own scenario has the five default layers; a case snapshot has the case's 1 to 6 layers.
+  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length < 1 || s.inputs.layers.length > SNAP_MAX_LAYERS) snapErr(where + ' layers', 'expected 1 to ' + SNAP_MAX_LAYERS + ' layers');
+  if (out.caseId === null && s.inputs.layers.length !== defIds.length) snapErr(where + ' layers', 'expected ' + defIds.length + ' layers');
+  const ids = s.inputs.layers.map((L, i) => {
+    if (!snapIsObj(L) || typeof L.id !== 'string' || !/^[a-z][a-z0-9-]{0,29}$/.test(L.id)) snapErr(where + ' layer ' + (i + 1), 'unexpected layer id');
+    if (out.caseId === null && L.id !== defIds[i]) snapErr(where + ' layer ' + (i + 1), 'expected layer id "' + defIds[i] + '"');
+    return L.id;
+  });
+  if (new Set(ids).size !== ids.length) snapErr(where + ' layers', 'duplicate layer id');
   s.inputs.layers.forEach((L, i) => {
     const w = where + ' layer ' + (i + 1), o = { id: ids[i] };
-    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP']), withAlloc ? ['alloc'] : [], w);
-    if (L.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
+    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP'], schema >= 4 ? ['name'] : []), withAlloc ? ['alloc'] : [], w);
+    o.name = schema >= 4 ? snapStr(L.name, 40, w + ' name') : d.DEFAULT_LAYERS[i].name;
+    // Layer names are drawn into charts and tables, so markup characters are refused rather than trusted.
+    if (!o.name.trim() || /[<>&"]/.test(o.name)) snapErr(w + ' name', 'must not be empty or contain < > & or "');
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = snapNum(L[k], d.LAYER_RANGES[k], w + ' ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
     ['driftP', 'marginP'].forEach(k => {
       if (!Array.isArray(L[k]) || L[k].length !== 3) snapErr(w + ' ' + k, 'expected three phase values');
@@ -1217,11 +1696,17 @@ function diffInputs(a, b){
 }
 // Compare two snapshots. When either was saved under a different model version from the other or from the current
 // model, both are recomputed under the current model and the stored outputs are kept alongside.
+// Two views can be compared only if they are of the same stack: same case (or both your own scenario), same layers.
+function snapSameStack(a, b){
+  return (a.caseId || null) === (b.caseId || null) && a.inputs.layers.length === b.inputs.layers.length && a.inputs.layers.every((L, i) => L.id === b.inputs.layers[i].id);
+}
+function snapStackName(s){ return s.caseId ? 'case “' + s.caseId + '”' : 'your own scenario'; }
 function compareSnapshots(a, b){
   const d = snapDeps();
   const versionMismatch = a.modelVersion !== b.modelVersion || a.modelVersion !== d.MODEL_VERSION || b.modelVersion !== d.MODEL_VERSION;
   const recA = versionMismatch ? snapOutputs(a.inputs) : null, recB = versionMismatch ? snapOutputs(b.inputs) : null;
-  const layers = d.DEFAULT_LAYERS.map((L, i) => {
+  if (!snapSameStack(a, b)) throw new Error('These two views are of different stacks (' + snapStackName(a) + ' and ' + snapStackName(b) + '), so they cannot be compared.');
+  const layers = a.inputs.layers.map((L, i) => {
     const before = recA ? recA[i] : a.outputs[i], after = recB ? recB[i] : b.outputs[i];
     return { id: L.id, name: L.name, before, after,
       storedBefore: a.outputs[i], storedAfter: b.outputs[i],
@@ -1249,8 +1734,11 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const g = checked.inputs.G;
   const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
   G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
-  const layers = currentLayers.map((L, i) => {
-    const src = checked.inputs.layers[i], out = Object.assign({}, L, { driftP: src.driftP.slice(), marginP: src.marginP.slice() });
+  // Layers come from the snapshot (ids and names); an allocation is restored only if the snapshot has it, otherwise
+  // the current allocation of the same layer is kept (or the placeholder 20 for a layer not on the page).
+  const layers = checked.inputs.layers.map(src => {
+    const cur = currentLayers.find(L => L.id === src.id);
+    const out = { id: src.id, name: src.name, alloc: cur ? cur.alloc : 20, driftP: src.driftP.slice(), marginP: src.marginP.slice() };
     SNAP_LAYER_NUM_KEYS.forEach(k => { out[k] = src[k]; });
     if (typeof src.alloc === 'number') out.alloc = src.alloc;
     return out;
@@ -1259,7 +1747,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const warning = checked.modelVersion !== cur
     ? 'This snapshot was saved under model version ' + checked.modelVersion + '; this page uses version ' + cur + '. Its inputs will load, and results will recompute under the current model, so they may differ from the stored ones.'
     : '';
-  return { ok: true, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
+  return { ok: true, caseId: checked.caseId, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
 }
 
 
@@ -1300,10 +1788,14 @@ function load(){
     if(Number.isInteger(o.sel) && o.sel>=0 && o.sel<layers.length) sel=o.sel;
   }catch(e){}
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
+// While a case is open, edits are not saved over your own scenario (which waits in memory for "Return to my scenario").
+function save(){ if(caseCtx) return; try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
 
 const $ = (id) => document.getElementById(id);
-const money = (x) => (x<0?'\u2212':'') + '$' + Math.abs(x).toFixed(0) + 'B';
+// Money unit: "$B" for your own scenario; a case sets its own (for example "\u00a3m") for every money label.
+let moneyUnit = '$B';
+const money = (x) => formatMoney(x, moneyUnit);
+let caseCtx = null; // open case: { c, versionId, st (case state), mine (your scenario, kept in memory) }
 const pct = (x, d) => (x<0?'\u2212':'') + Math.abs(x).toFixed(d||0) + '%';
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
@@ -1326,7 +1818,7 @@ const mx = (x, d) => (x<0?'−':'') + Math.abs(x).toFixed(d===undefined?1:d) + '
 function syncDriverLabels(){
   $('o_speed').textContent = G.speed.toFixed(1) + ' years';
   $('o_mid').textContent = 'year ' + G.mid.toFixed(1);
-  $('o_pool').textContent = '$' + G.pool.toFixed(0) + 'B a year';
+  $('o_pool').textContent = money(G.pool) + ' a year';
   $('o_prem').textContent = pct(G.premium);
   $('o_mult').textContent = mx(G.mult);
   $('o_entry').textContent = 'year ' + G.entry;
@@ -1335,8 +1827,8 @@ function syncDriverLabels(){
   $('o_tv').textContent = G.tv.toFixed(1) + 'x';
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
-  document.querySelectorAll('#defSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
-  document.querySelectorAll('#capexSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
+  document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
+  document.querySelectorAll('#capexSwitch button[data-c]').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
   $('capexNote').innerHTML = isV()
     ? '<b>Vintage cohorts.</b> Each year\u2019s build spend is replaced at the end of its asset life, at the original cost \u00d7 (1 \u2212 unit-cost decline)<sup>life</sup>. Replacement after year 15 is not charged; value beyond year 15 uses a normalised sustaining spend. Unit-cost decline lowers your replacement cost; pass-through sets how much of it competition hands to customers as lower prices, applied through share drift (see the effective drift in the Phases table). Replacement before your entry year is not in the entry price, and debt covers the initial build only.'
     : '<b>Sustaining spend (v0.1).</b> After the build, build capex \u00f7 asset life is spent every year. Unit-cost decline is ignored in this mode.';
@@ -1359,7 +1851,7 @@ function syncDriverInputs(){
   $('ph1').value = G.phases[0]; $('ph2').value = G.phases[1];
 }
 // One dash pattern per layer (in DEFAULT_LAYERS order) so no layer line can be mistaken for the solid demand line.
-const LAYER_DASH = ['8 3', '2 2', '8 3 2 3', '4 4', '12 2 2 2 2 2'];
+const LAYER_DASH = ['8 3', '2 2', '8 3 2 3', '4 4', '12 2 2 2 2 2', '1 3']; // up to six layers (cases)
 function timingText(L){
   const off = L.offset, st = L.steepness;
   if(off===0 && st===1) return 'same as end demand';
@@ -1385,7 +1877,7 @@ function timingShort(L){
 let adoptHeight = 170;
 function adoptChart(){
   const box = $('adoptChart');
-  const W = Math.max(260, Math.round(box.clientWidth) || 560), Hh = adoptHeight, m={l:36,r:10,t:8,b:22}, fs = 11;
+  const W = Math.max(260, Math.round(box.clientWidth) || 560), Hh = adoptHeight, m={l:38,r:10,t:8,b:24}, fs = 12;
   const iw=W-m.l-m.r, ih=Hh-m.t-m.b;
   const x = (t) => m.l + iw*t/H, y = (v) => m.t + ih*(1-v);
   const path = (f) => { let d=''; for(let t=0;t<=H;t+=0.25){ d += (t===0?'M':'L') + x(t).toFixed(1) + ' ' + y(f(t)).toFixed(1); } return d; };
@@ -1455,7 +1947,7 @@ function phaseLabels(){
 function buildInputs(){
   // Basic and Advanced show one cash margin per layer; it sets all three phases. When the phases differ (set in
   // Analyst), the cell says so instead of offering an input that would overwrite them.
-  const head = (c) => '<th'+dm(c[0])+'>'+c[1]+'</th>';
+  const head = (c) => '<th'+dm(c[0])+'>'+c[1].replace('$B', esc(moneyUnit))+'</th>';
   let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => head(c) + (c[0]==='share' ? '<th>Cash margin, %</th>' : '')).join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
@@ -1468,6 +1960,7 @@ function buildInputs(){
   document.querySelectorAll('#inputs input').forEach(inp => inp.addEventListener('input', onLayerInput));
   updateMarginCells(true);
   buildScoreLite();
+  renderChips();
 }
 // First-screen scorecard: layer, verdict, present value, headroom and an editable allocation. Built once so the
 // allocation box keeps focus while typing; values are refreshed in place on every render.
@@ -1608,9 +2101,12 @@ function quadChart(res){
   s += '<rect x="'+m.l+'" y="'+yg+'" width="'+(x0-m.l)+'" height="'+(m.t+ih-yg)+'" fill="var(--red-bg)"/>';
   s += '<rect x="'+x0+'" y="'+yg+'" width="'+(W-m.r-x0)+'" height="'+(m.t+ih-yg)+'" fill="var(--amber-bg)" opacity="0.6"/>';
   s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--amber)">Useful, capital does not earn its cost</text>';
-  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
+  // On narrow charts the two corner labels in a row can meet; then the right-hand one moves one line inwards.
+  const cornerGap = (l, r) => labelWidth(l) + labelWidth(r) + 24 > iw ? Math.round(fs * 1.3) : 0;
+  const topShift = cornerGap('Useful, capital does not earn its cost', 'Durable or fragile value'), botShift = cornerGap('Speculative', 'Pays on assumptions, not evidence');
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+fs+4+topShift)+'" font-size="'+fs+'" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
   s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--red)">Speculative</text>';
-  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+ih-8-botShift)+'" font-size="'+fs+'" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
   s += '<line x1="'+x0+'" x2="'+x0+'" y1="'+m.t+'" y2="'+(m.t+ih)+'" stroke="var(--ink)" stroke-width="1.2"/>';
   s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+yg+'" y2="'+yg+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="4 3"/>';
   [1,2,3,4,5].forEach(e => { s += '<text class="qa" x="'+(m.l-8)+'" y="'+(sy(e)+4)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="end">'+e+'</text>'; });
@@ -1756,7 +2252,7 @@ function cashChart(o){
   if(lifeEnd<=H){ s += '<line x1="'+x(lifeEnd)+'" x2="'+x(lifeEnd)+'" y1="'+m.t+'" y2="'+(m.t+ih)+'" stroke="var(--red)" stroke-width="1.2" stroke-dasharray="4 3"/><text x="'+(x(lifeEnd)+4)+'" y="'+(m.t+11)+'" font-size="10.5" fill="var(--red)">asset life ends</text>'; }
   if(o.payback!==null){ s += '<circle cx="'+x(o.payback)+'" cy="'+y(o.cumArr[o.payback])+'" r="4.5" fill="var(--green)" stroke="var(--card)" stroke-width="1.5"/><text x="'+(x(o.payback)+7)+'" y="'+(y(o.cumArr[o.payback])-7)+'" font-size="10.5" fill="var(--green)">payback</text>'; }
   [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-10)+'" font-size="10" fill="var(--cap)" text-anchor="middle">year '+t+'</text>'; });
-  s += '</svg><div class="legend">Line: cumulative cash, $B. Bars: cash each year, $B.</div>';
+  s += '</svg><div class="legend">Line: cumulative cash, '+esc(moneyUnit)+'. Bars: cash each year, '+esc(moneyUnit)+'.</div>';
   $('cashNote').textContent = 'Cash is counted from your entry year; the entry-year bar includes the price you pay.';
   $('cashChart').innerHTML = s;
 }
@@ -1849,6 +2345,7 @@ function renderResults(){
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
   renderKpis(); renderHiddenState(); lowShareNote();
   quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); updateMarginCells(false);
+  if(caseCtx){ renderCaseBar(); updateChips(); renderWhatHappened(res); }
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -1897,8 +2394,8 @@ function bind(){
   document.querySelectorAll('#scen button').forEach(b => b.addEventListener('click', () => {
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
-  document.querySelectorAll('#defSwitch button').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
-  document.querySelectorAll('#capexSwitch button').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
+  document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
+  document.querySelectorAll('#capexSwitch button[data-c]').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
   // The example only has an effect in Vintage mode, so it switches that mode on.
   $('ucdExample').addEventListener('click', () => { layers.forEach((L,i) => { L.unitCostDecline = UCD_EXAMPLE[i]; }); G.capexModel = 'vintage'; refreshInputsFromState(); update(); });
   $('ph1').addEventListener('change', onPhaseBounds); $('ph2').addEventListener('change', onPhaseBounds);
@@ -1911,6 +2408,7 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
+    if(caseCtx){ resetToCase(); return; }
     G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
     syncDriverInputs(); buildInputs(); update();
   });
@@ -1952,9 +2450,16 @@ function snapCleanKill(k, i){
     reviewBy: k && /^\d{4}-\d{2}-\d{2}$/.test(k.reviewBy) ? k.reviewBy : '',
     status: '', answeredAt: '' }; // the draft is for the next snapshot, so it carries no answers
 }
+// Info note for the trigger columns (metric, direction, threshold), wired like every other info note.
+let triggerTipN = 0;
+function triggerTip(){
+  const id = 'trigTip' + (++triggerTipN);
+  return el('span', {cls:'tipwrap'}, [el('button', {cls:'info', type:'button', 'aria-label':'About: Trigger', 'aria-expanded':'false', 'aria-controls': id}, ['i']),
+    el('span', {cls:'tip', role:'tooltip', id: id, text: 'Trigger: a metric, a direction (above or below) and a threshold that you will check yourself at the review-by date. Nothing is fetched. Leave blank to keep the criterion as text only.'})]);
+}
 function snapBuildKillTable(){
   const t = $('killTable'); t.textContent = '';
-  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise this layer','Metric','Direction','Threshold','Review by'].map((h,i) => el('th', {cls: i<2 ? 'l' : ''}, [h])))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise this layer','Metric','Direction','Threshold','Review by'].map((h,i) => el('th', {cls: i<2 ? 'l' : ''}, i===2 ? [h, ' ', triggerTip()] : [h])))]));
   const tb = el('tbody');
   layers.forEach((L,i) => {
     const k = snapStore.draftKill[i];
@@ -2010,7 +2515,7 @@ function snapRenderReview(){
     el('p', {cls:'pre', text: s.note || '(no note)'}),
     s.response ? el('p', {cls:'pre', text: (s.response.kind==='revised' ? 'Response to triggers: revised. Changed inputs: ' + (s.response.changedInputs.length ? s.response.changedInputs.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') : 'none') : 'Response to triggers: kept my view. Reason: ' + s.response.reason)}) : null]));
   const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
-  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, [h])))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, i===2 ? [h, ' ', triggerTip()] : [h])))]));
   const tb = el('tbody');
   s.kill.forEach((k,i) => {
     const trig = k.metric ? k.metric + (k.direction ? ' ' + k.direction + ' ' : ' ') + (k.threshold===null ? '' : k.threshold) : '—';
@@ -2049,7 +2554,7 @@ function snapFillSelects(){
     sel.value = [...sel.options].some(o => o.value===prev) ? prev : (j===0 ? (n ? String(n-1) : 'current') : 'current');
   });
 }
-function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill }); }
+function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill, caseId: caseCtx ? caseCtx.c.id : null }); }
 function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots[+v]; }
 // Saving while criteria are triggered opens a prompt to record "revised" or "kept my view". Never blocks saving.
 function snapSaveNew(){
@@ -2080,15 +2585,16 @@ function snapRespSave(){
 function snapCommitSave(response){
   const name = $('snapName').value.trim();
   snapHideRespond();
-  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response }));
+  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response, caseId: caseCtx ? caseCtx.c.id : null }));
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
   else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
   snapRenderList();
 }
 // One-step undo for "Load into simulator": the settings, layers, selection and kill-criteria draft just before it.
 let snapUndo = null;
-function snapPageState(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)) }; }
+function snapPageState(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)), caseCtx: caseCtx }; }
 function snapApplyState(st){
+  if('caseCtx' in st) setCaseContext(st.caseCtx);
   G = Object.assign(freshG(), st.G); layers = st.layers.map(copyLayer);
   if(typeof st.sel === 'number') sel = st.sel;
   snapStore.draftKill = st.draftKill.map(k => Object.assign({}, k));
@@ -2100,9 +2606,18 @@ function snapLoadInto(i){
   if(!plan.ok){ $('snapMsg').textContent = 'Not loaded: ' + plan.error; return; }
   const ask = 'Load “' + s.name + '” into the simulator? Your current settings will be replaced (you can undo once).'
     + (plan.warning ? '\n\n' + plan.warning : '') + (plan.hasAllocations ? '' : '\n\nThis snapshot has no allocations, so your current allocations stay.');
+  // A snapshot of a case opens that case first; one of your own scenario leaves any open case.
+  let ctx = null;
+  if(plan.caseId){
+    const c = CASES.find(x => x.id === plan.caseId);
+    if(!c){ $('snapMsg').textContent = 'Not loaded: this snapshot is from the case \u201c' + plan.caseId + '\u201d, which this page does not include.'; return; }
+    if(c.layers.length !== plan.state.layers.length || c.layers.some((L, j) => L.id !== plan.state.layers[j].id)){ $('snapMsg').textContent = 'Not loaded: the case \u201c' + c.title + '\u201d has different layers now.'; return; }
+    ctx = { c: c, versionId: 'base', st: caseState(c, 'base'), mine: caseCtx ? caseCtx.mine : snapMine() };
+  }
   if(!window.confirm(ask)) return;
   snapUndo = snapPageState();
-  snapApplyState(Object.assign({ sel: sel }, plan.state));
+  snapApplyState(Object.assign({ sel: 0, caseCtx: ctx }, plan.state));
+  if(!ctx && snapUndo.caseCtx) restoreMineDraft(snapUndo.caseCtx.mine);
   $('snapMsg').textContent = 'Loaded “' + s.name + '”. Results are recomputed from its inputs.' + (plan.warning ? ' ' + plan.warning : '');
   $('snapUndo').hidden = false;
 }
@@ -2124,7 +2639,9 @@ function snapRenderCompare(){
   const a = snapPick($('cmpA').value), b = snapPick($('cmpB').value), box = $('snapCompare');
   box.textContent = '';
   if(!a || !b) return;
-  const c = compareSnapshots(a, b), wrap = el('div', {cls:'snapbox'});
+  let c;
+  try { c = compareSnapshots(a, b); } catch(e){ box.appendChild(el('p', {cls:'notice', text: e.message})); return; }
+  const wrap = el('div', {cls:'snapbox'});
   wrap.appendChild(el('h3', {text: 'Before: ' + a.name + '   →   After: ' + b.name}));
   if(c.versionMismatch) wrap.appendChild(el('p', {cls:'notice', text: 'Model version differs (before v' + c.versions.before + ', after v' + c.versions.after + ', current v' + c.versions.current + '). Both sides are recomputed under the current model; the outputs stored at the time are shown alongside.'}));
   // Inputs that changed
@@ -2227,7 +2744,7 @@ function tile(id, big, sub, label, info, chip){
 }
 function esc(t){ return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 function renderKpis(){
-  const k = kpiTiles(layers, G);
+  const k = kpiTiles(layers, G, caseBase());
   const t = k.tight;
   const tightBig = t ? (t.headroom>0?'+':'') + (t.unit==='x' ? mx(t.headroom) : pct(t.headroom)) : 'n/a';
   let allocBig = 'n/a', allocLabel = 'My allocation in layers below cost';
@@ -2245,13 +2762,13 @@ function renderKpis(){
 // Shown in Basic and Advanced when any Analyst-only setting differs from its default.
 function renderHiddenState(){
   const el = $('hiddenState'); if(!el) return;
-  const diffs = analystDiffs(G, layers);
+  const diffs = analystDiffs(G, layers, caseBase());
   el.hidden = mode === 'analyst' || !diffs.length;
   if(el.hidden) return;
   $('hiddenText').textContent = diffs.length + ' advanced assumption' + (diffs.length===1 ? '' : 's') + ' active: ' + diffs.slice(0, 4).map(d => d.label).join('; ') + (diffs.length > 4 ? '; and ' + (diffs.length - 4) + ' more' : '') + '.';
 }
 function resetHidden(){
-  const r = resetAnalyst(G, layers);
+  const r = resetAnalyst(G, layers, caseBase());
   G = r.G; layers = r.layers;
   syncDriverInputs(); buildInputs(); update();
 }
@@ -2293,38 +2810,219 @@ function bindTips(){
   const reposition = () => document.querySelectorAll('.tipwrap > button').forEach(b => { const t = tipOf(b); if(t && t.classList.contains('open')) openTip(b); });
   window.addEventListener('scroll', reposition, true); window.addEventListener('resize', reposition);
 }
-/* "Behind the tool" modal: focus moves in, Tab is trapped inside, Esc or Close shuts it, focus returns to the button. */
-let behindReturn = null;
-function openBehind(){
-  behindReturn = document.activeElement;
-  $('behindModal').hidden = false;
-  $('behindClose').focus();
+/* Dialogs ("Behind the tool", Cases, Sources): focus moves in, Tab is trapped inside, Esc or Close shuts it, and
+   focus returns to whatever opened it. */
+const MODALS = { behindModal: 'behindClose', casesModal: 'casesClose', sourcesModal: 'sourcesClose' };
+let modalReturn = null, modalOpen = null;
+function openModal(id){
+  if(modalOpen) closeModal(true);
+  modalReturn = document.activeElement; modalOpen = id;
+  $(id).hidden = false;
+  $(MODALS[id]).focus();
 }
-function closeBehind(){
-  $('behindModal').hidden = true;
-  const r = behindReturn && document.contains(behindReturn) && behindReturn !== document.body ? behindReturn : $('behindBtn');
-  r.focus(); behindReturn = null;
+function closeModal(keepFocus){
+  if(!modalOpen) return;
+  $(modalOpen).hidden = true; modalOpen = null;
+  if(keepFocus) return;
+  const r = modalReturn && document.contains(modalReturn) && modalReturn !== document.body && modalReturn.offsetParent !== null ? modalReturn : $('behindBtn');
+  r.focus(); modalReturn = null;
 }
+const openBehind = () => openModal('behindModal'), closeBehind = () => closeModal();
 function bindBehind(){
   $('behindBtn').addEventListener('click', openBehind);
-  $('behindClose').addEventListener('click', closeBehind);
-  $('behindModal').addEventListener('click', e => { if(e.target === $('behindModal')) closeBehind(); });
+  $('casesBtn').addEventListener('click', () => { renderCasesList(); openModal('casesModal'); });
+  $('caseSources').addEventListener('click', () => { renderSources(); openModal('sourcesModal'); });
+  for(const id in MODALS){
+    $(MODALS[id]).addEventListener('click', () => closeModal());
+    $(id).addEventListener('click', e => { if(e.target === $(id)) closeModal(); });
+  }
   document.addEventListener('keydown', e => {
-    if($('behindModal').hidden) return;
-    if(e.key==='Escape'){ e.preventDefault(); closeBehind(); return; }
+    if(!modalOpen) return;
+    const m = $(modalOpen);
+    if(e.key==='Escape'){ e.preventDefault(); closeModal(); return; }
     if(e.key==='Tab'){
-      const f = [...$('behindModal').querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled);
+      const f = [...m.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled);
       if(!f.length) return;
       const first = f[0], last = f[f.length-1];
       if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
       else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-      else if(!$('behindModal').contains(document.activeElement)){ e.preventDefault(); first.focus(); }
+      else if(!m.contains(document.activeElement)){ e.preventDefault(); first.focus(); }
     }
   });
 }
+// Input guide (in "Behind the tool"): meaning, where to look, recipe and hindsight trap for every input.
+function renderGuide(){
+  const box = $('inputGuide'); box.textContent = '';
+  GUIDE_INTRO.forEach(t => box.appendChild(el('p', {text: t})));
+  Object.keys(GUIDE).forEach(k => {
+    const g = GUIDE[k];
+    box.appendChild(el('h4', {text: g.label}));
+    [['Meaning. ', g.meaning], ['Where to look at the as-of date. ', g.where], ['Recipe. ', g.recipe], ['Hindsight trap. ', g.trap]].forEach(([b, t]) => box.appendChild(el('p', null, [el('b', {text: b}), t])));
+  });
+}
+
+/* ---------- case library ---------- */
+// Cases are bundled at build time (CASES). Opening one keeps your own scenario in memory for "Return to my scenario"
+// (one step), loads the case's inputs, shows its title, money unit and badge, and marks each input with its basis.
+function caseBase(){ return caseCtx ? { G: caseCtx.st.G, layers: caseCtx.st.layers } : undefined; }
+function snapMine(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)) }; }
+function restoreMineDraft(mine){ snapStore.draftKill = mine.draftKill.map(k => Object.assign({}, k)); snapBuildKillTable(); }
+// Applies title, unit and page markers for a case context (or none); does not touch inputs.
+function setCaseContext(ctx){
+  caseCtx = ctx;
+  moneyUnit = ctx ? ctx.c.moneyUnit : '$B';
+  const name = ctx ? ctx.c.title : CASE_NAME;
+  $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
+  document.body.classList.toggle('case-mode', !!ctx);
+  $('caseBar').hidden = !ctx;
+  $('whatHappened').hidden = !ctx;
+  if(ctx) renderCaseBar();
+}
+function openCase(id, versionId, opts){
+  const c = CASES.find(x => x.id === id); if(!c) return false;
+  const o = opts || {};
+  const switching = caseCtx && caseCtx.c.id === id;
+  if(!o.noConfirm){
+    const ask = switching
+      ? 'Switch to the \u201c' + (versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label) + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : '')
+      : 'Open the case \u201c' + c.title + '\u201d (as of ' + c.asOfDate + ')? Your current scenario is kept in memory; use \u201cReturn to my scenario\u201d to get it back.';
+    if(!window.confirm(ask)) return false;
+  }
+  const mine = caseCtx ? caseCtx.mine : snapMine();
+  const st = caseState(c, versionId || 'base');
+  setCaseContext({ c: c, versionId: st.versionId, st: st, mine: mine });
+  G = Object.assign(freshG(), JSON.parse(JSON.stringify(st.G))); layers = st.layers.map(copyLayer); sel = 0;
+  if(!switching) snapStore.draftKill = snapBlankKill(layers);
+  syncDriverInputs(); buildInputs(); update(); snapBuildKillTable();
+  return true;
+}
+function resetToCase(){ if(caseCtx) openCase(caseCtx.c.id, caseCtx.versionId, { noConfirm: true }); }
+function returnToScenario(){
+  if(!caseCtx) return;
+  const mine = caseCtx.mine;
+  setCaseContext(null);
+  G = mine.G; layers = mine.layers.map(copyLayer); sel = mine.sel;
+  restoreMineDraft(mine);
+  syncDriverInputs(); buildInputs(); update();
+}
+// Inputs only (allocations are personal and not part of a case).
+function caseInputsOf(g, ls){ const x = snapInputs(g, ls); x.layers.forEach(L => { delete L.alloc; }); return JSON.stringify(x); }
+function caseModified(){ return !!caseCtx && caseInputsOf(G, layers) !== caseInputsOf(caseCtx.st.G, caseCtx.st.layers); }
+function renderCaseBar(){
+  if(!caseCtx) return;
+  const c = caseCtx.c;
+  $('caseBadgeText').textContent = c.title + ', as of ' + c.asOfDate;
+  const tip = $('caseTip'); tip.textContent = '';
+  [c.subtitle, 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
+  const vb = $('caseVersions'); vb.textContent = '';
+  if(c.versions.length){
+    [{ id: 'base', label: 'Base' }].concat(c.versions).forEach(v => {
+      const b = el('button', {type:'button', 'data-version': v.id, 'aria-pressed': String(v.id === caseCtx.versionId)}, [v.label]);
+      b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id); });
+      vb.appendChild(b);
+    });
+  }
+  $('caseModified').hidden = !caseModified();
+}
+function renderCasesList(){
+  const box = $('casesList'); box.textContent = '';
+  const list = el('div', {cls:'caselist'});
+  CASES.forEach(c => {
+    const open = el('button', {type:'button', 'data-case': c.id}, [caseCtx && caseCtx.c.id === c.id ? 'Open again' : 'Open']);
+    open.addEventListener('click', () => { closeModal(true); if(!openCase(c.id, 'base')) $('casesBtn').focus(); });
+    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'})]), open]));
+  });
+  box.appendChild(list);
+}
+function renderSources(){
+  const t = $('sourcesTable'); t.textContent = '';
+  if(!caseCtx) return;
+  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 2 ? 'l' : '', text: h})))]));
+  const tb = el('tbody');
+  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
+  t.appendChild(tb);
+}
+// Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
+// calculation or the rationale, and says when you have changed the value from the case.
+const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv' };
+const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
+let chipN = 0;
+function chipTargets(){
+  const out = [];
+  for(const id in SLIDER_KEYS){ const inp = $(id); if(inp) out.push({ key: 'settings.' + SLIDER_KEYS[id], host: inp.closest('.cctl').querySelector('.cctl-h output'), before: true, cur: () => G[SLIDER_KEYS[id]], word: true }); }
+  out.push({ key: 'settings.phase2Start', host: $('ph1'), cur: () => G.phases[0] }, { key: 'settings.phase3Start', host: $('ph2'), cur: () => G.phases[1] });
+  document.querySelectorAll('#inputs input[data-k], #phaseTable input[data-k]').forEach(inp => {
+    const k = inp.dataset.k, i = +inp.dataset.i, p = inp.dataset.p;
+    if(k === 'alloc' || k === 'marginAll') return;
+    const L = layers[i]; if(!L) return;
+    out.push({ key: 'layer ' + L.id + '.' + k + (p === undefined ? '' : '[' + p + ']'), host: inp, cur: () => p === undefined ? layers[i][k] : layers[i][k][+p] });
+  });
+  return out;
+}
+function chipTip(rec, edited, cur){
+  const cite = (ids) => ids.map(id => { const s = caseCtx.c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; });
+  const parts = [];
+  parts.push(rec.basis === 'sourced' ? 'Sourced.' : rec.basis === 'derived' ? 'Derived.' : 'Judgement.');
+  if(rec.basis === 'derived') parts.push('Calculation: ' + rec.note);
+  if(rec.basis === 'judgement') parts.push('Rationale: ' + rec.note);
+  if(rec.basis === 'sourced' && rec.note) parts.push(rec.note);
+  if(rec.sourceIds.length) parts.push('Sources: ' + cite(rec.sourceIds).join('; ') + '.');
+  else parts.push('No source.');
+  if(edited) parts.push('You changed this from the case value ' + rec.value + ' (now ' + cur + ').');
+  return parts;
+}
+function renderChips(){
+  document.querySelectorAll('.bchipwrap').forEach(e => e.remove());
+  if(!caseCtx) return;
+  chipTargets().forEach(t => {
+    const rec = caseCtx.st.recs[t.key]; if(!rec || !t.host) return;
+    const id = 'bc' + (++chipN);
+    const b = el('button', {cls: 'bchip b-' + rec.basis, type: 'button', 'aria-expanded': 'false', 'aria-controls': id, 'data-key': t.key,
+      'aria-label': 'Basis: ' + rec.basis + (rec.basis === 'judgement' ? ' (labelled judgement)' : '')}, [t.word ? rec.basis : BASIS_LETTER[rec.basis]]);
+    const tip = el('span', {cls: 'tip', role: 'tooltip', id: id});
+    const w = el('span', {cls: 'tipwrap bchipwrap'}, [b, tip]);
+    if(t.before) t.host.parentNode.insertBefore(w, t.host); else t.host.insertAdjacentElement('afterend', w);
+  });
+  updateChips();
+}
+function updateChips(){
+  if(!caseCtx) return;
+  const targets = chipTargets();
+  document.querySelectorAll('.bchip').forEach(b => {
+    const t = targets.find(x => x.key === b.dataset.key), rec = caseCtx.st.recs[b.dataset.key];
+    if(!t || !rec) return;
+    const cur = t.cur(), edited = cur !== rec.value;
+    b.classList.toggle('edited', edited);
+    const tip = document.getElementById(b.getAttribute('aria-controls')); tip.textContent = '';
+    chipTip(rec, edited, cur).forEach(x => tip.appendChild(el('p', {text: x, style: 'margin:0 0 3px'})));
+  });
+}
+// What happened: each layer's recorded outcome beside the model's verdict for the inputs on screen. No hit rate.
+function renderWhatHappened(res){
+  if(!caseCtx) return;
+  const c = caseCtx.c, w = caseOutcomeRows(c, layers, res);
+  $('whBanner').textContent = w.banner;
+  $('whHindsight').textContent = 'Hindsight: ' + c.hindsightDisclosure;
+  const t = $('outcomeTable'); t.textContent = '';
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer', 'Model verdict (inputs on screen)', 'Model: capital earns its cost?', 'What happened', 'Summary', 'Sources', 'Horizon'].map((h,i) => el('th', {cls: i===2 ? '' : 'l', text: h})))]));
+  const tb = el('tbody');
+  w.rows.forEach(r => {
+    const srcs = r.sourceIds.map(id => { const s = c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; }).join('; ');
+    tb.appendChild(el('tr', null, [el('td', {cls:'l', text: r.layer}), el('td', {cls:'l', text: r.verdict}), el('td', {text: r.earnsCost ? 'yes' : 'no'}),
+      el('td', {cls:'l', 'data-outcome': r.outcome || '', text: r.outcome || 'not recorded'}), el('td', {cls:'l', text: r.summary || '\u2014'}), el('td', {cls:'l', text: srcs || '\u2014'}), el('td', {cls:'l', text: r.horizon || '\u2014'})]));
+  });
+  t.appendChild(tb);
+  const k = w.counts;
+  $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
+}
+function bindCases(){
+  $('casesBtn').hidden = !CASES.length;
+  $('caseReturn').addEventListener('click', returnToScenario);
+  $('caseReset').addEventListener('click', () => { if(!caseModified() || window.confirm('Reset every input to the case values? Your edits to the case will be lost.')) resetToCase(); });
+}
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
-  setMode(initialMode(), { noStore: false }); bindModes();
+  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   let rz = null;

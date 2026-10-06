@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "build": "node scripts/build.js",
-    "fixture:model": "node scripts/update-model-fixture.js"
+    "fixture:model": "node scripts/update-model-fixture.js",
+    "build:dev": "node scripts/build.js --dev"
   },
   "//": "Node is needed only to run the tests and the build. The page itself (docs/index.html) needs no Node. Supported: Node 22.22.2 or later on 22.x, 24.15.0 or later on 24.x, or 26.0.0 or later (set by jsdom 30, used by the smoke test).",
   "engines": {

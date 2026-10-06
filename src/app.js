@@ -35,10 +35,14 @@ function load(){
     if(Number.isInteger(o.sel) && o.sel>=0 && o.sel<layers.length) sel=o.sel;
   }catch(e){}
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
+// While a case is open, edits are not saved over your own scenario (which waits in memory for "Return to my scenario").
+function save(){ if(caseCtx) return; try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
 
 const $ = (id) => document.getElementById(id);
-const money = (x) => (x<0?'\u2212':'') + '$' + Math.abs(x).toFixed(0) + 'B';
+// Money unit: "$B" for your own scenario; a case sets its own (for example "\u00a3m") for every money label.
+let moneyUnit = '$B';
+const money = (x) => formatMoney(x, moneyUnit);
+let caseCtx = null; // open case: { c, versionId, st (case state), mine (your scenario, kept in memory) }
 const pct = (x, d) => (x<0?'\u2212':'') + Math.abs(x).toFixed(d||0) + '%';
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
@@ -61,7 +65,7 @@ const mx = (x, d) => (x<0?'−':'') + Math.abs(x).toFixed(d===undefined?1:d) + '
 function syncDriverLabels(){
   $('o_speed').textContent = G.speed.toFixed(1) + ' years';
   $('o_mid').textContent = 'year ' + G.mid.toFixed(1);
-  $('o_pool').textContent = '$' + G.pool.toFixed(0) + 'B a year';
+  $('o_pool').textContent = money(G.pool) + ' a year';
   $('o_prem').textContent = pct(G.premium);
   $('o_mult').textContent = mx(G.mult);
   $('o_entry').textContent = 'year ' + G.entry;
@@ -70,8 +74,8 @@ function syncDriverLabels(){
   $('o_tv').textContent = G.tv.toFixed(1) + 'x';
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
-  document.querySelectorAll('#defSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
-  document.querySelectorAll('#capexSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
+  document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
+  document.querySelectorAll('#capexSwitch button[data-c]').forEach(b => b.setAttribute('aria-pressed', b.dataset.c===G.capexModel ? 'true':'false'));
   $('capexNote').innerHTML = isV()
     ? '<b>Vintage cohorts.</b> Each year\u2019s build spend is replaced at the end of its asset life, at the original cost \u00d7 (1 \u2212 unit-cost decline)<sup>life</sup>. Replacement after year 15 is not charged; value beyond year 15 uses a normalised sustaining spend. Unit-cost decline lowers your replacement cost; pass-through sets how much of it competition hands to customers as lower prices, applied through share drift (see the effective drift in the Phases table). Replacement before your entry year is not in the entry price, and debt covers the initial build only.'
     : '<b>Sustaining spend (v0.1).</b> After the build, build capex \u00f7 asset life is spent every year. Unit-cost decline is ignored in this mode.';
@@ -94,7 +98,7 @@ function syncDriverInputs(){
   $('ph1').value = G.phases[0]; $('ph2').value = G.phases[1];
 }
 // One dash pattern per layer (in DEFAULT_LAYERS order) so no layer line can be mistaken for the solid demand line.
-const LAYER_DASH = ['8 3', '2 2', '8 3 2 3', '4 4', '12 2 2 2 2 2'];
+const LAYER_DASH = ['8 3', '2 2', '8 3 2 3', '4 4', '12 2 2 2 2 2', '1 3']; // up to six layers (cases)
 function timingText(L){
   const off = L.offset, st = L.steepness;
   if(off===0 && st===1) return 'same as end demand';
@@ -120,7 +124,7 @@ function timingShort(L){
 let adoptHeight = 170;
 function adoptChart(){
   const box = $('adoptChart');
-  const W = Math.max(260, Math.round(box.clientWidth) || 560), Hh = adoptHeight, m={l:36,r:10,t:8,b:22}, fs = 11;
+  const W = Math.max(260, Math.round(box.clientWidth) || 560), Hh = adoptHeight, m={l:38,r:10,t:8,b:24}, fs = 12;
   const iw=W-m.l-m.r, ih=Hh-m.t-m.b;
   const x = (t) => m.l + iw*t/H, y = (v) => m.t + ih*(1-v);
   const path = (f) => { let d=''; for(let t=0;t<=H;t+=0.25){ d += (t===0?'M':'L') + x(t).toFixed(1) + ' ' + y(f(t)).toFixed(1); } return d; };
@@ -190,7 +194,7 @@ function phaseLabels(){
 function buildInputs(){
   // Basic and Advanced show one cash margin per layer; it sets all three phases. When the phases differ (set in
   // Analyst), the cell says so instead of offering an input that would overwrite them.
-  const head = (c) => '<th'+dm(c[0])+'>'+c[1]+'</th>';
+  const head = (c) => '<th'+dm(c[0])+'>'+c[1].replace('$B', esc(moneyUnit))+'</th>';
   let h = '<thead><tr><th class="l">Layer</th>' + COLS.map(c => head(c) + (c[0]==='share' ? '<th>Cash margin, %</th>' : '')).join('') + '</tr></thead><tbody>';
   layers.forEach((L,i) => {
     h += '<tr class="'+(i===sel?'sel':'')+'" data-i="'+i+'"><td>'+nameBtn(L,i)+'</td>';
@@ -203,6 +207,7 @@ function buildInputs(){
   document.querySelectorAll('#inputs input').forEach(inp => inp.addEventListener('input', onLayerInput));
   updateMarginCells(true);
   buildScoreLite();
+  renderChips();
 }
 // First-screen scorecard: layer, verdict, present value, headroom and an editable allocation. Built once so the
 // allocation box keeps focus while typing; values are refreshed in place on every render.
@@ -343,9 +348,12 @@ function quadChart(res){
   s += '<rect x="'+m.l+'" y="'+yg+'" width="'+(x0-m.l)+'" height="'+(m.t+ih-yg)+'" fill="var(--red-bg)"/>';
   s += '<rect x="'+x0+'" y="'+yg+'" width="'+(W-m.r-x0)+'" height="'+(m.t+ih-yg)+'" fill="var(--amber-bg)" opacity="0.6"/>';
   s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--amber)">Useful, capital does not earn its cost</text>';
-  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+fs+4)+'" font-size="'+fs+'" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
+  // On narrow charts the two corner labels in a row can meet; then the right-hand one moves one line inwards.
+  const cornerGap = (l, r) => labelWidth(l) + labelWidth(r) + 24 > iw ? Math.round(fs * 1.3) : 0;
+  const topShift = cornerGap('Useful, capital does not earn its cost', 'Durable or fragile value'), botShift = cornerGap('Speculative', 'Pays on assumptions, not evidence');
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+fs+4+topShift)+'" font-size="'+fs+'" fill="var(--green)" text-anchor="end">Durable or fragile value</text>';
   s += '<text class="qq" x="'+(m.l+8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--red)">Speculative</text>';
-  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+ih-8)+'" font-size="'+fs+'" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
+  s += '<text class="qq" x="'+(W-m.r-8)+'" y="'+(m.t+ih-8-botShift)+'" font-size="'+fs+'" fill="var(--amber)" text-anchor="end">Pays on assumptions, not evidence</text>';
   s += '<line x1="'+x0+'" x2="'+x0+'" y1="'+m.t+'" y2="'+(m.t+ih)+'" stroke="var(--ink)" stroke-width="1.2"/>';
   s += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+yg+'" y2="'+yg+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="4 3"/>';
   [1,2,3,4,5].forEach(e => { s += '<text class="qa" x="'+(m.l-8)+'" y="'+(sy(e)+4)+'" font-size="'+fs+'" fill="var(--cap)" text-anchor="end">'+e+'</text>'; });
@@ -491,7 +499,7 @@ function cashChart(o){
   if(lifeEnd<=H){ s += '<line x1="'+x(lifeEnd)+'" x2="'+x(lifeEnd)+'" y1="'+m.t+'" y2="'+(m.t+ih)+'" stroke="var(--red)" stroke-width="1.2" stroke-dasharray="4 3"/><text x="'+(x(lifeEnd)+4)+'" y="'+(m.t+11)+'" font-size="10.5" fill="var(--red)">asset life ends</text>'; }
   if(o.payback!==null){ s += '<circle cx="'+x(o.payback)+'" cy="'+y(o.cumArr[o.payback])+'" r="4.5" fill="var(--green)" stroke="var(--card)" stroke-width="1.5"/><text x="'+(x(o.payback)+7)+'" y="'+(y(o.cumArr[o.payback])-7)+'" font-size="10.5" fill="var(--green)">payback</text>'; }
   [0,5,10,15].forEach(t => { s += '<text x="'+x(t)+'" y="'+(Hh-10)+'" font-size="10" fill="var(--cap)" text-anchor="middle">year '+t+'</text>'; });
-  s += '</svg><div class="legend">Line: cumulative cash, $B. Bars: cash each year, $B.</div>';
+  s += '</svg><div class="legend">Line: cumulative cash, '+esc(moneyUnit)+'. Bars: cash each year, '+esc(moneyUnit)+'.</div>';
   $('cashNote').textContent = 'Cash is counted from your entry year; the entry-year bar includes the price you pay.';
   $('cashChart').innerHTML = s;
 }
@@ -584,6 +592,7 @@ function renderResults(){
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
   renderKpis(); renderHiddenState(); lowShareNote();
   quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); updateMarginCells(false);
+  if(caseCtx){ renderCaseBar(); updateChips(); renderWhatHappened(res); }
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
@@ -632,8 +641,8 @@ function bind(){
   document.querySelectorAll('#scen button').forEach(b => b.addEventListener('click', () => {
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
-  document.querySelectorAll('#defSwitch button').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
-  document.querySelectorAll('#capexSwitch button').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
+  document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.addEventListener('click', () => { G.entryDef = b.dataset.d; update(); }));
+  document.querySelectorAll('#capexSwitch button[data-c]').forEach(b => b.addEventListener('click', () => { G.capexModel = b.dataset.c; update(); }));
   // The example only has an effect in Vintage mode, so it switches that mode on.
   $('ucdExample').addEventListener('click', () => { layers.forEach((L,i) => { L.unitCostDecline = UCD_EXAMPLE[i]; }); G.capexModel = 'vintage'; refreshInputsFromState(); update(); });
   $('ph1').addEventListener('change', onPhaseBounds); $('ph2').addEventListener('change', onPhaseBounds);
@@ -646,6 +655,7 @@ function bind(){
   });
   $('arch_app').addEventListener('click', () => setProfile({life:4, drift:0, margin:30, debt:0, buildYears:2, evidence:3}));
   $('reset').addEventListener('click', () => {
+    if(caseCtx){ resetToCase(); return; }
     G = freshG(); layers = DEFAULT_LAYERS.map(copyLayer); sel = 1;
     syncDriverInputs(); buildInputs(); update();
   });
@@ -687,9 +697,16 @@ function snapCleanKill(k, i){
     reviewBy: k && /^\d{4}-\d{2}-\d{2}$/.test(k.reviewBy) ? k.reviewBy : '',
     status: '', answeredAt: '' }; // the draft is for the next snapshot, so it carries no answers
 }
+// Info note for the trigger columns (metric, direction, threshold), wired like every other info note.
+let triggerTipN = 0;
+function triggerTip(){
+  const id = 'trigTip' + (++triggerTipN);
+  return el('span', {cls:'tipwrap'}, [el('button', {cls:'info', type:'button', 'aria-label':'About: Trigger', 'aria-expanded':'false', 'aria-controls': id}, ['i']),
+    el('span', {cls:'tip', role:'tooltip', id: id, text: 'Trigger: a metric, a direction (above or below) and a threshold that you will check yourself at the review-by date. Nothing is fetched. Leave blank to keep the criterion as text only.'})]);
+}
 function snapBuildKillTable(){
   const t = $('killTable'); t.textContent = '';
-  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise this layer','Metric','Direction','Threshold','Review by'].map((h,i) => el('th', {cls: i<2 ? 'l' : ''}, [h])))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise this layer','Metric','Direction','Threshold','Review by'].map((h,i) => el('th', {cls: i<2 ? 'l' : ''}, i===2 ? [h, ' ', triggerTip()] : [h])))]));
   const tb = el('tbody');
   layers.forEach((L,i) => {
     const k = snapStore.draftKill[i];
@@ -745,7 +762,7 @@ function snapRenderReview(){
     el('p', {cls:'pre', text: s.note || '(no note)'}),
     s.response ? el('p', {cls:'pre', text: (s.response.kind==='revised' ? 'Response to triggers: revised. Changed inputs: ' + (s.response.changedInputs.length ? s.response.changedInputs.map(d => snapLabel(d.path) + ' ' + snapFmt(d.before) + ' → ' + snapFmt(d.after)).join('; ') : 'none') : 'Response to triggers: kept my view. Reason: ' + s.response.reason)}) : null]));
   const t = el('table', {'aria-label':'Kill criteria for this snapshot'});
-  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, [h])))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer','What would make me revise it','Trigger','Review by','Met?','State'].map((h,i) => el('th', {cls: i<3||i===5 ? 'l' : ''}, i===2 ? [h, ' ', triggerTip()] : [h])))]));
   const tb = el('tbody');
   s.kill.forEach((k,i) => {
     const trig = k.metric ? k.metric + (k.direction ? ' ' + k.direction + ' ' : ' ') + (k.threshold===null ? '' : k.threshold) : '—';
@@ -784,7 +801,7 @@ function snapFillSelects(){
     sel.value = [...sel.options].some(o => o.value===prev) ? prev : (j===0 ? (n ? String(n-1) : 'current') : 'current');
   });
 }
-function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill }); }
+function snapCurrent(){ return makeSnapshot({ name: 'Current settings', note: '', G: G, layers: layers, kill: snapStore.draftKill, caseId: caseCtx ? caseCtx.c.id : null }); }
 function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots[+v]; }
 // Saving while criteria are triggered opens a prompt to record "revised" or "kept my view". Never blocks saving.
 function snapSaveNew(){
@@ -815,15 +832,16 @@ function snapRespSave(){
 function snapCommitSave(response){
   const name = $('snapName').value.trim();
   snapHideRespond();
-  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response }));
+  snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response, caseId: caseCtx ? caseCtx.c.id : null }));
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
   else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
   snapRenderList();
 }
 // One-step undo for "Load into simulator": the settings, layers, selection and kill-criteria draft just before it.
 let snapUndo = null;
-function snapPageState(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)) }; }
+function snapPageState(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)), caseCtx: caseCtx }; }
 function snapApplyState(st){
+  if('caseCtx' in st) setCaseContext(st.caseCtx);
   G = Object.assign(freshG(), st.G); layers = st.layers.map(copyLayer);
   if(typeof st.sel === 'number') sel = st.sel;
   snapStore.draftKill = st.draftKill.map(k => Object.assign({}, k));
@@ -835,9 +853,18 @@ function snapLoadInto(i){
   if(!plan.ok){ $('snapMsg').textContent = 'Not loaded: ' + plan.error; return; }
   const ask = 'Load “' + s.name + '” into the simulator? Your current settings will be replaced (you can undo once).'
     + (plan.warning ? '\n\n' + plan.warning : '') + (plan.hasAllocations ? '' : '\n\nThis snapshot has no allocations, so your current allocations stay.');
+  // A snapshot of a case opens that case first; one of your own scenario leaves any open case.
+  let ctx = null;
+  if(plan.caseId){
+    const c = CASES.find(x => x.id === plan.caseId);
+    if(!c){ $('snapMsg').textContent = 'Not loaded: this snapshot is from the case \u201c' + plan.caseId + '\u201d, which this page does not include.'; return; }
+    if(c.layers.length !== plan.state.layers.length || c.layers.some((L, j) => L.id !== plan.state.layers[j].id)){ $('snapMsg').textContent = 'Not loaded: the case \u201c' + c.title + '\u201d has different layers now.'; return; }
+    ctx = { c: c, versionId: 'base', st: caseState(c, 'base'), mine: caseCtx ? caseCtx.mine : snapMine() };
+  }
   if(!window.confirm(ask)) return;
   snapUndo = snapPageState();
-  snapApplyState(Object.assign({ sel: sel }, plan.state));
+  snapApplyState(Object.assign({ sel: 0, caseCtx: ctx }, plan.state));
+  if(!ctx && snapUndo.caseCtx) restoreMineDraft(snapUndo.caseCtx.mine);
   $('snapMsg').textContent = 'Loaded “' + s.name + '”. Results are recomputed from its inputs.' + (plan.warning ? ' ' + plan.warning : '');
   $('snapUndo').hidden = false;
 }
@@ -859,7 +886,9 @@ function snapRenderCompare(){
   const a = snapPick($('cmpA').value), b = snapPick($('cmpB').value), box = $('snapCompare');
   box.textContent = '';
   if(!a || !b) return;
-  const c = compareSnapshots(a, b), wrap = el('div', {cls:'snapbox'});
+  let c;
+  try { c = compareSnapshots(a, b); } catch(e){ box.appendChild(el('p', {cls:'notice', text: e.message})); return; }
+  const wrap = el('div', {cls:'snapbox'});
   wrap.appendChild(el('h3', {text: 'Before: ' + a.name + '   →   After: ' + b.name}));
   if(c.versionMismatch) wrap.appendChild(el('p', {cls:'notice', text: 'Model version differs (before v' + c.versions.before + ', after v' + c.versions.after + ', current v' + c.versions.current + '). Both sides are recomputed under the current model; the outputs stored at the time are shown alongside.'}));
   // Inputs that changed
@@ -962,7 +991,7 @@ function tile(id, big, sub, label, info, chip){
 }
 function esc(t){ return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 function renderKpis(){
-  const k = kpiTiles(layers, G);
+  const k = kpiTiles(layers, G, caseBase());
   const t = k.tight;
   const tightBig = t ? (t.headroom>0?'+':'') + (t.unit==='x' ? mx(t.headroom) : pct(t.headroom)) : 'n/a';
   let allocBig = 'n/a', allocLabel = 'My allocation in layers below cost';
@@ -980,13 +1009,13 @@ function renderKpis(){
 // Shown in Basic and Advanced when any Analyst-only setting differs from its default.
 function renderHiddenState(){
   const el = $('hiddenState'); if(!el) return;
-  const diffs = analystDiffs(G, layers);
+  const diffs = analystDiffs(G, layers, caseBase());
   el.hidden = mode === 'analyst' || !diffs.length;
   if(el.hidden) return;
   $('hiddenText').textContent = diffs.length + ' advanced assumption' + (diffs.length===1 ? '' : 's') + ' active: ' + diffs.slice(0, 4).map(d => d.label).join('; ') + (diffs.length > 4 ? '; and ' + (diffs.length - 4) + ' more' : '') + '.';
 }
 function resetHidden(){
-  const r = resetAnalyst(G, layers);
+  const r = resetAnalyst(G, layers, caseBase());
   G = r.G; layers = r.layers;
   syncDriverInputs(); buildInputs(); update();
 }
@@ -1028,38 +1057,219 @@ function bindTips(){
   const reposition = () => document.querySelectorAll('.tipwrap > button').forEach(b => { const t = tipOf(b); if(t && t.classList.contains('open')) openTip(b); });
   window.addEventListener('scroll', reposition, true); window.addEventListener('resize', reposition);
 }
-/* "Behind the tool" modal: focus moves in, Tab is trapped inside, Esc or Close shuts it, focus returns to the button. */
-let behindReturn = null;
-function openBehind(){
-  behindReturn = document.activeElement;
-  $('behindModal').hidden = false;
-  $('behindClose').focus();
+/* Dialogs ("Behind the tool", Cases, Sources): focus moves in, Tab is trapped inside, Esc or Close shuts it, and
+   focus returns to whatever opened it. */
+const MODALS = { behindModal: 'behindClose', casesModal: 'casesClose', sourcesModal: 'sourcesClose' };
+let modalReturn = null, modalOpen = null;
+function openModal(id){
+  if(modalOpen) closeModal(true);
+  modalReturn = document.activeElement; modalOpen = id;
+  $(id).hidden = false;
+  $(MODALS[id]).focus();
 }
-function closeBehind(){
-  $('behindModal').hidden = true;
-  const r = behindReturn && document.contains(behindReturn) && behindReturn !== document.body ? behindReturn : $('behindBtn');
-  r.focus(); behindReturn = null;
+function closeModal(keepFocus){
+  if(!modalOpen) return;
+  $(modalOpen).hidden = true; modalOpen = null;
+  if(keepFocus) return;
+  const r = modalReturn && document.contains(modalReturn) && modalReturn !== document.body && modalReturn.offsetParent !== null ? modalReturn : $('behindBtn');
+  r.focus(); modalReturn = null;
 }
+const openBehind = () => openModal('behindModal'), closeBehind = () => closeModal();
 function bindBehind(){
   $('behindBtn').addEventListener('click', openBehind);
-  $('behindClose').addEventListener('click', closeBehind);
-  $('behindModal').addEventListener('click', e => { if(e.target === $('behindModal')) closeBehind(); });
+  $('casesBtn').addEventListener('click', () => { renderCasesList(); openModal('casesModal'); });
+  $('caseSources').addEventListener('click', () => { renderSources(); openModal('sourcesModal'); });
+  for(const id in MODALS){
+    $(MODALS[id]).addEventListener('click', () => closeModal());
+    $(id).addEventListener('click', e => { if(e.target === $(id)) closeModal(); });
+  }
   document.addEventListener('keydown', e => {
-    if($('behindModal').hidden) return;
-    if(e.key==='Escape'){ e.preventDefault(); closeBehind(); return; }
+    if(!modalOpen) return;
+    const m = $(modalOpen);
+    if(e.key==='Escape'){ e.preventDefault(); closeModal(); return; }
     if(e.key==='Tab'){
-      const f = [...$('behindModal').querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled);
+      const f = [...m.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled);
       if(!f.length) return;
       const first = f[0], last = f[f.length-1];
       if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
       else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-      else if(!$('behindModal').contains(document.activeElement)){ e.preventDefault(); first.focus(); }
+      else if(!m.contains(document.activeElement)){ e.preventDefault(); first.focus(); }
     }
   });
 }
+// Input guide (in "Behind the tool"): meaning, where to look, recipe and hindsight trap for every input.
+function renderGuide(){
+  const box = $('inputGuide'); box.textContent = '';
+  GUIDE_INTRO.forEach(t => box.appendChild(el('p', {text: t})));
+  Object.keys(GUIDE).forEach(k => {
+    const g = GUIDE[k];
+    box.appendChild(el('h4', {text: g.label}));
+    [['Meaning. ', g.meaning], ['Where to look at the as-of date. ', g.where], ['Recipe. ', g.recipe], ['Hindsight trap. ', g.trap]].forEach(([b, t]) => box.appendChild(el('p', null, [el('b', {text: b}), t])));
+  });
+}
+
+/* ---------- case library ---------- */
+// Cases are bundled at build time (CASES). Opening one keeps your own scenario in memory for "Return to my scenario"
+// (one step), loads the case's inputs, shows its title, money unit and badge, and marks each input with its basis.
+function caseBase(){ return caseCtx ? { G: caseCtx.st.G, layers: caseCtx.st.layers } : undefined; }
+function snapMine(){ return { G: JSON.parse(JSON.stringify(G)), layers: layers.map(copyLayer), sel: sel, draftKill: snapStore.draftKill.map(k => Object.assign({}, k)) }; }
+function restoreMineDraft(mine){ snapStore.draftKill = mine.draftKill.map(k => Object.assign({}, k)); snapBuildKillTable(); }
+// Applies title, unit and page markers for a case context (or none); does not touch inputs.
+function setCaseContext(ctx){
+  caseCtx = ctx;
+  moneyUnit = ctx ? ctx.c.moneyUnit : '$B';
+  const name = ctx ? ctx.c.title : CASE_NAME;
+  $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
+  document.body.classList.toggle('case-mode', !!ctx);
+  $('caseBar').hidden = !ctx;
+  $('whatHappened').hidden = !ctx;
+  if(ctx) renderCaseBar();
+}
+function openCase(id, versionId, opts){
+  const c = CASES.find(x => x.id === id); if(!c) return false;
+  const o = opts || {};
+  const switching = caseCtx && caseCtx.c.id === id;
+  if(!o.noConfirm){
+    const ask = switching
+      ? 'Switch to the \u201c' + (versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label) + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : '')
+      : 'Open the case \u201c' + c.title + '\u201d (as of ' + c.asOfDate + ')? Your current scenario is kept in memory; use \u201cReturn to my scenario\u201d to get it back.';
+    if(!window.confirm(ask)) return false;
+  }
+  const mine = caseCtx ? caseCtx.mine : snapMine();
+  const st = caseState(c, versionId || 'base');
+  setCaseContext({ c: c, versionId: st.versionId, st: st, mine: mine });
+  G = Object.assign(freshG(), JSON.parse(JSON.stringify(st.G))); layers = st.layers.map(copyLayer); sel = 0;
+  if(!switching) snapStore.draftKill = snapBlankKill(layers);
+  syncDriverInputs(); buildInputs(); update(); snapBuildKillTable();
+  return true;
+}
+function resetToCase(){ if(caseCtx) openCase(caseCtx.c.id, caseCtx.versionId, { noConfirm: true }); }
+function returnToScenario(){
+  if(!caseCtx) return;
+  const mine = caseCtx.mine;
+  setCaseContext(null);
+  G = mine.G; layers = mine.layers.map(copyLayer); sel = mine.sel;
+  restoreMineDraft(mine);
+  syncDriverInputs(); buildInputs(); update();
+}
+// Inputs only (allocations are personal and not part of a case).
+function caseInputsOf(g, ls){ const x = snapInputs(g, ls); x.layers.forEach(L => { delete L.alloc; }); return JSON.stringify(x); }
+function caseModified(){ return !!caseCtx && caseInputsOf(G, layers) !== caseInputsOf(caseCtx.st.G, caseCtx.st.layers); }
+function renderCaseBar(){
+  if(!caseCtx) return;
+  const c = caseCtx.c;
+  $('caseBadgeText').textContent = c.title + ', as of ' + c.asOfDate;
+  const tip = $('caseTip'); tip.textContent = '';
+  [c.subtitle, 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
+  const vb = $('caseVersions'); vb.textContent = '';
+  if(c.versions.length){
+    [{ id: 'base', label: 'Base' }].concat(c.versions).forEach(v => {
+      const b = el('button', {type:'button', 'data-version': v.id, 'aria-pressed': String(v.id === caseCtx.versionId)}, [v.label]);
+      b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id); });
+      vb.appendChild(b);
+    });
+  }
+  $('caseModified').hidden = !caseModified();
+}
+function renderCasesList(){
+  const box = $('casesList'); box.textContent = '';
+  const list = el('div', {cls:'caselist'});
+  CASES.forEach(c => {
+    const open = el('button', {type:'button', 'data-case': c.id}, [caseCtx && caseCtx.c.id === c.id ? 'Open again' : 'Open']);
+    open.addEventListener('click', () => { closeModal(true); if(!openCase(c.id, 'base')) $('casesBtn').focus(); });
+    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'})]), open]));
+  });
+  box.appendChild(list);
+}
+function renderSources(){
+  const t = $('sourcesTable'); t.textContent = '';
+  if(!caseCtx) return;
+  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 2 ? 'l' : '', text: h})))]));
+  const tb = el('tbody');
+  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
+  t.appendChild(tb);
+}
+// Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
+// calculation or the rationale, and says when you have changed the value from the case.
+const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv' };
+const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
+let chipN = 0;
+function chipTargets(){
+  const out = [];
+  for(const id in SLIDER_KEYS){ const inp = $(id); if(inp) out.push({ key: 'settings.' + SLIDER_KEYS[id], host: inp.closest('.cctl').querySelector('.cctl-h output'), before: true, cur: () => G[SLIDER_KEYS[id]], word: true }); }
+  out.push({ key: 'settings.phase2Start', host: $('ph1'), cur: () => G.phases[0] }, { key: 'settings.phase3Start', host: $('ph2'), cur: () => G.phases[1] });
+  document.querySelectorAll('#inputs input[data-k], #phaseTable input[data-k]').forEach(inp => {
+    const k = inp.dataset.k, i = +inp.dataset.i, p = inp.dataset.p;
+    if(k === 'alloc' || k === 'marginAll') return;
+    const L = layers[i]; if(!L) return;
+    out.push({ key: 'layer ' + L.id + '.' + k + (p === undefined ? '' : '[' + p + ']'), host: inp, cur: () => p === undefined ? layers[i][k] : layers[i][k][+p] });
+  });
+  return out;
+}
+function chipTip(rec, edited, cur){
+  const cite = (ids) => ids.map(id => { const s = caseCtx.c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; });
+  const parts = [];
+  parts.push(rec.basis === 'sourced' ? 'Sourced.' : rec.basis === 'derived' ? 'Derived.' : 'Judgement.');
+  if(rec.basis === 'derived') parts.push('Calculation: ' + rec.note);
+  if(rec.basis === 'judgement') parts.push('Rationale: ' + rec.note);
+  if(rec.basis === 'sourced' && rec.note) parts.push(rec.note);
+  if(rec.sourceIds.length) parts.push('Sources: ' + cite(rec.sourceIds).join('; ') + '.');
+  else parts.push('No source.');
+  if(edited) parts.push('You changed this from the case value ' + rec.value + ' (now ' + cur + ').');
+  return parts;
+}
+function renderChips(){
+  document.querySelectorAll('.bchipwrap').forEach(e => e.remove());
+  if(!caseCtx) return;
+  chipTargets().forEach(t => {
+    const rec = caseCtx.st.recs[t.key]; if(!rec || !t.host) return;
+    const id = 'bc' + (++chipN);
+    const b = el('button', {cls: 'bchip b-' + rec.basis, type: 'button', 'aria-expanded': 'false', 'aria-controls': id, 'data-key': t.key,
+      'aria-label': 'Basis: ' + rec.basis + (rec.basis === 'judgement' ? ' (labelled judgement)' : '')}, [t.word ? rec.basis : BASIS_LETTER[rec.basis]]);
+    const tip = el('span', {cls: 'tip', role: 'tooltip', id: id});
+    const w = el('span', {cls: 'tipwrap bchipwrap'}, [b, tip]);
+    if(t.before) t.host.parentNode.insertBefore(w, t.host); else t.host.insertAdjacentElement('afterend', w);
+  });
+  updateChips();
+}
+function updateChips(){
+  if(!caseCtx) return;
+  const targets = chipTargets();
+  document.querySelectorAll('.bchip').forEach(b => {
+    const t = targets.find(x => x.key === b.dataset.key), rec = caseCtx.st.recs[b.dataset.key];
+    if(!t || !rec) return;
+    const cur = t.cur(), edited = cur !== rec.value;
+    b.classList.toggle('edited', edited);
+    const tip = document.getElementById(b.getAttribute('aria-controls')); tip.textContent = '';
+    chipTip(rec, edited, cur).forEach(x => tip.appendChild(el('p', {text: x, style: 'margin:0 0 3px'})));
+  });
+}
+// What happened: each layer's recorded outcome beside the model's verdict for the inputs on screen. No hit rate.
+function renderWhatHappened(res){
+  if(!caseCtx) return;
+  const c = caseCtx.c, w = caseOutcomeRows(c, layers, res);
+  $('whBanner').textContent = w.banner;
+  $('whHindsight').textContent = 'Hindsight: ' + c.hindsightDisclosure;
+  const t = $('outcomeTable'); t.textContent = '';
+  t.appendChild(el('thead', null, [el('tr', null, ['Layer', 'Model verdict (inputs on screen)', 'Model: capital earns its cost?', 'What happened', 'Summary', 'Sources', 'Horizon'].map((h,i) => el('th', {cls: i===2 ? '' : 'l', text: h})))]));
+  const tb = el('tbody');
+  w.rows.forEach(r => {
+    const srcs = r.sourceIds.map(id => { const s = c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; }).join('; ');
+    tb.appendChild(el('tr', null, [el('td', {cls:'l', text: r.layer}), el('td', {cls:'l', text: r.verdict}), el('td', {text: r.earnsCost ? 'yes' : 'no'}),
+      el('td', {cls:'l', 'data-outcome': r.outcome || '', text: r.outcome || 'not recorded'}), el('td', {cls:'l', text: r.summary || '\u2014'}), el('td', {cls:'l', text: srcs || '\u2014'}), el('td', {cls:'l', text: r.horizon || '\u2014'})]));
+  });
+  t.appendChild(tb);
+  const k = w.counts;
+  $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
+}
+function bindCases(){
+  $('casesBtn').hidden = !CASES.length;
+  $('caseReturn').addEventListener('click', returnToScenario);
+  $('caseReset').addEventListener('click', () => { if(!caseModified() || window.confirm('Reset every input to the case values? Your edits to the case will be lost.')) resetToCase(); });
+}
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
-  setMode(initialMode(), { noStore: false }); bindModes();
+  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   let rz = null;

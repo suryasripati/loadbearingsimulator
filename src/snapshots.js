@@ -6,10 +6,13 @@
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 3;
+const SNAP_SCHEMA_VERSION = 4;
 // Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
 // had no trigger response (filled in as null).
-const SNAP_SCHEMA_READABLE = [1, 2, 3];
+const SNAP_SCHEMA_READABLE = [1, 2, 3, 4];
+// Schema 4 adds caseId (null for your own scenario, or the id of a bundled case) and layer names, and allows 1 to 6
+// layers. Older schemas are your own five-layer scenario: caseId null, names from the defaults.
+const SNAP_MAX_LAYERS = 6;
 const SNAP_RESPONSE_KINDS = ['revised', 'kept'];
 const SNAP_REASON_MAX = 500;
 const SNAP_MAX_BYTES = 1024 * 1024;
@@ -34,8 +37,8 @@ function snapDeps(){
   return { MODEL_VERSION, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
 }
 
-function snapBlankKill(){
-  return snapDeps().DEFAULT_LAYERS.map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
+function snapBlankKill(layers){
+  return (layers || snapDeps().DEFAULT_LAYERS).map(L => ({ id: L.id, text: '', metric: '', direction: '', threshold: null, reviewBy: '', status: '', answeredAt: '' }));
 }
 const snapFinite = (v) => typeof v === 'number' && isFinite(v) ? v : null;
 
@@ -54,7 +57,7 @@ function snapInputs(G, layers){
   SNAP_GLOBAL_KEYS.forEach(k => { g[k] = G[k]; });
   g.entryDef = G.entryDef; g.capexModel = G.capexModel; g.phases = [G.phases[0], G.phases[1]];
   const ls = layers.map(L => {
-    const o = { id: L.id };
+    const o = { id: L.id, name: L.name };
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = L[k]; });
     o.driftP = L.driftP.slice(0, 3); o.marginP = L.marginP.slice(0, 3);
     if (typeof L.alloc === 'number') o.alloc = L.alloc;
@@ -95,8 +98,9 @@ function makeSnapshot(opts){
     created: (opts.now || new Date()).toISOString(), // ISO, UTC
     note: String(opts.note || '').slice(0, SNAP_TEXT_MAX.note),
     modelVersion: snapDeps().MODEL_VERSION,
+    caseId: opts.caseId || null,
     inputs, outputs: snapOutputs(inputs),
-    kill: (opts.kill || snapBlankKill()).map(snapKillCopy),
+    kill: (opts.kill || snapBlankKill(opts.layers)).map(snapKillCopy),
     response: opts.response ? snapResponseCopy(opts.response) : null
   };
 }
@@ -193,15 +197,19 @@ function snapCheckFile(data, opts){
 }
 // Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
 function snapCheckOne(s, where, withAlloc){
-  const d = snapDeps(), ids = d.DEFAULT_LAYERS.map(L => L.id);
+  const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
   const schema = snapSchema(s.schemaVersion, where);
   snapNum(s.modelVersion, [1, 100000], where + ' modelVersion', true);
   if (s.modelVersion > d.MODEL_VERSION) snapErr(where, 'model version ' + s.modelVersion + ' is not compatible: it is newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first');
-  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : []), [], where);
+  snapKeys(s, ['schemaVersion', 'name', 'created', 'note', 'modelVersion', 'inputs', 'outputs', 'kill'].concat(schema >= 3 ? ['response'] : [], schema >= 4 ? ['caseId'] : []), [], where);
   const out = { schemaVersion: SNAP_SCHEMA_VERSION, name: snapStr(s.name, SNAP_TEXT_MAX.name, where + ' name'),
     created: snapDate(s.created, where + ' created'), note: snapStr(s.note, SNAP_TEXT_MAX.note, where + ' note'),
-    modelVersion: s.modelVersion, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
+    modelVersion: s.modelVersion, caseId: null, inputs: { G: {}, layers: [] }, outputs: [], kill: [], response: null };
+  if (schema >= 4 && s.caseId !== null) {
+    out.caseId = snapStr(s.caseId, 60, where + ' caseId');
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(out.caseId)) snapErr(where + ' caseId', 'unexpected case id');
+  }
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
@@ -214,11 +222,21 @@ function snapCheckOne(s, where, withAlloc){
   const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
   if (p1 >= p2) snapErr(where + ' setting phases', 'phase 2 must start before phase 3');
   out.inputs.G.phases = [p1, p2];
-  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length !== ids.length) snapErr(where + ' layers', 'expected ' + ids.length + ' layers');
+  // Layers: your own scenario has the five default layers; a case snapshot has the case's 1 to 6 layers.
+  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length < 1 || s.inputs.layers.length > SNAP_MAX_LAYERS) snapErr(where + ' layers', 'expected 1 to ' + SNAP_MAX_LAYERS + ' layers');
+  if (out.caseId === null && s.inputs.layers.length !== defIds.length) snapErr(where + ' layers', 'expected ' + defIds.length + ' layers');
+  const ids = s.inputs.layers.map((L, i) => {
+    if (!snapIsObj(L) || typeof L.id !== 'string' || !/^[a-z][a-z0-9-]{0,29}$/.test(L.id)) snapErr(where + ' layer ' + (i + 1), 'unexpected layer id');
+    if (out.caseId === null && L.id !== defIds[i]) snapErr(where + ' layer ' + (i + 1), 'expected layer id "' + defIds[i] + '"');
+    return L.id;
+  });
+  if (new Set(ids).size !== ids.length) snapErr(where + ' layers', 'duplicate layer id');
   s.inputs.layers.forEach((L, i) => {
     const w = where + ' layer ' + (i + 1), o = { id: ids[i] };
-    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP']), withAlloc ? ['alloc'] : [], w);
-    if (L.id !== ids[i]) snapErr(w, 'expected layer id "' + ids[i] + '"');
+    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP'], schema >= 4 ? ['name'] : []), withAlloc ? ['alloc'] : [], w);
+    o.name = schema >= 4 ? snapStr(L.name, 40, w + ' name') : d.DEFAULT_LAYERS[i].name;
+    // Layer names are drawn into charts and tables, so markup characters are refused rather than trusted.
+    if (!o.name.trim() || /[<>&"]/.test(o.name)) snapErr(w + ' name', 'must not be empty or contain < > & or "');
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = snapNum(L[k], d.LAYER_RANGES[k], w + ' ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
     ['driftP', 'marginP'].forEach(k => {
       if (!Array.isArray(L[k]) || L[k].length !== 3) snapErr(w + ' ' + k, 'expected three phase values');
@@ -330,11 +348,17 @@ function diffInputs(a, b){
 }
 // Compare two snapshots. When either was saved under a different model version from the other or from the current
 // model, both are recomputed under the current model and the stored outputs are kept alongside.
+// Two views can be compared only if they are of the same stack: same case (or both your own scenario), same layers.
+function snapSameStack(a, b){
+  return (a.caseId || null) === (b.caseId || null) && a.inputs.layers.length === b.inputs.layers.length && a.inputs.layers.every((L, i) => L.id === b.inputs.layers[i].id);
+}
+function snapStackName(s){ return s.caseId ? 'case “' + s.caseId + '”' : 'your own scenario'; }
 function compareSnapshots(a, b){
   const d = snapDeps();
   const versionMismatch = a.modelVersion !== b.modelVersion || a.modelVersion !== d.MODEL_VERSION || b.modelVersion !== d.MODEL_VERSION;
   const recA = versionMismatch ? snapOutputs(a.inputs) : null, recB = versionMismatch ? snapOutputs(b.inputs) : null;
-  const layers = d.DEFAULT_LAYERS.map((L, i) => {
+  if (!snapSameStack(a, b)) throw new Error('These two views are of different stacks (' + snapStackName(a) + ' and ' + snapStackName(b) + '), so they cannot be compared.');
+  const layers = a.inputs.layers.map((L, i) => {
     const before = recA ? recA[i] : a.outputs[i], after = recB ? recB[i] : b.outputs[i];
     return { id: L.id, name: L.name, before, after,
       storedBefore: a.outputs[i], storedAfter: b.outputs[i],
@@ -362,8 +386,11 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const g = checked.inputs.G;
   const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
   G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
-  const layers = currentLayers.map((L, i) => {
-    const src = checked.inputs.layers[i], out = Object.assign({}, L, { driftP: src.driftP.slice(), marginP: src.marginP.slice() });
+  // Layers come from the snapshot (ids and names); an allocation is restored only if the snapshot has it, otherwise
+  // the current allocation of the same layer is kept (or the placeholder 20 for a layer not on the page).
+  const layers = checked.inputs.layers.map(src => {
+    const cur = currentLayers.find(L => L.id === src.id);
+    const out = { id: src.id, name: src.name, alloc: cur ? cur.alloc : 20, driftP: src.driftP.slice(), marginP: src.marginP.slice() };
     SNAP_LAYER_NUM_KEYS.forEach(k => { out[k] = src[k]; });
     if (typeof src.alloc === 'number') out.alloc = src.alloc;
     return out;
@@ -372,7 +399,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const warning = checked.modelVersion !== cur
     ? 'This snapshot was saved under model version ' + checked.modelVersion + '; this page uses version ' + cur + '. Its inputs will load, and results will recompute under the current model, so they may differ from the stored ones.'
     : '';
-  return { ok: true, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
+  return { ok: true, caseId: checked.caseId, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
 }
 
-if (typeof module !== 'undefined') module.exports = { snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj, SNAP_SCHEMA_READABLE, snapTriggeredList, snapMakeResponse, snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };
+if (typeof module !== 'undefined') module.exports = { snapSameStack, SNAP_MAX_LAYERS, snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj, SNAP_SCHEMA_READABLE, snapTriggeredList, snapMakeResponse, snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_FORMAT, SNAP_SCHEMA_VERSION, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, exportSnapshots, exportSnapshotsText, importSnapshotsText, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };

@@ -281,7 +281,7 @@ test('build inlines every source file in order and strips their export lines', (
   const order = ['function runLayer(', 'const DEFAULT_LAYERS', 'function importSnapshotsText(', 'function snapInit('].map(m => html.indexOf(m));
   order.forEach((i, k) => assert.ok(i > 0, 'marker ' + k + ' present'));
   assert.deepEqual(order.slice().sort((a, b) => a - b), order, 'model, then defaults, then snapshots, then UI');
-  for (const f of ['src/model.js', 'src/defaults.js', 'src/snapshots.js']) {
+  for (const f of ['src/model.js', 'src/defaults.js', 'src/guide.js', 'src/cases.js', 'src/modes.js', 'src/snapshots.js']) {
     const body = read(f).split('\n').filter(l => !l.includes('module.exports')).join('\n');
     assert.ok(html.includes(body), f + ' is inlined unchanged apart from its export line');
   }

@@ -50,7 +50,7 @@ test('export excludes allocations by default and includes them only when ticked'
 });
 
 test('import checks schema version (file and snapshot) and model version, and says which is incompatible', () => {
-  reject(mutate(f => { f.schemaVersion = 4; }), /File: schema version 4 is not compatible \(this page reads schema versions 1 and 2 and 3\)/);
+  reject(mutate(f => { f.schemaVersion = 5; }), /File: schema version 5 is not compatible \(this page reads schema versions 1 and 2 and 3 and 4\)/);
   reject(mutate(f => { f.snapshots[0].schemaVersion = 9; }), /Snapshot 1: schema version 9 is not compatible/);
   reject(mutate(f => { f.snapshots[0].modelVersion = M.MODEL_VERSION + 1; }), new RegExp('Snapshot 1: model version ' + (M.MODEL_VERSION + 1) + ' is not compatible: it is newer than this page'));
   reject(mutate(f => { f.format = 'something-else'; }), /not a Load Bearing Simulator snapshot file/);
@@ -184,7 +184,7 @@ test('schema 1 files (no answer date, no response) still import, with a blank an
   const f = JSON.parse(fileOf([snap()]));
   f.schemaVersion = 1; f.snapshots[0].schemaVersion = 1;
   f.snapshots[0].kill.forEach(k => { delete k.answeredAt; });
-  delete f.snapshots[0].response;
+  delete f.snapshots[0].response; delete f.snapshots[0].caseId; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   const r = S.importSnapshotsText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.ok(r.snapshots[0].kill.every(k => k.answeredAt === ''));
@@ -278,8 +278,8 @@ test('import hardening: returns fresh plain objects with whitelisted fields only
   const walk = (v) => { if (v && typeof v === 'object') { if (!Array.isArray(v)) assert.equal(Object.getPrototypeOf(v), Object.prototype); Object.values(v).forEach(walk); } };
   walk(s0);
   assert.notEqual(s0, parsed.snapshots[0]);
-  assert.deepEqual(Object.keys(s0).sort(), ['created', 'inputs', 'kill', 'modelVersion', 'name', 'note', 'outputs', 'response', 'schemaVersion']);
-  assert.deepEqual(Object.keys(s0.inputs.layers[0]).sort(), ['alloc', 'buildStart', 'buildYears', 'capex', 'debt', 'driftP', 'evidence', 'id', 'life', 'marginP', 'offset', 'passThrough', 'share', 'steepness', 'unitCostDecline']);
+  assert.deepEqual(Object.keys(s0).sort(), ['caseId', 'created', 'inputs', 'kill', 'modelVersion', 'name', 'note', 'outputs', 'response', 'schemaVersion']);
+  assert.deepEqual(Object.keys(s0.inputs.layers[0]).sort(), ['alloc', 'buildStart', 'buildYears', 'capex', 'debt', 'driftP', 'evidence', 'id', 'life', 'marginP', 'name', 'offset', 'passThrough', 'share', 'steepness', 'unitCostDecline']);
   // Importing twice gives independent objects (nothing is merged or shared).
   const r2 = S.importSnapshotsText(text);
   r2.snapshots[0].inputs.layers[0].share = 99;
@@ -351,11 +351,52 @@ test('trigger response: strict import rejects bad responses', () => {
 test('trigger response: schema 2 files migrate with no response', () => {
   const f = JSON.parse(fileOf([snap()]));
   f.schemaVersion = 2; f.snapshots[0].schemaVersion = 2; delete f.snapshots[0].response;
+  delete f.snapshots[0].caseId; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   const r = S.importSnapshotsText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.equal(r.snapshots[0].response, null);
-  assert.equal(r.snapshots[0].schemaVersion, 3);
+  assert.equal(r.snapshots[0].schemaVersion, 4);
   // A schema 2 file must not carry a response field.
   const g = JSON.parse(fileOf([snap()])); g.schemaVersion = 2; g.snapshots[0].schemaVersion = 2;
+  delete g.snapshots[0].caseId; g.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   reject(JSON.stringify(g), /unknown field "response"/);
+});
+
+/* ---------- Schema 4: cases and 1 to 6 layers ---------- */
+const C = require('../src/cases.js');
+const fixture = (n) => C.validateCase(JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'support', 'cases', 'synthetic-' + n + '.case.json'), 'utf8')));
+
+test('schema 4: a case snapshot records the case id and its own layers (1, 3 or 6), and round-trips', () => {
+  for (const n of [1, 3, 6]) {
+    const c = fixture(n), st = C.caseState(c, 'base');
+    const s = S.makeSnapshot({ name: 'Case view', G: { ...st.G }, layers: st.layers, caseId: c.id, now: NOW });
+    assert.equal(s.caseId, c.id);
+    assert.equal(s.inputs.layers.length, n); assert.equal(s.kill.length, n); assert.equal(s.outputs.length, n);
+    assert.deepEqual(s.inputs.layers.map(L => L.name), c.layers.map(L => L.name));
+    const r = S.importSnapshotsText(fileOf([s], { includeAllocations: true }));
+    assert.equal(r.ok, true, r.error);
+    assert.deepEqual(r.snapshots[0], JSON.parse(JSON.stringify(s)));
+  }
+  // Your own scenario stays the five default layers with caseId null.
+  assert.equal(snap().caseId, null);
+  reject(mutate(f => { f.snapshots[0].inputs.layers.pop(); }), /expected 5 layers/);
+  reject(mutate(f => { f.snapshots[0].inputs.layers[0].id = 'other'; }), /expected layer id "hw"/);
+  reject(mutate(f => { f.snapshots[0].caseId = 'Bad Id'; }), /unexpected case id/);
+  // Layer names are drawn into the page, so an imported file cannot carry markup in them.
+  reject(mutate(f => { f.snapshots[0].inputs.layers[0].name = '<img src=x onerror=alert(1)>'; }), /name: must not be empty or contain/);
+  reject(mutate(f => { f.snapshots[0].inputs.layers[0].name = ' '; }), /name: must not be empty or contain/);
+});
+
+test('schema 4: views of different stacks cannot be compared; loading a case snapshot carries its case id and layers', () => {
+  const c = fixture(3), st = C.caseState(c, 'base');
+  const a = S.makeSnapshot({ name: 'Mine', G: baseG(), layers: baseLayers(), now: NOW });
+  const b = S.makeSnapshot({ name: 'Case', G: { ...st.G }, layers: st.layers, caseId: c.id, now: NOW });
+  assert.equal(S.snapSameStack(a, b), false);
+  assert.throws(() => S.compareSnapshots(a, b), /different stacks \(your own scenario and case “synthetic-3-layer”\)/);
+  assert.equal(S.compareSnapshots(b, b).layers.length, 3);
+  const plan = S.snapPrepareLoad(b, baseLayers());
+  assert.equal(plan.ok, true, plan.error);
+  assert.equal(plan.caseId, c.id);
+  assert.deepEqual(plan.state.layers.map(L => L.id), c.layers.map(L => L.id));
+  assert.equal(plan.state.draftKill.length, 3);
 });

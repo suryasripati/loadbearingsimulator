@@ -1,11 +1,10 @@
-// Guidance for every calibration input: what it means, where to look at the as-of date, a recipe, and the hindsight
-// trap. One source for the in-page help and calibration/GUIDE.md (the build writes the guide from this file).
-// Examples are symbolic (P, C, T and so on) or refer to the synthetic test fixture. No real episode numbers, ever.
-// CommonJS export for tests; stripped by the build.
+// Input guide: for every input, what it means, where to look at a case's as-of date, a recipe, and the hindsight trap.
+// Shown in the "Behind the tool" dialog. Examples are symbolic (P, C, T and so on); no real numbers, ever.
+// CommonJS export for tests; stripped by the build and inlined before the UI code.
 
 const GUIDE_INTRO = [
-  'Fill an episode as someone standing at the as-of date: use only what was published, or compiled from series that stop, on or before that date.',
-  'Every number needs a basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: your call, with a rationale; sources optional, but an uncited judgement keeps the file private.',
+  'What each input means, where to look for it at a chosen as-of date, a recipe for estimating it, and the hindsight trap to avoid.',
+  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled.',
   'Examples below are symbolic. They show the shape of a calculation, never a figure from a real episode.'
 ];
 
@@ -132,29 +131,4 @@ const GUIDE = {
     trap: 'Using margins from after the shake-out.' }
 };
 
-// Scorer checklist: what the scorer already knew. Every item must be answered (yes, no or partly) before locking.
-const SCORER_CHECKLIST = [
-  { key: 'peakDate', text: 'Knew the peak date' },
-  { key: 'fallSize', text: 'Knew the size of the fall' },
-  { key: 'failures', text: 'Knew which companies failed or survived' },
-  { key: 'finalFigures', text: 'Knew final revenue or traffic figures' },
-  { key: 'laterSources', text: 'Have read sources published after the as-of date' },
-  { key: 'outcomesFirst', text: 'Looked at outcomes before entering inputs' }
-];
-
-function guideMarkdown(){
-  const out = ['# Calibration guide', '', '<!-- Generated from src/calibration-guide.js by npm run build. Edit that file, not this one. -->', ''];
-  GUIDE_INTRO.forEach(p => { out.push(p, ''); });
-  out.push('## Before you start: what you already know', '', 'Answer each item yes, no or partly before locking. The answers are part of the lock hash.', '');
-  SCORER_CHECKLIST.forEach(c => out.push('- ' + c.text));
-  out.push('', '## Inputs', '');
-  Object.keys(GUIDE).forEach(k => {
-    const g = GUIDE[k];
-    out.push('### ' + g.label + ' (`' + k + '`)', '', '- **Meaning.** ' + g.meaning, '- **Where to look at the as-of date.** ' + g.where,
-      '- **Recipe.** ' + g.recipe, '- **Hindsight trap.** ' + g.trap, '');
-  });
-  out.push('## Input versions', '', 'An episode can be scored with more than one input version (for example a hype version and a measured version of adoption speed). Each version is locked separately with its own hash and acknowledgement. All versions share the as-of date, as-of rule, outcome horizon, outcome measure, scorer checklist and layer names; changing any of those after a version is locked means starting a new episode version.', '');
-  return out.join('\n');
-}
-
-if (typeof module !== 'undefined') module.exports = { GUIDE, GUIDE_INTRO, SCORER_CHECKLIST, guideMarkdown };
+if (typeof module !== 'undefined') module.exports = { GUIDE, GUIDE_INTRO };

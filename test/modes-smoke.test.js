@@ -42,7 +42,8 @@ test('layout: title with a case-name variable, subtitle, header buttons, footer;
   assert.equal(doc.querySelector('.tb-name').textContent, 'AI Stack: Load Bearing Simulator');
   assert.equal(doc.getElementById('caseName').textContent, Mo.CASE_NAME);
   assert.equal(doc.querySelector('.tb-sub').textContent, 'Which layers carry the weight, and who gets paid?');
-  assert.deepEqual([...doc.querySelectorAll('.tb-right button')].map(b => b.textContent), ['Basic', 'Advanced', 'Analyst', 'Placeholder data', 'Behind the tool']);
+  assert.deepEqual([...doc.querySelectorAll('.tb-right button')].map(b => b.textContent), ['Basic', 'Advanced', 'Analyst', 'Placeholder data', 'Behind the tool', 'Cases']);
+  assert.equal(doc.getElementById('casesBtn').hidden, true, 'live build has no cases, so the Cases pill is hidden');
   assert.equal(doc.querySelector('footer.foot').textContent, 'Not financial advice.');
   assert.ok(![...doc.querySelectorAll('main h2, main h3')].some(h => /How it works/.test(h.textContent)), 'section removed from the page');
   assert.equal(doc.querySelector('a[href*="calibration"]'), null);
@@ -275,14 +276,29 @@ test('quadrant: drawn at pixel size; axis, quadrant and layer labels at least 11
   win.close();
 });
 
-test('timing card: chart drawn at pixel size with 11px axis text; legend has End demand plus one entry per layer', () => {
+test('timing card: chart drawn at pixel size with 12px axis text; legend has End demand plus one entry per layer', () => {
   const { doc, win } = load();
   setMode(win, doc, 'analyst');
   const svg = doc.querySelector('#adoptChart > svg');
   assert.ok(svg.getAttribute('width') && svg.getAttribute('height'));
-  [...svg.querySelectorAll('text')].forEach(t => assert.equal(t.getAttribute('font-size'), '11'));
+  [...svg.querySelectorAll('text')].forEach(t => assert.equal(t.getAttribute('font-size'), '12'));
   const items = [...doc.querySelectorAll('#adoptChart .tlegend li')];
   assert.equal(items.length, D.DEFAULT_LAYERS.length + 1);
   assert.ok(items.slice(1).every(li => li.querySelector('.tshort').textContent === '= demand'));
+  win.close();
+});
+
+test('info notes inside the entry-definition and capex-model switches open their note and change no setting', () => {
+  const { doc, win, errors } = load({ hash: '#analyst' });
+  const before = doc.getElementById('score').textContent;
+  for (const id of ['defSwitch', 'capexSwitch']) {
+    const info = doc.querySelector('#' + id + ' .tipwrap > button');
+    click(win, info);
+    assert.equal(info.getAttribute('aria-expanded'), 'true');
+    assert.equal(doc.querySelectorAll('#' + id + ' button[aria-pressed="true"]').length, 1, id + ': one option still selected');
+    click(win, info);
+  }
+  assert.equal(doc.getElementById('score').textContent, before, 'results unchanged');
+  assert.deepEqual(errors, []);
   win.close();
 });

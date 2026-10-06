@@ -15,8 +15,14 @@ function modeDeps(){
 }
 
 // KPI tiles. Status chips are text, never colour alone. Chip rules use signs and counts only, no invented thresholds.
-function kpiTiles(layers, G){
+// base (optional): { G, layers } to compare against, for example an open case; defaults otherwise.
+function modeBase(base){
   const d = modeDeps();
+  if (base) return base;
+  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
+}
+function kpiTiles(layers, G, base){
+  const d = modeDeps(), b = modeBase(base);
   const res = layers.map(L => d.runLayer(L, G));
   const N = layers.length;
   // (a) Layers that earn their cost (present value at or above zero).
@@ -28,7 +34,7 @@ function kpiTiles(layers, G){
   if (tight) { tight.unit = G.entryDef === 'B' ? 'x' : '%'; tight.chip = tight.headroom < 0 ? 'Fragile' : 'Stable'; }
   // (c) Share of my allocation in layers that do not earn their cost.
   const tot = layers.reduce((a, L) => a + (L.alloc || 0), 0);
-  const placeholder = layers.every(L => { const def = d.DEFAULT_LAYERS.find(x => x.id === L.id); return def && L.alloc === def.alloc; });
+  const placeholder = layers.every(L => { const def = b.layers.find(x => x.id === L.id); return def && L.alloc === def.alloc; });
   let alloc;
   if (tot <= 0) alloc = { pct: null, placeholder, chip: 'No allocation' };
   else {
@@ -49,13 +55,13 @@ const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entr
 const ANALYST_LAYER_KEYS = [['evidence', 'demand evidence'], ['share', 'share of pool'], ['capex', 'build capex'], ['life', 'asset life'], ['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
   ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
 const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-function analystDiffs(G, layers){
-  const d = modeDeps(), out = [];
-  const defG = Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX });
+function analystDiffs(G, layers, base){
+  const b = modeBase(base), out = [];
+  const defG = b.G;
   ANALYST_GLOBALS.forEach(([k, label]) => { if (G[k] !== defG[k]) out.push({ scope: 'settings', key: k, label }); });
-  if (!sameArr(G.phases, d.DEFAULT_PHASES)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
+  if (!sameArr(G.phases, defG.phases)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
   layers.forEach(L => {
-    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id);
+    const def = b.layers.find(x => x.id === L.id);
     if (!def) return;
     ANALYST_LAYER_KEYS.forEach(([k, label]) => { if (L[k] !== def[k]) out.push({ scope: L.id, key: k, label: L.name + ': ' + label }); });
     if (!sameArr(L.driftP, def.driftP)) out.push({ scope: L.id, key: 'driftP', label: L.name + ': share drift' });
@@ -64,12 +70,12 @@ function analystDiffs(G, layers){
   return out;
 }
 // Reset only the analyst-only settings. Never touches first-screen inputs, allocations or snapshots.
-function resetAnalyst(G, layers){
-  const d = modeDeps();
-  const g = Object.assign({}, G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() });
-  ANALYST_GLOBALS.forEach(([k]) => { if (k in d.DEFAULT_G) g[k] = d.DEFAULT_G[k]; });
+function resetAnalyst(G, layers, base){
+  const b = modeBase(base);
+  const g = Object.assign({}, G, { entryDef: b.G.entryDef, capexModel: b.G.capexModel, phases: b.G.phases.slice() });
+  ANALYST_GLOBALS.forEach(([k]) => { if (k in b.G) g[k] = b.G[k]; });
   const ls = layers.map(L => {
-    const def = d.DEFAULT_LAYERS.find(x => x.id === L.id), o = Object.assign({}, L, { driftP: L.driftP.slice(), marginP: L.marginP.slice() });
+    const def = b.layers.find(x => x.id === L.id), o = Object.assign({}, L, { driftP: L.driftP.slice(), marginP: L.marginP.slice() });
     if (!def) return o;
     ANALYST_LAYER_KEYS.forEach(([k]) => { o[k] = def[k]; });
     o.driftP = def.driftP.slice();
