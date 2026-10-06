@@ -242,6 +242,16 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+/* Analyst on phones: a one-line note, and every section below the Timing | Money row collapsed by default. */
+.analystnote,.sectoggle,.phonehead{display:none}
+@media (max-width:599px){
+  body[data-mode="analyst"] .analystnote{display:block;margin:8px 0 0}
+  body[data-mode="analyst"] .collapsible{position:relative}
+  body[data-mode="analyst"] .phonehead{display:block}
+  body[data-mode="analyst"] .collapsible > :first-child{padding-right:64px}
+  body[data-mode="analyst"] .sectoggle{display:inline-block;position:absolute;top:2px;right:0;font-size:12px;padding:2px 10px}
+  body[data-mode="analyst"] .collapsible.collapsed > :not(:first-child):not(.sectoggle){display:none !important}
+}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:75;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:8px 10px 8px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:13.5px;max-width:calc(100vw - 32px)}
 .toast[hidden]{display:none}
 /* Phones: scorecards, the allocation table and the fragility table become one card per layer; the input grids keep
@@ -370,6 +380,7 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
 <main class="wrap">
 
 <p class="phonenote nocase"><b>Placeholders, not data.</b> Every number here was chosen to show the mechanics; none is sourced. Not financial advice.</p>
+<p class="notice slim analystnote">Analyst mode works best on a larger screen.</p>
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
 
 <div class="casebar" id="caseBar" hidden>
@@ -3648,11 +3659,33 @@ function bindCases(){
     askConfirm({ title: 'Reset to case', ok: 'Reset to case', returnTo: $('caseReset'), text: 'Reset every input to the case values? Your edits to the case will be lost.', onOk: resetToCase });
   });
 }
+// Analyst on phones (CSS below 600px): sections become collapsible. The first row (Timing | Money) starts open, the
+// rest closed. Blocks without their own heading get a phone-only one. Desktop and other modes are unaffected.
+const COLLAPSIBLE = [['.row2', 'Timing and money assumptions'], ['#whatHappened'], ['#detailScore'], ['#detailSection'], ['#lowerPair', 'Entry timing and allocation'],
+  ['#layerSection'], ['#phaseSection'], ['#fragSection'], ['#snapshots']];
+function setupCollapsibles(){
+  COLLAPSIBLE.forEach(([sel, label], i) => {
+    const sec = document.querySelector(sel); if(!sec) return;
+    if(label) sec.insertBefore(el('h2', {cls:'ctitle phonehead', text: label}), sec.firstChild);
+    const name = label || (sec.querySelector('h2') || {}).textContent || 'section';
+    const title = (sec.querySelector('h2 > span') || sec.querySelector('h2') || { textContent: name }).textContent.trim();
+    const open = i === 0;
+    sec.classList.add('collapsible'); sec.classList.toggle('collapsed', !open);
+    const b = el('button', {cls:'reset sectoggle', type:'button', 'aria-expanded': String(open), 'aria-label': (open ? 'Hide ' : 'Show ') + title}, [open ? 'Hide' : 'Show']);
+    b.addEventListener('click', () => {
+      const shut = !sec.classList.toggle('collapsed');
+      const nowOpen = !sec.classList.contains('collapsed');
+      b.textContent = nowOpen ? 'Hide' : 'Show'; b.setAttribute('aria-expanded', String(nowOpen)); b.setAttribute('aria-label', (nowOpen ? 'Hide ' : 'Show ') + title);
+      if(nowOpen) dispatchEvent(new Event('resize')); // charts that were hidden redraw at their real width
+    });
+    sec.appendChild(b);
+  });
+}
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
-  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); fillGuideTips(); renderGuide();
+  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); setupCollapsibles(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   showLoadNotes();

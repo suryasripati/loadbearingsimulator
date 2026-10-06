@@ -1506,11 +1506,33 @@ function bindCases(){
     askConfirm({ title: 'Reset to case', ok: 'Reset to case', returnTo: $('caseReset'), text: 'Reset every input to the case values? Your edits to the case will be lost.', onOk: resetToCase });
   });
 }
+// Analyst on phones (CSS below 600px): sections become collapsible. The first row (Timing | Money) starts open, the
+// rest closed. Blocks without their own heading get a phone-only one. Desktop and other modes are unaffected.
+const COLLAPSIBLE = [['.row2', 'Timing and money assumptions'], ['#whatHappened'], ['#detailScore'], ['#detailSection'], ['#lowerPair', 'Entry timing and allocation'],
+  ['#layerSection'], ['#phaseSection'], ['#fragSection'], ['#snapshots']];
+function setupCollapsibles(){
+  COLLAPSIBLE.forEach(([sel, label], i) => {
+    const sec = document.querySelector(sel); if(!sec) return;
+    if(label) sec.insertBefore(el('h2', {cls:'ctitle phonehead', text: label}), sec.firstChild);
+    const name = label || (sec.querySelector('h2') || {}).textContent || 'section';
+    const title = (sec.querySelector('h2 > span') || sec.querySelector('h2') || { textContent: name }).textContent.trim();
+    const open = i === 0;
+    sec.classList.add('collapsible'); sec.classList.toggle('collapsed', !open);
+    const b = el('button', {cls:'reset sectoggle', type:'button', 'aria-expanded': String(open), 'aria-label': (open ? 'Hide ' : 'Show ') + title}, [open ? 'Hide' : 'Show']);
+    b.addEventListener('click', () => {
+      const shut = !sec.classList.toggle('collapsed');
+      const nowOpen = !sec.classList.contains('collapsed');
+      b.textContent = nowOpen ? 'Hide' : 'Show'; b.setAttribute('aria-expanded', String(nowOpen)); b.setAttribute('aria-label', (nowOpen ? 'Hide ' : 'Show ') + title);
+      if(nowOpen) dispatchEvent(new Event('resize')); // charts that were hidden redraw at their real width
+    });
+    sec.appendChild(b);
+  });
+}
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
-  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); fillGuideTips(); renderGuide();
+  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); setupCollapsibles(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
   showLoadNotes();

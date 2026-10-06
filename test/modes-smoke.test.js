@@ -34,7 +34,7 @@ const setMode = (win, doc, m) => click(win, doc.querySelector('[data-mode-btn="'
 const visibleHeads = (doc, id) => [...doc.querySelectorAll('#' + id + ' thead th')].filter(shown).map(th => th.textContent.replace(/ at year \d+/, ''));
 // The page's top-level blocks after the header, in document order, that are shown in the current mode.
 const FIRST = ['#kpis', '#drivers', '#quadCard', '#liteCard'];
-const blocks = (doc) => [...doc.querySelectorAll('main > *')].filter(e => e.tagName !== 'P' && e.id !== 'hiddenState' && shown(e)).map(e => e.id || e.className);
+const blocks = (doc) => [...doc.querySelectorAll('main > *')].filter(e => e.tagName !== 'P' && e.id !== 'hiddenState' && shown(e)).map(e => e.id || e.className.replace(/\s*\bcollaps(ible|ed)\b/g, ''));
 
 test('layout: title with a case-name variable, subtitle, header buttons, footer; no "How it works" section on the page', () => {
   const { doc, win, errors } = load();
@@ -87,7 +87,7 @@ test('layout: first-screen cards hold the right controls; scenario sliders compa
   // Every card title in Advanced and Analyst has an info note, and no long paragraphs remain visible in cards.
   setMode(win, doc, 'analyst');
   for (const t of doc.querySelectorAll('main .card h2.ctitle, main .card h3.ctitle, main section > h2.ctitle')) {
-    if (t.id === 'detailTitle') continue;
+    if (t.id === 'detailTitle' || t.classList.contains('phonehead')) continue; // phone-only labels for collapsible rows
     assert.ok(t.querySelector('.info'), 'info note on: ' + t.textContent);
   }
   const longVisible = [...doc.querySelectorAll('main p, main .legend, main .muted')].filter(e => shown(e) && !e.closest('.tip') && e.textContent.trim().length > 160 && !e.closest('#snapshots') && !e.classList.contains('intro'));
@@ -378,5 +378,29 @@ test('phones (below 600px): scorecards, allocation and fragility tables become o
   // Choosing a layer from a card still works.
   click(win, doc.querySelectorAll('#score tbody .rowname')[3]);
   assert.equal(doc.getElementById('detailTitle').textContent, 'Detail: ' + D.DEFAULT_LAYERS[3].name);
+  win.close();
+});
+
+test('Analyst on phones: a one-line note and collapsible sections; the first row (Timing | Money) open, the rest closed', () => {
+  const { doc, win } = load({ hash: '#analyst' });
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(css.includes('body[data-mode="analyst"] .analystnote{display:block'));
+  assert.ok(css.includes('body[data-mode="analyst"] .collapsible.collapsed > :not(:first-child):not(.sectoggle){display:none !important}'));
+  assert.ok(/\.analystnote,\.sectoggle,\.phonehead\{display:none\}/.test(css), 'desktop and other modes unaffected');
+  assert.equal(doc.querySelector('.analystnote').textContent, 'Analyst mode works best on a larger screen.');
+  const secs = [...doc.querySelectorAll('.collapsible')];
+  assert.deepEqual(secs.map(e => e.id || 'row2'), ['row2', 'whatHappened', 'detailScore', 'detailSection', 'lowerPair', 'layerSection', 'phaseSection', 'fragSection', 'snapshots']);
+  assert.deepEqual(secs.map(e => e.classList.contains('collapsed')), [false, true, true, true, true, true, true, true, true]);
+  assert.equal(doc.querySelector('.row2 > .phonehead').textContent, 'Timing and money assumptions');
+  assert.equal(doc.querySelector('.row2 > :first-child').classList.contains('phonehead'), true, 'the label row stays visible when collapsed');
+  const t = doc.querySelector('#layerSection > .sectoggle');
+  assert.deepEqual([t.textContent, t.getAttribute('aria-expanded'), t.getAttribute('aria-label')], ['Show', 'false', 'Show Layer assumptions']);
+  click(win, t);
+  assert.equal(doc.getElementById('layerSection').classList.contains('collapsed'), false);
+  assert.deepEqual([t.textContent, t.getAttribute('aria-expanded'), t.getAttribute('aria-label')], ['Hide', 'true', 'Hide Layer assumptions']);
+  click(win, t);
+  assert.equal(doc.getElementById('layerSection').classList.contains('collapsed'), true);
+  // Collapsing hides only; every input stays in the page, so results are unchanged.
+  assert.ok(doc.querySelector('#layerSection #inputs input[data-k="capex"]'));
   win.close();
 });
