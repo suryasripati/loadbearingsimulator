@@ -404,3 +404,14 @@ test('Analyst on phones: a one-line note and collapsible sections; the first row
   assert.ok(doc.querySelector('#layerSection #inputs input[data-k="capex"]'));
   win.close();
 });
+
+test('tablets and narrow windows (600-1279px): one header row, no wrapping pills; below 960px secondary buttons move into More; scorecard full width below 1100px', () => {
+  const { doc } = load();
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(/@media \(min-width:600px\) and \(max-width:1279px\)\{\s*\.tb-in\{flex-wrap:nowrap\}/.test(css));
+  assert.ok(css.includes('.tb-right .pill{white-space:nowrap}'));
+  assert.ok(/@media \(min-width:600px\) and \(max-width:959px\)\{\s*#behindBtn,#casesBtn,#shareBtn\{display:none\}\s*\.morewrap\{display:inline-block\}/.test(css));
+  assert.ok(css.includes('@media (max-width:1099px){.first{grid-template-columns:1fr 1fr}.first #liteCard{grid-column:1 / -1}}'));
+  // The placeholder notice is never moved into a menu (locked decision 5).
+  assert.ok(!/#phPill\{display:none/.test(css));
+});
