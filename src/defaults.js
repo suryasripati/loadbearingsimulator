@@ -28,6 +28,7 @@ const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 // passThrough default 0.5 (in DEFAULT_LAYERS): no view; placeholder, unsourced. Share of unit-cost decline passed to
 // customers as lower prices, used only in Vintage mode.
 // Input ranges [min, max, step], shared by the page's inputs and the snapshot import validator.
+// Adoption speed widened to 1-20 years (from 3-20) so very fast period claims can be entered; a range change only.
 // Timing offset widened to -10..10 years (from -5..5) so an established network can sit well along the demand curve;
 // a range change only: the model and MODEL_VERSION are unchanged, and older snapshots and links stay valid.
 const LAYER_RANGES = {
@@ -36,7 +37,7 @@ const LAYER_RANGES = {
   life:[1,100,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
 };
 const GLOBAL_RANGES = {
-  pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
+  pool:[200,3000,50], speed:[1,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
   entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,6,0.5]
 };
 // tvGrowth range (-5 to 6 % a year) is a display choice, not evidence; values saved above 6 (older pages allowed 10)

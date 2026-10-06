@@ -420,3 +420,23 @@ test('timing offset range is -10 to 10 years; older snapshots inside -5..5 stay 
   reject(mutate(f => { f.snapshots[0].inputs.layers[0].offset = 11; }), /outside -10 to 10/);
   assert.equal(M.MODEL_VERSION, 2);
 });
+
+test('adoption speed range is 1 to 20 years; values below 3 are now valid; the model handles them', () => {
+  assert.deepEqual(D.GLOBAL_RANGES.speed, [1, 20, 0.5]);
+  for (const v of [1, 1.9, 3, 20]) { const r = S.snapReadStoredText(mutate(f => { f.snapshots[0].inputs.G.speed = v; })); assert.equal(r.ok, true, v + ': ' + r.error); }
+  reject(mutate(f => { f.snapshots[0].inputs.G.speed = 0.5; }), /setting speed: value 0.5 is outside 1 to 20/);
+  const o = M.runLayer(baseLayers()[0], { ...baseG(), speed: 1 });
+  assert.ok(isFinite(o.npv));
+  // Links and cases use the same shared range.
+  const lt = S.makeLinkText({ ...baseG(), speed: 1.9 }, baseLayers());
+  assert.equal(S.parseLinkText(lt).ok, true);
+  const bad = S.parseLinkText(S.makeLinkText({ ...baseG(), speed: 0.5 }, baseLayers()));
+  assert.equal(bad.ok, false); assert.match(bad.error, /setting speed: value 0.5 is outside 1 to 20/);
+  const C = require('../src/cases.js'), { makeCase } = require('./support/make-synthetic-cases.js');
+  const c = JSON.parse(JSON.stringify(makeCase(3, '£m'))); c.settings.speed.value = 1.9;
+  assert.doesNotThrow(() => C.validateCase(c));
+  c.settings.speed.value = 0.9; assert.throws(() => C.validateCase(c), /value 0.9 is outside the tool’s range 1 to 20/);
+  // The input guide reads the shared range.
+  assert.match(require('../src/guide.js').guideRows().find(r => r.key === 'speed').range, /^1 to 20, step 0.5; default 8$/);
+  assert.equal(M.MODEL_VERSION, 2);
+});
