@@ -135,3 +135,78 @@ test('live page: the Cases dialog lists both cases; the telecom card shows its j
   assert.deepEqual(errors, []);
   win.close();
 });
+
+const openCase = (win, doc, id, versionId) => {
+  click(win, doc.getElementById('casesBtn')); click(win, doc.querySelector('[data-case="' + id + '"]')); click(win, doc.getElementById('confirmOk'));
+  if (versionId && versionId !== 'base') { click(win, doc.querySelector('#caseVersions button[data-version="' + versionId + '"]')); click(win, doc.getElementById('confirmOk')); }
+};
+const signedPct = (x) => (x > 0 ? '+' : '') + (x < 0 ? '−' : '') + Math.abs(x).toFixed(0) + '%';
+
+test('quadrant: a headroom beyond the axis end is drawn at the edge with an arrow, the exact value in its label and tooltip', () => {
+  const { doc, win, errors } = load('#basic');
+  openCase(win, doc, 'telecom-fibre-1999');
+  const A = runCase('base'), names = CASE.layers.map(L => L.name);
+  const dot = (i) => doc.querySelector('#quad g.dot[data-sel="' + i + '"]');
+  // Applications: headroom about +978%, beyond the +800% end.
+  assert.ok(A[2].headroom > 800);
+  const app = dot(2);
+  assert.equal(app.getAttribute('data-off'), '1');
+  assert.equal(app.querySelector('text').textContent, names[2] + ' ' + signedPct(A[2].headroom) + ' →');
+  assert.match(app.querySelector('title').textContent, new RegExp('Headroom \\' + signedPct(A[2].headroom) + ', beyond the axis end \\(\\+800%\\); drawn at the edge'));
+  assert.ok(app.querySelector('path.qoff'), 'arrow drawn');
+  const svg = doc.querySelector('#quad svg'), W = +svg.getAttribute('width');
+  assert.ok(+app.querySelector('circle').getAttribute('cx') < W - 16, 'the dot stays inside the plot');
+  // Layers inside the axis keep their plain names and no arrow.
+  [0, 1].forEach(i => { assert.equal(dot(i).getAttribute('data-off'), '0'); assert.equal(dot(i).querySelector('text').textContent, names[i]); assert.equal(dot(i).querySelector('path.qoff'), null); });
+  // Left edge: an entry premium of 300% pushes the capacity builders below -200%.
+  const p = doc.getElementById('g_prem'); p.value = '300'; p.dispatchEvent(new win.Event('input', { bubbles: true }));
+  const st = C.caseState(CASE, 'base'), G = { ...D.DEFAULT_G, ...st.G, premium: 300 };
+  const o = M.runLayer(st.layers[0], G);
+  assert.ok(o.headroom < -200, String(o.headroom));
+  assert.equal(dot(0).getAttribute('data-off'), '-1');
+  assert.equal(dot(0).querySelector('text').textContent, '← ' + names[0] + ' ' + signedPct(o.headroom));
+  assert.match(dot(0).querySelector('title').textContent, /beyond the axis end \(-200%\); drawn at the edge/);
+  assert.ok(+dot(0).querySelector('circle').getAttribute('cx') > 0);
+  assert.deepEqual(errors, []);
+  win.close();
+});
+
+test('case bar: model-versus-outcome counts equal the What happened table (both cases, every version) and open the dialog', () => {
+  const runs = [['railway-mania-1845', 'base'], ['railway-mania-1845', 'existing-line-costs'], ['telecom-fibre-1999', 'base'], ['telecom-fibre-1999', 'period-claims']];
+  const seen = {};
+  runs.forEach(([id, v]) => {
+    const { doc, win, errors } = load('#basic');
+    openCase(win, doc, id, v);
+    // Count from the table itself: column 2 = model says capital earns its cost, column 3 = recorded outcome.
+    const rows = [...doc.querySelectorAll('#outcomeTable tbody tr')].map(tr => ({ earns: tr.children[2].textContent, out: tr.children[3].textContent }));
+    const dec = rows.filter(r => r.out === 'yes' || r.out === 'no');
+    const dis = dec.filter(r => (r.out === 'yes') !== (r.earns === 'yes')).length;
+    const n = (s) => rows.filter(r => r.out === s).length;
+    const rest = [n('contested') && n('contested') + ' contested', n('unknown') && n('unknown') + ' unknown', n('not recorded') && n('not recorded') + ' not recorded'].filter(Boolean);
+    const want = (dec.length ? 'Model and recorded outcome disagree for ' + dis + ' of ' + dec.length + ' decided layer' + (dec.length === 1 ? '' : 's') : 'No decided outcomes') + (rest.length ? '; ' + rest.join(', ') : '');
+    const btn = doc.getElementById('caseAgree');
+    assert.equal(btn.textContent, want, id + ' ' + v);
+    assert.ok(!/%/.test(btn.textContent), 'counts only');
+    seen[id + ' ' + v] = btn.textContent;
+    click(win, btn);
+    assert.equal(doc.getElementById('whModal').hidden, false, 'opens What happened');
+    assert.deepEqual(errors, []);
+    win.close();
+  });
+  assert.equal(seen['telecom-fibre-1999 base'], 'Model and recorded outcome disagree for 2 of 2 decided layers; 1 contested');
+  assert.equal(seen['telecom-fibre-1999 period-claims'], 'Model and recorded outcome disagree for 2 of 2 decided layers; 1 contested');
+});
+
+test('caseAgreement: yes/no outcomes are decided; contested, unknown and not recorded are listed, not counted', () => {
+  const k = C.caseAgreement([{ outcome: 'yes', earnsCost: false }, { outcome: 'yes', earnsCost: true }, { outcome: 'no', earnsCost: false }, { outcome: 'unknown', earnsCost: true }, { outcome: null, earnsCost: true }]);
+  assert.deepEqual(k, { decided: 3, disagree: 1, contested: 0, unknown: 1, none: 1 });
+  assert.equal(C.caseAgreementText(k), 'Model and recorded outcome disagree for 1 of 3 decided layers; 1 unknown, 1 not recorded');
+  assert.equal(C.caseAgreementText(C.caseAgreement([{ outcome: 'contested', earnsCost: true }])), 'No decided outcomes; 1 contested');
+});
+
+test('hindsight disclosure: both cases read "Scored by the tool\'s author."; the general banner is unchanged', () => {
+  const rail = C.validateCase(JSON.parse(fs.readFileSync(path.join(root, 'cases', 'railway-mania-1845.case.json'), 'utf8')));
+  assert.equal(rail.hindsightDisclosure, "Scored by the tool's author.");
+  assert.equal(CASE.hindsightDisclosure, "Scored by the tool's author.");
+  assert.equal(C.CASE_BANNER, 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.');
+});

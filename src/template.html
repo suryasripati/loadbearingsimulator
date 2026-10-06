@@ -363,6 +363,7 @@ body:not(.case-mode) .caseonly{display:none !important}
 .casebar[hidden]{display:none}
 .casebar .seg{margin:0}
 .casebtns{display:inline-flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.caseagree{font-size:12.5px;padding:0 2px;text-align:left}
 .casebtns button{font-size:12.5px;padding:3px 10px}
 .modmark{font-size:11.5px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:1px 8px}
 .modmark[hidden]{display:none}
@@ -410,6 +411,7 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
   <span class="casebadge"><b>Case:</b> <span id="caseBadgeText"></span><span class="tipwrap"><button class="info" type="button" aria-label="About this case" aria-expanded="false" aria-controls="caseTip">i</button><span class="tip" role="tooltip" id="caseTip"></span></span></span>
   <span class="seg compact" id="caseVersions" role="group" aria-label="Case version"></span>
   <span class="modmark" id="caseModified" hidden>modified from case</span>
+  <button class="linkish caseagree" type="button" id="caseAgree" aria-haspopup="dialog" aria-controls="whModal"></button>
   <span class="casebtns"><button class="pill" type="button" id="caseWhat" aria-haspopup="dialog" aria-controls="whModal">What happened</button><button class="pill" type="button" id="caseSources" aria-haspopup="dialog" aria-controls="sourcesModal">Sources</button><button class="reset" type="button" id="caseReset">Reset to case</button><button class="reset" type="button" id="caseReturn">Return to my scenario</button></span>
 </div>
 

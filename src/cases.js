@@ -352,4 +352,21 @@ function caseOutcomeRows(c, layers, results){
   return { rows, counts, banner: CASE_BANNER };
 }
 
-if (typeof module !== 'undefined') module.exports = { caseRanges, caseBasisCounts, caseCountText, caseVersionRows, CASE_DEFAULT_NOTE, CASE_SCHEMAS, CASE_FORMAT, CASE_SCHEMA_VERSION, CASE_MAX_LAYERS, CASE_BANNER, CASE_DEFAULT_ALLOC, CASE_SETTING_KEYS, CASE_LAYER_KEYS, parseMoneyUnit, formatMoney, validateCase, caseState, caseOutcomeRows, sourceForInput, sourceForOutcome };
+// Model against recorded outcome, for the case bar. A disagreement is a layer where the model says capital earns its
+// cost and the recorded outcome is "no", or the model says it does not and the outcome is "yes". Contested, unknown and
+// unrecorded outcomes are listed, not counted. Counts only, never a rate.
+function caseAgreement(rows){
+  const k = { decided: 0, disagree: 0, contested: 0, unknown: 0, none: 0 };
+  rows.forEach(r => {
+    if (r.outcome === 'yes' || r.outcome === 'no') { k.decided++; if ((r.outcome === 'yes') !== r.earnsCost) k.disagree++; }
+    else k[r.outcome || 'none']++;
+  });
+  return k;
+}
+function caseAgreementText(k){
+  const rest = [k.contested ? k.contested + ' contested' : '', k.unknown ? k.unknown + ' unknown' : '', k.none ? k.none + ' not recorded' : ''].filter(Boolean);
+  const head = k.decided ? 'Model and recorded outcome disagree for ' + k.disagree + ' of ' + k.decided + ' decided layer' + (k.decided === 1 ? '' : 's') : 'No decided outcomes';
+  return head + (rest.length ? '; ' + rest.join(', ') : '');
+}
+
+if (typeof module !== 'undefined') module.exports = { caseAgreement, caseAgreementText, caseRanges, caseBasisCounts, caseCountText, caseVersionRows, CASE_DEFAULT_NOTE, CASE_SCHEMAS, CASE_FORMAT, CASE_SCHEMA_VERSION, CASE_MAX_LAYERS, CASE_BANNER, CASE_DEFAULT_ALLOC, CASE_SETTING_KEYS, CASE_LAYER_KEYS, parseMoneyUnit, formatMoney, validateCase, caseState, caseOutcomeRows, sourceForInput, sourceForOutcome };

@@ -7,7 +7,7 @@
   "description": "Most inputs are judgement. The model has no supply-and-demand link, so a capacity glut shows up only through share drift. Read the What must be true panel and compare with What happened before reading anything into the verdicts.",
   "asOfDate": "1999-12-31",
   "asOfRule": "Last quarter-end before the primary equity index peak (Nasdaq Composite, 10 March 2000; to be verified). Uses hindsight; applied the same way as for the railway case.",
-  "hindsightDisclosure": "Scored by someone who knew the outcome: that telecom capacity was overbuilt, that carriers and suppliers lost most of their value in 2000-2002, and that Internet traffic nonetheless kept roughly doubling each year.",
+  "hindsightDisclosure": "Scored by the tool's author.",
   "moneyUnit": "$bn",
   "moneyDecimals": 1,
   "moneyRanges": {
@@ -69,7 +69,7 @@
       "citation": "Amazon.com, Form 10-Q for the quarter ended 30 Sep 1999, SEC accession 0000891020-99-001938",
       "publicationDate": "1999-11-15",
       "kind": "period",
-      "note": "Nine-month sales $963.8m against $357.0m; Q3 $355.8m; nine-month net loss $396.8m. Publication date approximate; confirm."
+      "note": "Nine-month sales $963.8m against $357.0m; Q3 $355.8m; nine-month net loss $396.8m. Nine-month cost of sales $761.0m on sales of $963.8m (gross margin 21.0%)."
     },
     {
       "id": "P8",

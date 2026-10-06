@@ -7,7 +7,7 @@ Historical cases for the Load Bearing Simulator, one plain file each (`cases/<id
 - `railway-mania-1845` (British railway mania, as of 30 September 1845; schema 4, money in £m with one decimal).
 - `telecom-fibre-1999` (telecom and fibre, as of 31 December 1999; schema 4, money in $bn with one decimal). Three layers: long-haul transport capacity builders, network equipment suppliers, and Internet applications and content. Two versions differ in adoption speed: "Measured growth" (traffic doubling each year, speed 6.3) and "Period claims" (the reported 10-fold yearly growth, speed 1.9). Most inputs are judgement. Each layer's timing offset is derived from its observed year-0 revenue over its full-adoption revenue, computed from the stored speed and midpoint, so the modelled year-0 revenue matches the observed figure. Several source dates are approximate and marked so in the source notes. The model has no supply-and-demand link, so a capacity glut shows up only through share drift.
 
-In a case the header pill reads "Case data" instead of "Placeholder data". Each case's hindsight disclosure is a draft for the owner to confirm before it goes live. Every number in a case must come from a public source, be clearly labelled as a judgement with a stated rationale, or be a neutral default the case does not use.
+In a case the header pill reads "Case data" instead of "Placeholder data". Both cases' hindsight disclosure reads "Scored by the tool's author." Every number in a case must come from a public source, be clearly labelled as a judgement with a stated rationale, or be a neutral default the case does not use.
 
 ## Rules (the build fails on any breach)
 
@@ -25,7 +25,7 @@ In a case the header pill reads "Case data" instead of "Placeholder data". Each 
   - each has a `status` (`yes`, `no`, `unknown` or `contested`), a `summary`, sources and a `horizon`;
   - `yes` and `no` need a source;
   - `contested` needs at least two sources, and a summary that states both positions ("For: … Against: …").
-- **Hindsight.** `hindsightDisclosure` is one line saying what the author already knew. The page shows: "Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
+- **Hindsight.** `hindsightDisclosure` is one line saying who scored the case (both shipped cases: "Scored by the tool's author."); the What happened card shows it after "Hindsight:". The page also shows, unchanged: "Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
 - **Allocations are personal** and are never part of a case. A case opens with a placeholder equal split.
 
 ## File format (`schemaVersion` 4; schema 1 to 3 files stay valid)

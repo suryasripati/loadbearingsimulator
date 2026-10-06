@@ -360,6 +360,8 @@ function quadSize(){
   const extra = $('lowShare') && !$('lowShare').hidden ? $('lowShare').offsetHeight + 8 : 0;
   return { W, Hh: Math.round(Math.max(260, Math.min(620, window.innerHeight - top - below - extra))) };
 }
+// Headroom as shown in the scorecard: signed, a percentage (Definition A) or a multiple (Definition B).
+function headroomLabel(o){ return (o.headroom>0?'+':'') + (isB() ? mx(o.headroom) : pct(o.headroom)); }
 function quadChart(res){
   const sz = quadSize(), W = sz.W, Hh = sz.Hh, fs = quadFontFor(W);
   quadFs = fs;
@@ -392,18 +394,26 @@ function quadChart(res){
   res.forEach((o,i) => {
     const L = layers[i];
     if(!isFinite(o.headroom)){ skipped.push(L.name); return; }
-    const r = 6 + 12*Math.sqrt(L.alloc/tot);
-    dots.push({i:i, o:o, L:L, cx:sx(o.headroom), cy:sy(L.evidence), r:r, rr:o.flags.length ? r+3.5 : r});
+    const r = 6 + 12*Math.sqrt(L.alloc/tot), rr = o.flags.length ? r+3.5 : r;
+    // Headroom beyond an axis end: the dot sits just inside that edge with an arrow pointing off the chart, and the
+    // label and tooltip give the exact value.
+    const off = o.headroom > XMAX ? 1 : o.headroom < XMIN ? -1 : 0, hr = headroomLabel(o);
+    const cx = off > 0 ? W - m.r - rr - 10 : off < 0 ? m.l + rr + 10 : sx(o.headroom);
+    const label = off > 0 ? L.name + ' ' + hr + ' \u2192' : off < 0 ? '\u2190 ' + L.name + ' ' + hr : L.name;
+    const tip = L.name + ': ' + o.bin + '. Headroom ' + hr + (off ? ', beyond the axis end (' + (off > 0 ? '+' + XMAX : XMIN) + (isB() ? 'x' : '%') + '); drawn at the edge' : '') + '.';
+    dots.push({i:i, o:o, L:L, cx:cx, cy:sy(L.evidence), r:r, rr:rr, off:off, label:label, tip:tip});
   });
   const labels = placeLabels(dots, {x0:m.l, y0:m.t, x1:W-m.r, y1:m.t+ih});
   dots.forEach((d,k) => {
     const lb = labels[k];
-    s += '<g class="dot'+(d.i===sel?' on':'')+'" data-sel="'+d.i+'" role="button" tabindex="0" aria-pressed="'+(d.i===sel)+'" aria-label="'+d.L.name+': '+d.o.bin+'. Select to see detail.">';
+    s += '<g class="dot'+(d.i===sel?' on':'')+'" data-sel="'+d.i+'" data-off="'+d.off+'" role="button" tabindex="0" aria-pressed="'+(d.i===sel)+'" aria-label="'+d.tip+' Select to see detail.">';
+    s += '<title>'+d.tip+'</title>';
+    if(d.off){ const ax = d.cx + d.off*(d.rr + 2), tx = ax + d.off*7; s += '<path class="qoff" d="M'+ax.toFixed(1)+' '+(d.cy-5).toFixed(1)+' L'+tx.toFixed(1)+' '+d.cy.toFixed(1)+' L'+ax.toFixed(1)+' '+(d.cy+5).toFixed(1)+' Z" fill="var(--ink)"/>'; }
     s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+d.r.toFixed(1)+'" fill="'+binColor(d.o)+'" fill-opacity="0.85" stroke="var(--card)" stroke-width="1.5"/>';
     if(d.o.flags.length) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+d.rr.toFixed(1)+'" fill="none" stroke="var(--ink)" stroke-width="1.3" stroke-dasharray="3 2"/>';
     if(d.i===sel) s += '<circle cx="'+d.cx.toFixed(1)+'" cy="'+d.cy.toFixed(1)+'" r="'+(d.rr+4).toFixed(1)+'" fill="none" stroke="var(--copper)" stroke-width="2"/>';
     if(lb.leader) s += '<line x1="'+d.cx.toFixed(1)+'" y1="'+d.cy.toFixed(1)+'" x2="'+lb.lx.toFixed(1)+'" y2="'+lb.ly.toFixed(1)+'" stroke="var(--cap)" stroke-width="0.8"/>';
-    s += '<text class="qlab" x="'+lb.x.toFixed(1)+'" y="'+(lb.y + labBase()).toFixed(1)+'" font-size="'+quadFs+'" font-weight="700" fill="var(--ink)">'+d.L.name+'</text>';
+    s += '<text class="qlab" x="'+lb.x.toFixed(1)+'" y="'+(lb.y + labBase()).toFixed(1)+'" font-size="'+quadFs+'" font-weight="700" fill="var(--ink)">'+d.label+'</text>';
     s += '</g>';
   });
   s += '</svg>';
@@ -431,7 +441,7 @@ function placeLabels(dots, box){
   const order = dots.map((d,k) => k).sort((a,b) => dots[b].r - dots[a].r);
   const out = [];
   order.forEach(k => {
-    const d = dots[k], w = labelWidth(d.L.name), g = 4;
+    const d = dots[k], w = labelWidth(d.label), g = 4;
     // Above and below: centred on the dot, then slid sideways (kept inside the plot) so edge dots still get a spot.
     const at = (dist) => {
       const up = d.cy - d.rr - dist - labH(), dn = d.cy + d.rr + dist, mid = d.cy - labH()/2;
@@ -643,8 +653,9 @@ function renderResults(){
   const s = layers.reduce((a,L)=>a+L.share,0);
   $('shareCheck').innerHTML = 'Shares add up to <b>'+s.toFixed(0)+'%</b> at the start' + (s>100.5 ? ' — above 100%, so layers together claim more than the whole pool.' : '.');
   renderKpis(); renderHiddenState(); lowShareNote();
-  quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); updateMarginCells(false);
+  // The case bar comes first: its height (it can wrap) sets the room left for the quadrant on the first screen.
   if(caseCtx){ renderCaseBar(); updateChips(); renderWhatHappened(res); }
+  quadChart(res); scoreTable(res); updateScoreLite(res); fragilityPanel(); updateEffDrift(); updateMarginCells(false);
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
   adoptChart(); cashChart(res[sel]); tornado(); mustBeTruePanel(); heatChart(); expoTable();
@@ -1255,6 +1266,7 @@ function bindBehind(){
   $('casesBtn').addEventListener('click', () => { renderCasesList(); openModal('casesModal'); });
   $('caseSources').addEventListener('click', () => { renderSources(); openModal('sourcesModal'); });
   $('caseWhat').addEventListener('click', () => { renderWhModal(); openModal('whModal'); });
+  $('caseAgree').addEventListener('click', () => { renderWhModal(); openModal('whModal'); });
   $('confirmOk').addEventListener('click', () => {
     const f = confirmAction; confirmAction = null;
     $('confirmModal').hidden = true; modalOpen = null;
@@ -1537,6 +1549,8 @@ function renderWhatHappened(res){
   tb.querySelectorAll('tr').forEach(tr => [...tr.children].forEach((td, i) => td.setAttribute('data-label', heads[i])));
   t.appendChild(tb);
   const k = w.counts;
+  // Case bar: disagreements between the model (inputs on screen) and the recorded outcomes, as counts; opens this dialog.
+  $('caseAgree').textContent = caseAgreementText(caseAgreement(w.rows));
   $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
   // Each version as the case defines it (page edits not applied), beside the recorded outcomes.
   const vt = $('versionTable'); vt.textContent = '';
