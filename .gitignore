@@ -14,3 +14,4 @@ calibration/private/
 .claude/
 # Dev build with synthetic case fixtures (never published)
 docs-dev/
+screenshots/

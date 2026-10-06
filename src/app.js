@@ -1377,6 +1377,7 @@ function renderSources(){
   const tb = el('tbody');
   caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
   t.appendChild(tb);
+  labelCells(t);
 }
 // Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
 // calculation or the rationale, and says when you have changed the value from the case.

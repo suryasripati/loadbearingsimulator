@@ -221,6 +221,8 @@ test('Sources dialog lists every source with publication date, kind and series e
   assert.equal($(doc, 'sourcesModal').hidden, false);
   const rows = [...doc.querySelectorAll('#sourcesTable tbody tr')].map(tr => [...tr.children].map(td => td.textContent));
   assert.deepEqual(rows, c.sources.map(s => [s.id, s.citation, s.publicationDate, s.kind, s.seriesEndsOn || '—']));
+  assert.ok($(doc, 'sourcesTable').classList.contains('cards'));
+  assert.ok([...doc.querySelectorAll('#sourcesTable tbody td')].every(td => td.dataset.label), 'phone cards: every cell labelled');
   win.close();
 });
 
