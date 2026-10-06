@@ -1015,6 +1015,7 @@ function openLink(hash){
   if(!/^#s=/.test(hash || '')) return;
   const r = parseLinkText(hash);
   const fail = (msg) => { linkNotice('This link could not be opened: ' + msg); clearLinkHash(); };
+  if(!r.ok && r.invalid){ linkNotice(r.error); clearLinkHash(); return; }
   if(!r.ok) return fail(r.error);
   linkNotice('');
   if(r.kind === 'own'){

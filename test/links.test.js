@@ -35,7 +35,7 @@ test('malformed links are rejected with a reason: not a link, bad characters, ba
   bad('#analyst', /not a scenario link/);
   bad('#s=abc$%', /damaged/);
   bad('#s=' + Buffer.from('{not json').toString('base64url'), /damaged/);
-  bad(encode([1, 2]), /expected an object/);
+  bad(encode([1, 2]), /^This is not a valid scenario link\.$/);
   const p = decode(S.makeLinkText(G0(), L0()));
   bad(encode({ ...p, extra: 1 }), /Link: unknown field "extra"/);
   bad(encode({ ...p, g: { ...p.g, disc: 99 } }), /Link setting disc: value 99 is outside 5 to 20/);
@@ -62,7 +62,7 @@ test('prototype keys are refused anywhere, and the size is capped before decodin
 test('version checks: unknown link format and newer model versions are rejected; older model versions recompute', () => {
   const p = decode(S.makeLinkText(G0(), L0()));
   bad(encode({ ...p, v: 2 }), /link format version 2 is not supported \(this page reads version 1\)/);
-  bad(encode({ ...p, v: '1' }), /link format version 1 is not supported/);
+  bad(encode({ ...p, v: '1' }), /^This is not a valid scenario link\.$/);
   bad(encode({ ...p, m: M.MODEL_VERSION + 1 }), new RegExp('made with model version ' + (M.MODEL_VERSION + 1) + ', newer than this page'));
   bad(encode({ ...p, m: 1.5 }), /no valid model version/);
   const old = S.parseLinkText(encode({ ...p, m: 1 }));
@@ -219,5 +219,27 @@ test('phones: Share moves into a "More" overflow menu (CSS below 600px); the men
   click(win, more); click(win, doc.getElementById('moreShare'));
   assert.equal(menu.hidden, true); assert.equal(doc.getElementById('sharePop').hidden, false);
   assert.equal(doc.activeElement, doc.getElementById('shareCopy'));
+  win.close();
+});
+
+test('a link that decodes but has no recognisable format version says "This is not a valid scenario link"; no message ever says "undefined"', () => {
+  const p = decode(S.makeLinkText(G0(), L0()));
+  const noV = { ...p }; delete noV.v;
+  for (const obj of [{}, noV, { ...p, v: null }, { ...p, v: '1' }, { ...p, v: 1.5 }, { ...p, v: 0 }, { ...p, v: true }, [], 'text', 42, null]) {
+    const r = S.parseLinkText(encode(obj));
+    assert.equal(r.ok, false, JSON.stringify(obj).slice(0, 40));
+    assert.equal(r.error, 'This is not a valid scenario link.', JSON.stringify(obj).slice(0, 40));
+  }
+  // Every rejection message, across many broken links, is free of "undefined", "null" and "NaN".
+  const variants = [{ ...p, m: undefined }, { ...p, m: null }, { ...p, v: 3 }, { ...p, g: undefined }, { ...p, l: undefined }, { ...p, g: { ...p.g, disc: null } },
+    { ...p, g: { ...p.g, entryDef: undefined } }, { ...p, l: [{}] }, { v: 1, m: 2, c: 'x', ver: undefined, d: {} }, { v: 1, m: 2, c: 'x', ver: 'base', d: { 'settings.disc': null } }, { v: 1, m: 2 }];
+  for (const obj of variants) {
+    const r = S.parseLinkText(encode(obj));
+    if (!r.ok) assert.ok(!/undefined|NaN|\bnull\b/.test(r.error), r.error);
+  }
+  // In the page: the plain message, nothing else.
+  const { doc, win } = load({ hash: '#' + encode({ hello: 'world' }) });
+  assert.equal(doc.getElementById('linkNotice').textContent, 'This is not a valid scenario link.');
+  assert.equal(doc.getElementById('confirmModal').hidden, true);
   win.close();
 });

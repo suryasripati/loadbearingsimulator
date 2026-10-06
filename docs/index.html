@@ -2064,9 +2064,11 @@ function parseLinkText(text){
     try { p = JSON.parse(linkB64Decode(t.slice(2))); } catch (e) { return fail('the link is damaged (it could not be decoded).'); }
     const bad = snapForbiddenKey(p, 0);
     if (bad) return fail('the link contains a forbidden key "' + bad + '".');
-    if (!snapIsObj(p)) return fail('the link is damaged (expected an object).');
+    if (!snapIsObj(p)) return { ok: false, invalid: true, error: 'This is not a valid scenario link.' };
     const d = snapDeps();
-    if (p.v !== LINK_SCHEMA_VERSION) return fail('link format version ' + String(p.v).slice(0, 12) + ' is not supported (this page reads version ' + LINK_SCHEMA_VERSION + ').');
+    // No recognisable format version (missing, not a whole number): not one of our links at all.
+    if (typeof p.v !== 'number' || !isFinite(p.v) || Math.round(p.v) !== p.v || p.v < 1) return { ok: false, invalid: true, error: 'This is not a valid scenario link.' };
+    if (p.v !== LINK_SCHEMA_VERSION) return fail('link format version ' + p.v + ' is not supported (this page reads version ' + LINK_SCHEMA_VERSION + ').');
     if (typeof p.m !== 'number' || Math.round(p.m) !== p.m || p.m < 1) return fail('the link has no valid model version.');
     if (p.m > d.MODEL_VERSION) return fail('the link was made with model version ' + p.m + ', newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first.');
     if ('c' in p) {
@@ -3136,6 +3138,7 @@ function openLink(hash){
   if(!/^#s=/.test(hash || '')) return;
   const r = parseLinkText(hash);
   const fail = (msg) => { linkNotice('This link could not be opened: ' + msg); clearLinkHash(); };
+  if(!r.ok && r.invalid){ linkNotice(r.error); clearLinkHash(); return; }
   if(!r.ok) return fail(r.error);
   linkNotice('');
   if(r.kind === 'own'){
