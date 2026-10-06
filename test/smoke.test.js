@@ -328,11 +328,19 @@ test('existing saved settings still load (v3, v2 and v1 keys)', () => {
 
 /* ---------- Snapshots UI ---------- */
 function setVal(win, el, v, ev = 'input'){ el.value = v; el.dispatchEvent(new win.Event(ev, { bubbles: true })); }
+// The page asks in its own dialog; answer it (OK or Cancel). Returns the question text.
+function answer(win, doc, ok){
+  assert.equal(doc.getElementById('confirmModal').hidden, false, 'the page asked first');
+  const q = doc.getElementById('confirmText').textContent;
+  click(win, doc.getElementById(ok ? 'confirmOk' : 'confirmCancel'));
+  assert.equal(doc.getElementById('confirmModal').hidden, true);
+  return q;
+}
 function snapStored(win){ return JSON.parse(win.localStorage.getItem('load-bearing-snapshots-v1') || '{"snapshots":[]}'); }
 
 test('snapshots: save, list, review, compare, delete', () => {
-  const { doc, win, errors } = load();
-  win.confirm = () => true;
+  const { doc, win, errors } = load({ hash: '#analyst' }); // Snapshots are an Analyst section
+  win.confirm = () => { throw new Error('window.confirm must not be used'); };
   assert.ok(/No snapshots yet/.test(doc.getElementById('snapList').textContent));
   setVal(win, doc.getElementById('snapName'), 'Base <b>view</b>');
   setVal(win, doc.getElementById('snapNote'), 'Note with <img src=x onerror="window.__x=1">');
@@ -370,13 +378,22 @@ test('snapshots: save, list, review, compare, delete', () => {
   const changed = c.layers.filter(x => x.verdictChanged).map(x => x.name);
   assert.ok(cmp.includes('Verdict changed for: ' + changed.join(', ') + '.'), cmp);
   assert.ok(!/Model version differs/.test(cmp));
-  // Delete asks first; a "no" keeps it.
-  win.confirm = () => false;
-  click(win, doc.querySelectorAll('#snapList [data-snap="delete"]')[0]);
+  // Delete asks first (in-page dialog); Cancel keeps it and focus returns to the Delete button.
+  const del0 = doc.querySelectorAll('#snapList [data-snap="delete"]')[0];
+  del0.focus(); click(win, del0);
+  assert.ok(doc.getElementById('confirmModal').contains(doc.activeElement), 'focus moves into the dialog');
+  assert.equal(answer(win, doc, false), 'Delete the snapshot “Base <b>view</b>”? This cannot be undone.');
   assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 2);
-  win.confirm = () => true;
+  assert.equal(doc.activeElement, del0, 'focus returns');
+  // Esc also cancels.
+  click(win, del0);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(doc.getElementById('confirmModal').hidden, true);
+  assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 2);
   click(win, doc.querySelectorAll('#snapList [data-snap="delete"]')[0]);
+  answer(win, doc, true);
   assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 1);
+  assert.equal(doc.activeElement, doc.querySelectorAll('#snapList [data-snap="delete"]')[0], 'focus moves to the next Delete button');
   assert.equal(snapStored(win).snapshots[0].name, 'Lead/lag');
   assert.deepEqual(errors, []);
   win.close();
@@ -479,7 +496,7 @@ test('snapshots: review states in the page (no shows last reviewed and a next da
 });
 
 test('snapshots: load into the simulator (confirm, recompute, undo), and a malformed snapshot changes nothing', () => {
-  const { doc, win, errors } = load();
+  const { doc, win, errors } = load({ hash: '#analyst' }); // Snapshots are an Analyst section
   const settings = () => JSON.parse(win.localStorage.getItem('load-bearing-sim-v3'));
   // Save a snapshot of a distinctive state, with kill criteria.
   click(win, doc.getElementById('leadlag'));
@@ -494,13 +511,14 @@ test('snapshots: load into the simulator (confirm, recompute, undo), and a malfo
   const before = settings();
   assert.equal(before.G.disc, 10);
   // Declining the confirmation changes nothing.
-  win.confirm = () => false;
+  win.confirm = () => { throw new Error('window.confirm must not be used'); };
   click(win, doc.querySelector('#snapList [data-snap="load"]'));
+  answer(win, doc, false);
   assert.deepEqual(settings(), before);
   // Accepting loads the inputs and recomputes.
-  let asked = '';
-  win.confirm = (m) => { asked = m; return true; };
   click(win, doc.querySelector('#snapList [data-snap="load"]'));
+  const asked = answer(win, doc, true);
+  assert.equal(doc.activeElement, doc.getElementById('snapUndo'), 'focus goes to Undo after loading');
   assert.ok(/Load “Distinct” into the simulator\? Your current settings will be replaced \(you can undo once\)\./.test(asked), asked);
   assert.ok(!/model version/.test(asked), 'no version warning when versions match');
   assert.equal(doc.getElementById('g_disc').value, '12');
@@ -579,4 +597,13 @@ test('snapshots: saving with an open trigger prompts "revised" or "kept my view"
   win.Date = RealDate;
   assert.deepEqual(errors, []);
   win.close();
+});
+
+test('the page never uses the browser\'s own dialogs (confirm, alert, prompt); every question uses the in-page dialog', () => {
+  const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>')).replace(/\/\/[^\n]*/g, '');
+  assert.ok(!/\b(window\.)?(confirm|alert|prompt)\s*\(/.test(js.replace(/askConfirm\(/g, '')), 'no native dialog calls');
+  const { doc } = load();
+  const dlg = doc.querySelector('#confirmModal [role="dialog"]');
+  assert.equal(dlg.getAttribute('aria-modal'), 'true');
+  assert.equal(dlg.getAttribute('aria-describedby'), 'confirmText');
 });

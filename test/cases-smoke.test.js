@@ -208,7 +208,7 @@ test('basis chips: one per case input, labelled, with citation, calculation or r
   assert.equal($(doc, 'caseModified').hidden, false);
   assert.equal($(doc, 'caseModified').textContent, 'modified from case');
   // Allocations are personal: changing one does not mark the case as modified.
-  click(win, $(doc, 'caseReset'));
+  click(win, $(doc, 'caseReset')); click(win, $(doc, 'confirmOk'));
   setInput(win, doc.querySelector('#scoreLite input[data-k="alloc"]'), 55);
   assert.equal($(doc, 'caseModified').hidden, true);
   win.close();
@@ -255,7 +255,14 @@ test('Return to my scenario restores it exactly; Reset to case restores the case
   const caseDisc = sliderVal(doc, 'g_disc');
   setInput(win, $(doc, 'g_disc'), 17);
   assert.equal(win.localStorage.getItem('load-bearing-sim-v3'), saved, 'edits in a case are not saved over my scenario');
-  click(win, $(doc, 'caseReset'));
+  // Reset to case asks first when the case was edited: Cancel (or Esc) keeps the edit and returns focus.
+  $(doc, 'caseReset').focus(); click(win, $(doc, 'caseReset'));
+  assert.equal($(doc, 'confirmText').textContent, 'Reset every input to the case values? Your edits to the case will be lost.');
+  click(win, $(doc, 'confirmCancel'));
+  assert.equal(sliderVal(doc, 'g_disc'), 17); assert.equal(doc.activeElement, $(doc, 'caseReset'));
+  click(win, $(doc, 'caseReset')); doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(sliderVal(doc, 'g_disc'), 17);
+  click(win, $(doc, 'caseReset')); click(win, $(doc, 'confirmOk'));
   assert.equal(sliderVal(doc, 'g_disc'), caseDisc);
   // "Reset everything" inside a case also resets to the case.
   setInput(win, $(doc, 'g_disc'), 17); click(win, $(doc, 'reset'));
@@ -288,7 +295,7 @@ test('snapshots in a case: saved with the case id; cannot be compared with my sc
   // Back to my scenario, then load the case snapshot: the case opens.
   click(win, $(doc, 'caseReturn'));
   const loads = [...doc.querySelectorAll('#snapList [data-snap="load"]')];
-  click(win, loads[1]);
+  click(win, loads[1]); assert.match($(doc, 'confirmText').textContent, /^Load “Case view” into the simulator\?/); click(win, $(doc, 'confirmOk'));
   assert.equal($(doc, 'caseBar').hidden, false);
   assert.match(doc.querySelector('.tb-name').textContent, /^Synthetic 3-layer case/);
   assert.equal(doc.querySelectorAll('#scoreLite tbody tr').length, 3);

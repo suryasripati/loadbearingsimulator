@@ -870,12 +870,13 @@ function snapLoadInto(i){
     if(c.layers.length !== plan.state.layers.length || c.layers.some((L, j) => L.id !== plan.state.layers[j].id)){ $('snapMsg').textContent = 'Not loaded: the case \u201c' + c.title + '\u201d has different layers now.'; return; }
     ctx = { c: c, versionId: 'base', st: caseState(c, 'base'), mine: caseCtx ? caseCtx.mine : snapMine() };
   }
-  if(!window.confirm(ask)) return;
-  snapUndo = snapPageState();
-  snapApplyState(Object.assign({ sel: 0, caseCtx: ctx }, plan.state));
-  if(!ctx && snapUndo.caseCtx) restoreMineDraft(snapUndo.caseCtx.mine);
-  $('snapMsg').textContent = 'Loaded “' + s.name + '”. Results are recomputed from its inputs.' + (plan.warning ? ' ' + plan.warning : '');
-  $('snapUndo').hidden = false;
+  askConfirm({ title: 'Load snapshot', ok: 'Load', text: ask, returnTo: () => $('snapUndo'), onOk: () => {
+    snapUndo = snapPageState();
+    snapApplyState(Object.assign({ sel: 0, caseCtx: ctx }, plan.state));
+    if(!ctx && snapUndo.caseCtx) restoreMineDraft(snapUndo.caseCtx.mine);
+    $('snapMsg').textContent = 'Loaded “' + s.name + '”. Results are recomputed from its inputs.' + (plan.warning ? ' ' + plan.warning : '');
+    $('snapUndo').hidden = false;
+  } });
 }
 function snapUndoLoad(){
   if(!snapUndo) return;
@@ -885,10 +886,15 @@ function snapUndoLoad(){
 }
 function snapDelete(i){
   const s = snapStore.snapshots[i]; if(!s) return;
-  if(!window.confirm('Delete the snapshot “' + s.name + '”? This cannot be undone.')) return;
-  snapStore.snapshots.splice(i, 1);
-  if(snapOpen===i) snapOpen = -1; else if(snapOpen>i) snapOpen--;
-  snapSaveStore(); snapRenderList(); $('snapCompare').textContent = '';
+  const opener = document.activeElement;
+  askConfirm({ title: 'Delete snapshot', ok: 'Delete', text: 'Delete the snapshot “' + s.name + '”? This cannot be undone.',
+    // After deleting, focus goes to the next snapshot's Delete button, or to the name field when none is left.
+    returnTo: () => { const d = [...document.querySelectorAll('#snapList [data-snap="delete"]')]; return d.indexOf(opener) >= 0 ? opener : d[Math.min(i, d.length - 1)] || $('snapName'); },
+    onOk: () => {
+      snapStore.snapshots.splice(i, 1);
+      if(snapOpen===i) snapOpen = -1; else if(snapOpen>i) snapOpen--;
+      snapSaveStore(); snapRenderList(); $('snapCompare').textContent = '';
+    } });
 }
 function snapFmt(v){ return typeof v === 'number' ? String(Math.round(v*1000)/1000) : String(v); }
 function snapRenderCompare(){
@@ -1119,7 +1125,8 @@ function focusBack(){
   if(!(r && document.contains(r) && r !== document.body && shown(r))) r = $('behindBtn');
   r.focus(); modalReturn = null;
 }
-// In-page confirmation (replaces window.confirm for opening a case): OK runs onOk, Cancel or Esc does nothing.
+// In-page confirmation, used for every question the page asks (the page never calls window.confirm): OK runs onOk,
+// Cancel or Esc does nothing; focus returns to returnTo (or the opener).
 let confirmAction = null;
 function askConfirm(o){
   $('confirmTitle').textContent = o.title; $('confirmText').textContent = o.text; $('confirmOk').textContent = o.ok;
@@ -1405,7 +1412,10 @@ function renderWhModal(){
 function bindCases(){
   $('casesBtn').hidden = !CASES.length;
   $('caseReturn').addEventListener('click', returnToScenario);
-  $('caseReset').addEventListener('click', () => { if(!caseModified() || window.confirm('Reset every input to the case values? Your edits to the case will be lost.')) resetToCase(); });
+  $('caseReset').addEventListener('click', () => {
+    if(!caseModified()) return resetToCase();
+    askConfirm({ title: 'Reset to case', ok: 'Reset to case', returnTo: $('caseReset'), text: 'Reset every input to the case values? Your edits to the case will be lost.', onOk: resetToCase });
+  });
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
