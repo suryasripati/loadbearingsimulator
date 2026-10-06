@@ -6,10 +6,13 @@
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 4;
+const SNAP_SCHEMA_VERSION = 5;
 // Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
 // had no trigger response (filled in as null).
-const SNAP_SCHEMA_READABLE = [1, 2, 3, 4];
+const SNAP_SCHEMA_READABLE = [1, 2, 3, 4, 5];
+// Schema 5 adds the terminal-value mode (tvMode, "multiple" or "perpetuity") and long-run growth (tvGrowth) to the
+// settings. Older schemas load as "multiple" with growth 0, which is what they were computed under.
+const SNAP_TV_MODES = ['multiple', 'perpetuity'];
 // Schema 4 adds caseId (null for your own scenario, or the id of a bundled case) and layer names, and allows 1 to 6
 // layers. Older schemas are your own five-layer scenario: caseId null, names from the defaults.
 const SNAP_MAX_LAYERS = 6;
@@ -34,7 +37,7 @@ function snapDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') {
     return Object.assign({}, require('./model.js'), require('./defaults.js'));
   }
-  return { MODEL_VERSION, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
+  return { MODEL_VERSION, TV_GROWTH_GAP, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
 }
 
 function snapBlankKill(layers){
@@ -56,6 +59,7 @@ function snapInputs(G, layers){
   const g = {};
   SNAP_GLOBAL_KEYS.forEach(k => { g[k] = G[k]; });
   g.entryDef = G.entryDef; g.capexModel = G.capexModel; g.phases = [G.phases[0], G.phases[1]];
+  g.tvMode = G.tvMode === 'perpetuity' ? 'perpetuity' : 'multiple'; g.tvGrowth = typeof G.tvGrowth === 'number' ? G.tvGrowth : 0;
   const ls = layers.map(L => {
     const o = { id: L.id, name: L.name };
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = L[k]; });
@@ -157,6 +161,11 @@ function snapKeys(obj, required, optional, where){
   Object.keys(obj).forEach(k => { if (allowed.indexOf(k) < 0) snapErr(where, 'unknown field "' + String(k).slice(0, 40) + '"'); });
   required.forEach(k => { if (!Object.prototype.hasOwnProperty.call(obj, k)) snapErr(where, 'missing field "' + k + '"'); });
 }
+// Long-run growth must stay at least TV_GROWTH_GAP points below the discount rate.
+function snapGrowthGap(G, where){
+  const gap = snapDeps().TV_GROWTH_GAP;
+  if (G.tvGrowth > G.disc - gap) snapErr(where, 'long-run growth ' + G.tvGrowth + '% must be at least ' + gap + ' point below the discount rate (' + G.disc + '%)');
+}
 function snapNum(v, range, where, integer){
   if (typeof v !== 'number' || !isFinite(v)) snapErr(where, 'expected a finite number');
   if (range && (v < range[0] || v > range[1])) snapErr(where, 'value ' + v + ' is outside ' + range[0] + ' to ' + range[1]);
@@ -213,10 +222,13 @@ function snapCheckOne(s, where, withAlloc){
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
-  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases']), [], where + ' settings');
+  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
   SNAP_GLOBAL_KEYS.forEach(k => { out.inputs.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
   out.inputs.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
   out.inputs.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
+  out.inputs.G.tvMode = schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
+  out.inputs.G.tvGrowth = schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
+  snapGrowthGap(out.inputs.G, where + ' setting tvGrowth');
   if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
   const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
   const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
@@ -328,7 +340,7 @@ function snapTodayLocal(now){
 // Flatten inputs to labelled paths for diffing, e.g. "settings.disc" or "layer hw.driftP[2]".
 function snapFlatten(inputs){
   const out = {};
-  SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel']).forEach(k => { out['settings.' + k] = inputs.G[k]; });
+  SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'tvMode', 'tvGrowth']).forEach(k => { out['settings.' + k] = inputs.G[k]; });
   inputs.G.phases.forEach((v, i) => { out['settings.phases[' + i + ']'] = v; });
   inputs.layers.forEach(L => {
     SNAP_LAYER_NUM_KEYS.forEach(k => { out['layer ' + L.id + '.' + k] = L[k]; });
@@ -386,6 +398,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const g = checked.inputs.G;
   const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
   G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
+  G.tvMode = g.tvMode; G.tvGrowth = g.tvGrowth;
   // Layers come from the snapshot (ids and names); an allocation is restored only if the snapshot has it, otherwise
   // the current allocation of the same layer is kept (or the placeholder 20 for a layer not on the page).
   const layers = checked.inputs.layers.map(src => {

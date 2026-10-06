@@ -20,7 +20,7 @@ test('snapshot holds the model version, all inputs and per-layer outputs equal t
   const s = snap();
   assert.equal(s.modelVersion, M.MODEL_VERSION);
   assert.equal(s.created, NOW.toISOString());
-  assert.deepEqual(Object.keys(s.inputs.G).sort(), ['capexModel', 'disc', 'entry', 'entryDef', 'mid', 'mult', 'phases', 'pool', 'premium', 'rd', 'speed', 'tv']);
+  assert.deepEqual(Object.keys(s.inputs.G).sort(), ['capexModel', 'disc', 'entry', 'entryDef', 'mid', 'mult', 'phases', 'pool', 'premium', 'rd', 'speed', 'tv', 'tvGrowth', 'tvMode']);
   s.inputs.layers.forEach((L, i) => {
     const o = M.runLayer(L, s.inputs.G), f = M.verdictFragility(L, s.inputs.G), out = s.outputs[i];
     assert.equal(out.npv, o.npv); assert.equal(out.bin, o.bin); assert.deepEqual(out.flags, o.flags);
@@ -50,7 +50,7 @@ test('export excludes allocations by default and includes them only when ticked'
 });
 
 test('import checks schema version (file and snapshot) and model version, and says which is incompatible', () => {
-  reject(mutate(f => { f.schemaVersion = 5; }), /File: schema version 5 is not compatible \(this page reads schema versions 1 and 2 and 3 and 4\)/);
+  reject(mutate(f => { f.schemaVersion = 6; }), /File: schema version 6 is not compatible \(this page reads schema versions 1 and 2 and 3 and 4 and 5\)/);
   reject(mutate(f => { f.snapshots[0].schemaVersion = 9; }), /Snapshot 1: schema version 9 is not compatible/);
   reject(mutate(f => { f.snapshots[0].modelVersion = M.MODEL_VERSION + 1; }), new RegExp('Snapshot 1: model version ' + (M.MODEL_VERSION + 1) + ' is not compatible: it is newer than this page'));
   reject(mutate(f => { f.format = 'something-else'; }), /not a Load Bearing Simulator snapshot file/);
@@ -184,7 +184,7 @@ test('schema 1 files (no answer date, no response) still import, with a blank an
   const f = JSON.parse(fileOf([snap()]));
   f.schemaVersion = 1; f.snapshots[0].schemaVersion = 1;
   f.snapshots[0].kill.forEach(k => { delete k.answeredAt; });
-  delete f.snapshots[0].response; delete f.snapshots[0].caseId; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
+  delete f.snapshots[0].response; delete f.snapshots[0].caseId; delete f.snapshots[0].inputs.G.tvMode; delete f.snapshots[0].inputs.G.tvGrowth; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   const r = S.importSnapshotsText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.ok(r.snapshots[0].kill.every(k => k.answeredAt === ''));
@@ -351,14 +351,14 @@ test('trigger response: strict import rejects bad responses', () => {
 test('trigger response: schema 2 files migrate with no response', () => {
   const f = JSON.parse(fileOf([snap()]));
   f.schemaVersion = 2; f.snapshots[0].schemaVersion = 2; delete f.snapshots[0].response;
-  delete f.snapshots[0].caseId; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
+  delete f.snapshots[0].caseId; delete f.snapshots[0].inputs.G.tvMode; delete f.snapshots[0].inputs.G.tvGrowth; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   const r = S.importSnapshotsText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.equal(r.snapshots[0].response, null);
-  assert.equal(r.snapshots[0].schemaVersion, 4);
+  assert.equal(r.snapshots[0].schemaVersion, S.SNAP_SCHEMA_VERSION);
   // A schema 2 file must not carry a response field.
   const g = JSON.parse(fileOf([snap()])); g.schemaVersion = 2; g.snapshots[0].schemaVersion = 2;
-  delete g.snapshots[0].caseId; g.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
+  delete g.snapshots[0].caseId; delete g.snapshots[0].inputs.G.tvMode; delete g.snapshots[0].inputs.G.tvGrowth; g.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   reject(JSON.stringify(g), /unknown field "response"/);
 });
 
@@ -399,4 +399,21 @@ test('schema 4: views of different stacks cannot be compared; loading a case sna
   assert.equal(plan.caseId, c.id);
   assert.deepEqual(plan.state.layers.map(L => L.id), c.layers.map(L => L.id));
   assert.equal(plan.state.draftKill.length, 3);
+});
+
+test('schema 5: terminal-value mode and growth are saved and checked; older schemas load as "multiple" with growth 0', () => {
+  const s = snap({ G: { ...baseG(), tvMode: 'perpetuity', tvGrowth: 2 } });
+  assert.deepEqual([s.inputs.G.tvMode, s.inputs.G.tvGrowth], ['perpetuity', 2]);
+  const r = S.importSnapshotsText(fileOf([s]));
+  assert.equal(r.ok, true, r.error);
+  assert.deepEqual([r.snapshots[0].inputs.G.tvMode, r.snapshots[0].inputs.G.tvGrowth], ['perpetuity', 2]);
+  assert.equal(snap().inputs.G.tvMode, 'multiple', 'inputs without a mode are "multiple"');
+  reject(mutate(f => { f.snapshots[0].inputs.G.tvMode = 'forever'; }), /setting tvMode/);
+  reject(mutate(f => { f.snapshots[0].inputs.G.tvGrowth = 9.5; }), /long-run growth 9.5% must be at least 1 point below the discount rate \(10%\)/);
+  reject(mutate(f => { delete f.snapshots[0].inputs.G.tvGrowth; }), /missing field "tvGrowth"/);
+  const plan = S.snapPrepareLoad(s, baseLayers());
+  assert.deepEqual([plan.state.G.tvMode, plan.state.G.tvGrowth], ['perpetuity', 2]);
+  // Diff lists a mode change.
+  const d = S.diffInputs(snap().inputs, s.inputs).map(x => x.path);
+  assert.ok(d.includes('settings.tvMode') && d.includes('settings.tvGrowth'));
 });

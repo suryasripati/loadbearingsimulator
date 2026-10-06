@@ -240,7 +240,7 @@ test('low-share warning appears in any mode below the display threshold and name
 test('every input range on the page equals the range the snapshot import validator uses', () => {
   const { doc, win } = load();
   const r3 = (e) => [Number(e.min), Number(e.max), Number(e.step)];
-  const sliders = { g_speed: 'speed', g_mid: 'mid', g_pool: 'pool', g_prem: 'premium', g_mult: 'mult', g_entry: 'entry', g_disc: 'disc', g_rd: 'rd', g_tv: 'tv' };
+  const sliders = { g_speed: 'speed', g_mid: 'mid', g_pool: 'pool', g_prem: 'premium', g_mult: 'mult', g_entry: 'entry', g_disc: 'disc', g_rd: 'rd', g_tv: 'tv', g_tvg: 'tvGrowth' };
   for (const id in sliders) assert.deepEqual(r3(doc.getElementById(id)), D.GLOBAL_RANGES[sliders[id]], id);
   assert.deepEqual(Object.values(sliders).sort(), Object.keys(D.GLOBAL_RANGES).sort(), 'every global range has a slider');
   assert.deepEqual(r3(doc.getElementById('ph1')), D.PHASE_RANGES[0]);
@@ -267,10 +267,21 @@ test('every input range on the page equals the range the snapshot import validat
   }
   for (const k in D.GLOBAL_RANGES) {
     const [lo, hi] = D.GLOBAL_RANGES[k];
-    assert.ok(tryVal(s => { s.inputs.G[k] = lo; }) && tryVal(s => { s.inputs.G[k] = hi; }), k + ' ends accepted');
+    // Growth must stay 1 point below the discount rate, so its top end is tried with the highest discount rate.
+    const room = (s) => { if (k === 'tvGrowth') s.inputs.G.disc = D.GLOBAL_RANGES.disc[1]; };
+    assert.ok(tryVal(s => { s.inputs.G[k] = lo; }) && tryVal(s => { room(s); s.inputs.G[k] = hi; }), k + ' ends accepted');
     assert.ok(!tryVal(s => { s.inputs.G[k] = lo - 1; }) && !tryVal(s => { s.inputs.G[k] = hi + 1; }), k + ' beyond the ends rejected');
   }
   assert.ok(tryVal(s => { s.inputs.G.phases = [D.PHASE_RANGES[0][0], D.PHASE_RANGES[1][1]]; }));
+  // Model version 2 widened asset life to 1-100 and the terminal multiple to 0-30; the page's inputs reach the new ends.
+  assert.deepEqual([D.LAYER_RANGES.life[0], D.LAYER_RANGES.life[1]], [1, 100]);
+  assert.deepEqual([D.GLOBAL_RANGES.tv[0], D.GLOBAL_RANGES.tv[1]], [0, 30]);
+  assert.equal(doc.getElementById('g_tv').max, '30');
+  doc.querySelectorAll('#inputs input[data-k="life"]').forEach(i => assert.equal(i.max, '100'));
+  assert.ok(tryVal(s => { s.inputs.layers[0].life = 100; s.inputs.G.tv = 30; }));
+  // Growth above the discount rate minus 1 point is refused.
+  assert.ok(tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 10; s.inputs.G.tvGrowth = 9; }));
+  assert.ok(!tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 10; s.inputs.G.tvGrowth = 9.5; }));
   assert.ok(!tryVal(s => { s.inputs.G.phases = [D.PHASE_RANGES[0][0] - 1, 10]; }) && !tryVal(s => { s.inputs.G.phases = [5, D.PHASE_RANGES[1][1] + 1]; }));
   win.close();
 });

@@ -53,7 +53,8 @@ function makeCase(n, unit){
     versions: n === 3 ? [
       { id: 'hype', label: 'Hype', settings: { speed: { value: 5, basis: 'judgement', sourceIds: [], note: 'Synthetic: a fast-adoption view (fictitious).' } } },
       { id: 'measured', label: 'Measured', settings: { speed: { value: 12, basis: 'judgement', sourceIds: [], note: 'Synthetic: a slow-adoption view (fictitious).' } },
-        layers: { 'syn-2': { capex: { value: 180, basis: 'sourced', sourceIds: ['SYN-P1'], note: '' } } } }
+        layers: { 'syn-2': { capex: { value: 180, basis: 'sourced', sourceIds: ['SYN-P1'], note: '' } } } },
+      { id: 'long-run', label: 'Long run', settings: { tvMode: 'perpetuity', tvGrowth: { value: 2, basis: 'judgement', sourceIds: [], note: 'Synthetic: a long-run growth view (fictitious).' } } }
     ] : [],
     outcomes
   };

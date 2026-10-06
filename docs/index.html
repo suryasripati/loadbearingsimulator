@@ -338,7 +338,13 @@ td .bchipwrap{margin-left:3px}
     <div class="cctl"><div class="cctl-h"><label for="g_entry">Entry year</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry year" aria-expanded="false" aria-controls="tip13">i</button><span class="tip" role="tooltip" id="tip13">You own the layer's cash flows from this year on. Present values are stated in entry-year terms.</span></span><output id="o_entry"></output></div><input type="range" id="g_entry"></div>
     <div class="cctl" id="ctl_mult" hidden><div class="cctl-h"><label for="g_mult">Entry multiple</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Entry multiple" aria-expanded="false" aria-controls="tip14">i</button><span class="tip" role="tooltip" id="tip14">Price paid at entry, as a multiple of the layer's operating cash in the following year (before sustaining spend). Default 10x is a placeholder.</span></span><output id="o_mult"></output></div><input type="range" id="g_mult"></div>
     <div class="cctl"><div class="cctl-h"><label for="g_rd">Interest on debt</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Interest on debt" aria-expanded="false" aria-controls="tip15">i</button><span class="tip" role="tooltip" id="tip15">Debt is repaid evenly over eight years after the build ends.</span></span><output id="o_rd"></output></div><input type="range" id="g_rd"></div>
-    <div class="cctl"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16">Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
+    <div class="seg compact" id="tvSwitch" role="group" aria-label="Value beyond year 15" style="margin-top:6px">
+      <button data-t="multiple" aria-pressed="false">Multiple (v0.1)</button>
+      <button data-t="perpetuity" aria-pressed="false">Growing perpetuity</button>
+      <span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15, mode" aria-expanded="false" aria-controls="tipTvMode">i</button><span class="tip" role="tooltip" id="tipTvMode">How value beyond year 15 is counted. <b>Multiple</b> (default): your multiple times year-15 cash after sustaining spend. <b>Growing perpetuity</b>: year-15 cash growing at a long-run rate g for ever, discounted at your rate r, which equals a multiple of (1 + g) ÷ (r − g). At g = 0 that is 1 ÷ r, so 10x at 10%, twice the default multiple of 5. Growth must stay at least 1 point below the discount rate.</span></span>
+    </div>
+    <div class="cctl" id="ctl_tv"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16">Multiple of year-15 cash flow. Set it to 0 to count only what arrives within 15 years.</span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
+    <div class="cctl" id="ctl_tvg" hidden><div class="cctl-h"><label for="g_tvg">Long-run growth</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Long-run growth" aria-expanded="false" aria-controls="tipTvg">i</button><span class="tip" role="tooltip" id="tipTvg">Growth of year-15 cash for ever, in % a year, used only in the growing-perpetuity mode. Default 0 is a placeholder with no view behind it, unsourced. The value shows the multiple it implies at your discount rate. Kept at least 1 point below the discount rate.</span></span><output id="o_tvg"></output></div><input type="range" id="g_tvg"></div>
     <div class="seg compact" id="capexSwitch" role="group" aria-label="Capex model" style="margin-top:6px">
       <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
       <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
@@ -476,6 +482,7 @@ td .bchipwrap{margin-left:3px}
       <li>Build capex is spread evenly over the build years, starting in the year you set (default year 0). After that, sustaining spend equals build capex divided by asset life. Split the life of the technology from the life of the asset when you set it.</li>
       <li>Capex model. The default, sustaining spend (v0.1), spends build capex ÷ asset life every year after the build. Vintage cohorts (opt-in) treats each year’s build spend as a cohort replaced at the end of its life (rounded to whole years), at the original spend × (1 − unit-cost decline)<sup>life</sup>; replacement after year 15 is not charged, and value beyond year 15 uses a normalised sustaining spend, capex × (1 − decline)<sup>15</sup> ÷ life. Replacement is assumed to happen on time, so capacity stays at 100% after the initial build. Unit-cost decline lowers the owner’s replacement cost, and competition passes a share of it (pass-through, 0 to 1, default 0.5 as a placeholder with no view behind it) to customers as lower prices. That erosion runs through share drift: each year’s share multiplier is (1 + phase drift) × (1 − pass-through × decline). Drift covers other commoditisation; pass-through covers erosion caused by cheaper capacity. Value beyond year 15 uses the year-15 share after pass-through. Stranded value is a diagnostic, not a cash item. Caveat: pass-through lowers a layer’s revenue without raising demand. If demand is price-elastic, cheaper capacity could raise revenue instead; price elasticity is not modelled. The entry price under the premium definition covers the initial build only (replacement before the entry year is not priced), and debt covers the initial build only. Even at zero decline, vintage cohorts differ from sustaining spend: replacement arrives in lumps at end of life rather than as a steady charge from the end of the build.</li>
       <li>Capacity limit (an assumption, not data): a layer can only earn on capacity it has built. Capacity is taken to scale linearly with build spend, so revenue uses the lower of layer adoption and the share of build capex spent so far. Without this, starting the build later would always look better, because spend would get cheaper while revenue stayed the same. It is a first-order stand-in for capacity utilisation, to be refined by vintage capex. At the default settings it never binds.</li>
+      <li>Value beyond year 15. By default (the v0.1 model) it is your multiple times year-15 cash after sustaining spend, floored at zero. The opt-in growing perpetuity instead treats year-15 cash as growing for ever at a long-run rate g, discounted at your rate r: a multiple of (1 + g) ÷ (r − g). Growth is a placeholder input (default 0, unsourced) and must stay at least 1 point below the discount rate. At g = 0 the perpetuity is 1 ÷ r, 10x at 10%, twice the default multiple of 5, so switching mode at default settings raises every layer’s value. Asset life runs to 100 years and the multiple to 30x, so long-lived assets can be represented; with a 15-year horizon a longer life changes only sustaining spend, the life flag and the terminal value.</li>
       <li>Present value uses your discount rate and is stated at your entry year. With the premium definition you pay the build cost already sunk, marked up, plus later build at the same mark-up. With the multiple definition you pay a multiple of next-year operating cash, plus later build at cost. Break-even solves for the price at which present value is zero.</li>
       <li>Not yet modelled: margins and drift that respond to how full the built capacity is. The capacity limit above only caps revenue at what has been built; it does not change prices. Deferred until the sensitivity ranking shows it matters.</li>
       <li>This is a straight-line model. There is no competition between layers, no price war feedback, and no check that shares add up beyond the warning above.</li>
@@ -517,11 +524,24 @@ td .bchipwrap{margin-left:3px}
 const H = 15;
 // Model version stamp, saved with every snapshot. Bump it whenever the maths changes (any change that can move an
 // output for the same inputs), so comparisons can flag snapshots made under older maths.
-const MODEL_VERSION = 1;
+const MODEL_VERSION = 2;
+// Version 2 added the perpetuity terminal-value option (G.tvMode, G.tvGrowth). With tvMode "multiple" (the default, and
+// what a missing tvMode means) every output equals version 1.
+// Long-run growth must stay at least this many points below the discount rate (the inputs enforce it). Inside the
+// model, growth is capped at that gap, so a discount-rate shock in the sensitivity or fragility tests stays finite.
+const TV_GROWTH_GAP = 1;
 const AMORT = 8;
 // Below this share of the layer's peak operating cash, a forward multiple on year e+1 is reported as
 // "not meaningful". This is a display cut-off for near-zero denominators, not an evidence-based threshold.
 const B_MIN_OCF_SHARE = 0.01;
+// Terminal value multiple applied to year-15 net cash. "multiple": the tv input. "perpetuity": a growing perpetuity
+// of next year's cash, (1 + g) / (r - g), with g = long-run growth and r = discount rate. Growth is an unsourced
+// placeholder input (default 0); at g = 0 the multiple is 1 / r.
+function perpetuityMultiple(g, disc){
+  const gg = Math.min(g, disc - TV_GROWTH_GAP);
+  return (1 + gg / 100) / ((disc - gg) / 100);
+}
+function tvMultipleOf(G){ return G.tvMode === 'perpetuity' ? perpetuityMultiple(G.tvGrowth || 0, G.disc) : G.tv; }
 function adoption(t, G){
   const k = Math.log(81) / G.speed;
   return 1 / (1 + Math.exp(-k * (t - G.mid)));
@@ -630,7 +650,8 @@ function runLayer(L, G){
   const opsNet = years.map(t => ocf[t] - sust[t]);
   // Terminal value: v0.1 uses year-15 cash after sustaining spend. Vintage mode uses a normalised sustaining spend,
   // capex x (1 - decline)^15 / life, instead of the lumpy year-15 replacement; at decline 0 this equals capex / life.
-  const tv = vin ? G.tv * Math.max(0, ocf[H] - vin.normSust) : G.tv * Math.max(0, opsNet[H]);
+  const tvM = tvMultipleOf(G);
+  const tv = vin ? tvM * Math.max(0, ocf[H] - vin.normSust) : tvM * Math.max(0, opsNet[H]);
 
   // Entry year e: the investor owns cash flows from e onward, valued in year-e terms.
   const disc = (t) => Math.pow(1 + r, t - e);
@@ -725,7 +746,9 @@ function sensItems(G){
     {id:'capex', n:'Build capex', lab:'±25%', L:(L,k)=>{ L.capex*=k; }, lo:1.25, hi:0.75},
     {id:'life', n:'Asset life', lab:'±25%', L:(L,k)=>{ L.life=Math.max(1,L.life*k); }, lo:0.75, hi:1.25},
     {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
-    {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
+    G.tvMode === 'perpetuity'
+      ? {id:'tv', n:'Long-run growth (perpetuity)', lab:'\u00b11 point', g:(g,k)=>{ g.tvGrowth=(g.tvGrowth||0)+k; }, lo:-1, hi:1}
+      : {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
   ];
   if (G.capexModel === 'vintage'){
     items.push({id:'decline', n:'Unit-cost decline (\u00b13 points)', lab:'\u00b13 points', L:(L,k)=>{ L.unitCostDecline=(L.unitCostDecline||0)+k; }, lo:-3, hi:3});
@@ -832,10 +855,13 @@ function verdictFragility(L, G){
 // Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
 // Defaults are neutral on timing (offset 0, steepness 1, build starts in year 0) and on phases (all three equal the v0.1 constant),
 // so the default page reproduces the v0.1 results. Anything that demonstrates a verdict must be opt-in.
-const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
+const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10, tvGrowth:0 };
 const DEFAULT_DEF = 'A';
 // Capex model: 'sustaining' (v0.1, default) or 'vintage' (opt-in cohorts with replacement at end of life).
 const DEFAULT_CAPEX = 'sustaining';
+// Value beyond year 15: 'multiple' (v0.1, default; uses tv) or 'perpetuity' (opt-in; uses tvGrowth, long-run growth in
+// % a year, a placeholder default of 0 with no view behind it, unsourced).
+const DEFAULT_TV_MODE = 'multiple';
 const DEFAULT_PHASES = [5, 10];
 const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mid:5.5} };
 const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
@@ -859,12 +885,14 @@ const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 const LAYER_RANGES = {
   evidence:[1,5,1], share:[0,100,1], offset:[-5,5,0.5], steepness:[0.25,4,0.25], capex:[1,2000,5],
   buildStart:[0,14,1], buildYears:[1,10,1], unitCostDecline:[-10,50,0.5], passThrough:[0,1,0.05],
-  life:[1,40,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
+  life:[1,100,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
 };
 const GLOBAL_RANGES = {
   pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
-  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,12,0.5]
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,10,0.5]
 };
+// tvGrowth range (-5 to 10 % a year) is a display choice, not evidence; growth must also stay at least TV_GROWTH_GAP
+// (1 point) below the discount rate, which the inputs and every validator enforce.
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
 
@@ -909,6 +937,16 @@ const GUIDE = {
     where: 'Contemporary valuations of mature, comparable businesses; dividend yields of established utilities or carriers at the time.',
     recipe: 'If mature comparables traded at a cash yield y, a multiple of about 1 / y is a starting point; state y and its source.',
     trap: 'Choosing a low multiple because you know the layer later struggled.' },
+  tvMode: { label: 'Value beyond year 15: mode (multiple or growing perpetuity)',
+    meaning: 'Whether value after year 15 is a fixed multiple of year-15 cash, or year-15 cash growing for ever at a long-run rate, which implies a multiple of (1 + g) / (r - g).',
+    where: 'How contemporaries valued long-lived assets: as a multiple of earnings, or as a yield on a growing income.',
+    recipe: 'Use the perpetuity when you can state a long-run growth rate g and want the multiple to move with the discount rate; otherwise keep the multiple.',
+    trap: 'Switching mode to get a terminal value you already like.' },
+  tvGrowth: { label: 'Long-run growth (% a year, perpetuity mode)',
+    meaning: 'Growth of year-15 cash for ever. Must stay at least 1 point below the discount rate.',
+    where: 'Long-run growth of the economy or of the asset class as stated at the time.',
+    recipe: 'g = long-run nominal growth stated in period sources; implied multiple = (1 + g) / (r - g).',
+    trap: 'Using growth that only later turned out to be achievable.' },
   premium: { label: 'Entry premium over build cost (%)',
     meaning: 'Under the replacement-cost definition, how much above build cost an investor paid at entry.',
     where: 'Share prices against the book value of assets built; market-to-book ratios reported at the time.',
@@ -1013,7 +1051,11 @@ const GUIDE = {
 // note; judgement values need a rationale in the note, may have no source, and are always labelled on the page.
 
 const CASE_FORMAT = 'load-bearing-simulator-case';
-const CASE_SCHEMA_VERSION = 1;
+const CASE_SCHEMA_VERSION = 2;
+// Schema 2 adds two optional settings: tvMode ("multiple" or "perpetuity") and tvGrowth (an input record, long-run
+// growth in % a year). Schema 1 cases stay valid and open as "multiple" with growth 0.
+const CASE_SCHEMAS = [1, 2];
+const CASE_TV_MODES = ['multiple', 'perpetuity'];
 const CASE_MAX_LAYERS = 6;
 const CASE_MAX_VERSIONS = 3;
 const CASE_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
@@ -1026,8 +1068,8 @@ const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity c
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){
-  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'));
-  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES };
+  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: require('./model.js').TV_GROWTH_GAP });
+  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP };
 }
 
 /* ---------- Money unit ---------- */
@@ -1100,10 +1142,12 @@ function caseRecord(r, where, range, integer, ctx){
 }
 function settingRange(k, d){ return k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k]; }
 function caseSettings(S, where, ctx, partial){
-  const d = caseDeps();
-  caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : [], where);
+  const d = caseDeps(), tvKeys = ctx.schema >= 2 ? ['tvMode', 'tvGrowth'] : [];
+  caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), (partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : []).concat(tvKeys), where);
   const out = {};
   CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  if ('tvGrowth' in S) out.tvGrowth = caseRecord(S.tvGrowth, where + ' tvGrowth', d.GLOBAL_RANGES.tvGrowth, false, ctx);
+  if ('tvMode' in S) { if (CASE_TV_MODES.indexOf(S.tvMode) < 0) caseErr(where + ' tvMode', 'expected "multiple" or "perpetuity"'); out.tvMode = S.tvMode; }
   if ('entryDef' in S) { if (['A', 'B'].indexOf(S.entryDef) < 0) caseErr(where + ' entryDef', 'expected "A" or "B"'); out.entryDef = S.entryDef; }
   if ('capexModel' in S) { if (['sustaining', 'vintage'].indexOf(S.capexModel) < 0) caseErr(where + ' capexModel', 'expected "sustaining" or "vintage"'); out.capexModel = S.capexModel; }
   return out;
@@ -1120,6 +1164,11 @@ function caseInputs(I, where, ctx, partial){
   });
   return out;
 }
+// Long-run growth must stay at least TV_GROWTH_GAP points below the discount rate.
+function growthGap(settings, where){
+  const g = settings.tvGrowth ? settings.tvGrowth.value : 0, gap = caseDeps().TV_GROWTH_GAP;
+  if (g > settings.disc.value - gap) caseErr(where, 'long-run growth ' + g + '% must be at least ' + gap + ' point below the discount rate (' + settings.disc.value + '%)');
+}
 function phaseOrder(settings, where){
   const p2 = settings.phase2Start && settings.phase2Start.value, p3 = settings.phase3Start && settings.phase3Start.value;
   if (p2 != null && p3 != null && p2 >= p3) caseErr(where, 'phase 2 must start before phase 3');
@@ -1129,8 +1178,8 @@ function validateCase(raw, where0){
   const where = where0 || 'Case';
   caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'], where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
-  if (raw.schemaVersion !== CASE_SCHEMA_VERSION) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMA_VERSION);
-  const c = { format: CASE_FORMAT, schemaVersion: CASE_SCHEMA_VERSION };
+  if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
+  const c = { format: CASE_FORMAT, schemaVersion: raw.schemaVersion };
   c.id = caseText(raw.id, where + ' id', 60);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(c.id)) caseErr(where + ' id', 'use lower-case letters, digits and hyphens');
   c.title = caseText(raw.title, where + ' title', 60);
@@ -1157,10 +1206,11 @@ function validateCase(raw, where0){
     byId[o.id] = o;
     return o;
   });
-  const ctx = { byId, asOfDate: c.asOfDate };
+  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion };
   // Settings and layers
   c.settings = caseSettings(raw.settings, where + ' settings', ctx, false);
   phaseOrder(c.settings, where + ' settings');
+  growthGap(c.settings, where + ' settings');
   if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > CASE_MAX_LAYERS) caseErr(where + ' layers', 'expected 1 to ' + CASE_MAX_LAYERS + ' layers');
   const ids = new Set();
   c.layers = raw.layers.map((L, i) => {
@@ -1196,6 +1246,7 @@ function validateCase(raw, where0){
     }
     if (!Object.keys(o.settings).length && !Object.keys(o.layers).length) caseErr(w, 'a version must override at least one input');
     phaseOrder(Object.assign({}, c.settings, o.settings), w + ' settings');
+    growthGap(Object.assign({}, c.settings, o.settings), w + ' settings');
     return o;
   });
   // Outcomes per layer
@@ -1238,6 +1289,8 @@ function caseState(c, versionId){
   G.phases = [settings.phase2Start.value, settings.phase3Start.value];
   recs['settings.phase2Start'] = settings.phase2Start; recs['settings.phase3Start'] = settings.phase3Start;
   G.entryDef = settings.entryDef; G.capexModel = settings.capexModel;
+  G.tvMode = settings.tvMode || 'multiple'; G.tvGrowth = settings.tvGrowth ? settings.tvGrowth.value : 0;
+  if (settings.tvGrowth) recs['settings.tvGrowth'] = settings.tvGrowth;
   const layers = c.layers.map(L => {
     const inp = Object.assign({}, L.inputs, v && v.layers[L.id] ? v.layers[L.id] : {});
     const o = { id: L.id, name: L.name, alloc: CASE_DEFAULT_ALLOC };
@@ -1280,7 +1333,7 @@ function modeFromHash(hash){ const m = String(hash || '').replace(/^#/, '').toLo
 
 function modeDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./model.js'), require('./defaults.js'));
-  return { runLayer, verdictFragility, DEFAULT_LAYERS, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, DEFAULT_PHASES };
+  return { runLayer, verdictFragility, DEFAULT_LAYERS, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, DEFAULT_TV_MODE, DEFAULT_PHASES };
 }
 
 // KPI tiles. Status chips are text, never colour alone. Chip rules use signs and counts only, no invented thresholds.
@@ -1288,7 +1341,7 @@ function modeDeps(){
 function modeBase(base){
   const d = modeDeps();
   if (base) return base;
-  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
+  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, tvMode: d.DEFAULT_TV_MODE, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
 }
 function kpiTiles(layers, G, base){
   const d = modeDeps(), b = modeBase(base);
@@ -1320,14 +1373,16 @@ function kpiTiles(layers, G, base){
 // Analyst-only settings (not editable in Basic or Advanced) that differ from their defaults. Inputs editable on the
 // first screen (adoption speed and midpoint, value pool, entry premium, discount rate, my allocation) never count.
 const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entry year'], ['mult', 'Entry multiple'], ['rd', 'Interest on debt'],
-  ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model']];
+  ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model'], ['tvMode', 'Value beyond year 15: mode'], ['tvGrowth', 'Long-run growth']];
 const ANALYST_LAYER_KEYS = [['evidence', 'demand evidence'], ['share', 'share of pool'], ['capex', 'build capex'], ['life', 'asset life'], ['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
   ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
 const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 function analystDiffs(G, layers, base){
   const b = modeBase(base), out = [];
   const defG = b.G;
-  ANALYST_GLOBALS.forEach(([k, label]) => { if (G[k] !== defG[k]) out.push({ scope: 'settings', key: k, label }); });
+  // A missing tvMode or tvGrowth (inputs from before model version 2) means "multiple" and 0.
+  const val = (g, k) => k === 'tvMode' ? (g.tvMode || 'multiple') : k === 'tvGrowth' ? (g.tvGrowth || 0) : g[k];
+  ANALYST_GLOBALS.forEach(([k, label]) => { if (val(G, k) !== val(defG, k)) out.push({ scope: 'settings', key: k, label }); });
   if (!sameArr(G.phases, defG.phases)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
   layers.forEach(L => {
     const def = b.layers.find(x => x.id === L.id);
@@ -1375,10 +1430,13 @@ function placeTip(anchor, tip, vp, margin, gap){
 // Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
 
 const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
-const SNAP_SCHEMA_VERSION = 4;
+const SNAP_SCHEMA_VERSION = 5;
 // Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
 // had no trigger response (filled in as null).
-const SNAP_SCHEMA_READABLE = [1, 2, 3, 4];
+const SNAP_SCHEMA_READABLE = [1, 2, 3, 4, 5];
+// Schema 5 adds the terminal-value mode (tvMode, "multiple" or "perpetuity") and long-run growth (tvGrowth) to the
+// settings. Older schemas load as "multiple" with growth 0, which is what they were computed under.
+const SNAP_TV_MODES = ['multiple', 'perpetuity'];
 // Schema 4 adds caseId (null for your own scenario, or the id of a bundled case) and layer names, and allows 1 to 6
 // layers. Older schemas are your own five-layer scenario: caseId null, names from the defaults.
 const SNAP_MAX_LAYERS = 6;
@@ -1403,7 +1461,7 @@ function snapDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') {
     return Object.assign({}, require('./model.js'), require('./defaults.js'));
   }
-  return { MODEL_VERSION, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
+  return { MODEL_VERSION, TV_GROWTH_GAP, runLayer, verdictFragility, DEFAULT_LAYERS, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, H };
 }
 
 function snapBlankKill(layers){
@@ -1425,6 +1483,7 @@ function snapInputs(G, layers){
   const g = {};
   SNAP_GLOBAL_KEYS.forEach(k => { g[k] = G[k]; });
   g.entryDef = G.entryDef; g.capexModel = G.capexModel; g.phases = [G.phases[0], G.phases[1]];
+  g.tvMode = G.tvMode === 'perpetuity' ? 'perpetuity' : 'multiple'; g.tvGrowth = typeof G.tvGrowth === 'number' ? G.tvGrowth : 0;
   const ls = layers.map(L => {
     const o = { id: L.id, name: L.name };
     SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = L[k]; });
@@ -1526,6 +1585,11 @@ function snapKeys(obj, required, optional, where){
   Object.keys(obj).forEach(k => { if (allowed.indexOf(k) < 0) snapErr(where, 'unknown field "' + String(k).slice(0, 40) + '"'); });
   required.forEach(k => { if (!Object.prototype.hasOwnProperty.call(obj, k)) snapErr(where, 'missing field "' + k + '"'); });
 }
+// Long-run growth must stay at least TV_GROWTH_GAP points below the discount rate.
+function snapGrowthGap(G, where){
+  const gap = snapDeps().TV_GROWTH_GAP;
+  if (G.tvGrowth > G.disc - gap) snapErr(where, 'long-run growth ' + G.tvGrowth + '% must be at least ' + gap + ' point below the discount rate (' + G.disc + '%)');
+}
 function snapNum(v, range, where, integer){
   if (typeof v !== 'number' || !isFinite(v)) snapErr(where, 'expected a finite number');
   if (range && (v < range[0] || v > range[1])) snapErr(where, 'value ' + v + ' is outside ' + range[0] + ' to ' + range[1]);
@@ -1582,10 +1646,13 @@ function snapCheckOne(s, where, withAlloc){
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
   const G = s.inputs.G;
-  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases']), [], where + ' settings');
+  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
   SNAP_GLOBAL_KEYS.forEach(k => { out.inputs.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
   out.inputs.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
   out.inputs.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
+  out.inputs.G.tvMode = schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
+  out.inputs.G.tvGrowth = schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
+  snapGrowthGap(out.inputs.G, where + ' setting tvGrowth');
   if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
   const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
   const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
@@ -1697,7 +1764,7 @@ function snapTodayLocal(now){
 // Flatten inputs to labelled paths for diffing, e.g. "settings.disc" or "layer hw.driftP[2]".
 function snapFlatten(inputs){
   const out = {};
-  SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel']).forEach(k => { out['settings.' + k] = inputs.G[k]; });
+  SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'tvMode', 'tvGrowth']).forEach(k => { out['settings.' + k] = inputs.G[k]; });
   inputs.G.phases.forEach((v, i) => { out['settings.phases[' + i + ']'] = v; });
   inputs.layers.forEach(L => {
     SNAP_LAYER_NUM_KEYS.forEach(k => { out['layer ' + L.id + '.' + k] = L[k]; });
@@ -1755,6 +1822,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const g = checked.inputs.G;
   const G = {}; SNAP_GLOBAL_KEYS.forEach(k => { G[k] = g[k]; });
   G.entryDef = g.entryDef; G.capexModel = g.capexModel; G.phases = g.phases.slice();
+  G.tvMode = g.tvMode; G.tvGrowth = g.tvGrowth;
   // Layers come from the snapshot (ids and names); an allocation is restored only if the snapshot has it, otherwise
   // the current allocation of the same layer is kept (or the placeholder 20 for a layer not on the page).
   const layers = checked.inputs.layers.map(src => {
@@ -1774,7 +1842,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
 
 const KEY = 'load-bearing-sim-v3', V2_KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
 const copyLayer = (l) => Object.assign({}, l, {driftP:l.driftP.slice(), marginP:l.marginP.slice()});
-const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, phases:DEFAULT_PHASES.slice()});
+const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, tvMode:DEFAULT_TV_MODE, phases:DEFAULT_PHASES.slice()});
 let G = freshG();
 let layers = DEFAULT_LAYERS.map(copyLayer);
 let sel = 1;
@@ -1791,6 +1859,8 @@ function load(){
       for(const k in DEFAULT_G){ if(num(o.G[k])) G[k]=o.G[k]; }
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
       if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
+      if(o.G.tvMode==='multiple' || o.G.tvMode==='perpetuity') G.tvMode = o.G.tvMode;
+      keepGrowthGap();
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
     if(o && Array.isArray(o.layers) && o.layers.length===DEFAULT_LAYERS.length){
@@ -1846,6 +1916,10 @@ function syncDriverLabels(){
   $('o_disc').textContent = G.disc.toFixed(1) + '%';
   $('o_rd').textContent = G.rd.toFixed(1) + '%';
   $('o_tv').textContent = G.tv.toFixed(1) + 'x';
+  // Perpetuity: growth and the multiple it implies at the current discount rate, (1 + g) / (r - g).
+  $('o_tvg').textContent = G.tvGrowth.toFixed(1) + '% \u00b7 ' + mx(perpetuityMultiple(G.tvGrowth, G.disc));
+  document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.setAttribute('aria-pressed', b.dataset.t===G.tvMode ? 'true':'false'));
+  $('ctl_tv').hidden = G.tvMode === 'perpetuity'; $('ctl_tvg').hidden = G.tvMode !== 'perpetuity';
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
@@ -1860,7 +1934,9 @@ function syncDriverLabels(){
     : '<b>Replacement-cost premium.</b> You pay build capex already spent before year '+G.entry+', marked up by the premium, at year '+G.entry+'. Build capex from then on is also paid at the premium. At entry year 0 this is the v0.1 model.';
 }
 // Slider and phase-input ranges come from the shared definitions in defaults.js (also used by the snapshot validator).
-const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv'};
+const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth'};
+// Long-run growth stays at least TV_GROWTH_GAP points below the discount rate: growth is pulled down when either moves.
+function keepGrowthGap(){ if(G.tvGrowth > G.disc - TV_GROWTH_GAP){ G.tvGrowth = G.disc - TV_GROWTH_GAP; if($('g_tvg')) $('g_tvg').value = G.tvGrowth; } }
 function applyRanges(){
   for(const id in SLIDERS){ const r = GLOBAL_RANGES[SLIDERS[id]], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
   ['ph1','ph2'].forEach((id,i) => { const r = PHASE_RANGES[i], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; });
@@ -1868,7 +1944,7 @@ function applyRanges(){
 function syncDriverInputs(){
   $('g_speed').value = G.speed; $('g_mid').value = G.mid; $('g_pool').value = G.pool;
   $('g_prem').value = G.premium; $('g_mult').value = G.mult; $('g_entry').value = G.entry;
-  $('g_disc').value = G.disc; $('g_rd').value = G.rd; $('g_tv').value = G.tv;
+  $('g_disc').value = G.disc; $('g_rd').value = G.rd; $('g_tv').value = G.tv; $('g_tvg').value = G.tvGrowth;
   $('ph1').value = G.phases[0]; $('ph2').value = G.phases[1];
 }
 // One dash pattern per layer (in DEFAULT_LAYERS order) so no layer line can be mistaken for the solid demand line.
@@ -2409,9 +2485,10 @@ function setProfile(p){
   refreshInputsFromState(); save(); renderResults();
 }
 function bind(){
-  [['g_speed','speed'],['g_mid','mid'],['g_pool','pool'],['g_prem','premium'],['g_mult','mult'],['g_entry','entry'],['g_disc','disc'],['g_rd','rd'],['g_tv','tv']].forEach(p => {
-    $(p[0]).addEventListener('input', e => { G[p[1]] = parseFloat(e.target.value); update(); });
+  [['g_speed','speed'],['g_mid','mid'],['g_pool','pool'],['g_prem','premium'],['g_mult','mult'],['g_entry','entry'],['g_disc','disc'],['g_rd','rd'],['g_tv','tv'],['g_tvg','tvGrowth']].forEach(p => {
+    $(p[0]).addEventListener('input', e => { G[p[1]] = parseFloat(e.target.value); keepGrowthGap(); update(); });
   });
+  document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.addEventListener('click', () => { G.tvMode = b.dataset.t; update(); }));
   document.querySelectorAll('#scen button').forEach(b => b.addEventListener('click', () => {
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
@@ -2995,7 +3072,7 @@ function renderSources(){
 }
 // Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
 // calculation or the rationale, and says when you have changed the value from the case.
-const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv' };
+const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth' };
 const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
 let chipN = 0;
 function chipTargets(){

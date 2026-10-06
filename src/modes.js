@@ -11,7 +11,7 @@ function modeFromHash(hash){ const m = String(hash || '').replace(/^#/, '').toLo
 
 function modeDeps(){
   if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./model.js'), require('./defaults.js'));
-  return { runLayer, verdictFragility, DEFAULT_LAYERS, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, DEFAULT_PHASES };
+  return { runLayer, verdictFragility, DEFAULT_LAYERS, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, DEFAULT_TV_MODE, DEFAULT_PHASES };
 }
 
 // KPI tiles. Status chips are text, never colour alone. Chip rules use signs and counts only, no invented thresholds.
@@ -19,7 +19,7 @@ function modeDeps(){
 function modeBase(base){
   const d = modeDeps();
   if (base) return base;
-  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
+  return { G: Object.assign({}, d.DEFAULT_G, { entryDef: d.DEFAULT_DEF, capexModel: d.DEFAULT_CAPEX, tvMode: d.DEFAULT_TV_MODE, phases: d.DEFAULT_PHASES.slice() }), layers: d.DEFAULT_LAYERS };
 }
 function kpiTiles(layers, G, base){
   const d = modeDeps(), b = modeBase(base);
@@ -51,14 +51,16 @@ function kpiTiles(layers, G, base){
 // Analyst-only settings (not editable in Basic or Advanced) that differ from their defaults. Inputs editable on the
 // first screen (adoption speed and midpoint, value pool, entry premium, discount rate, my allocation) never count.
 const ANALYST_GLOBALS = [['entryDef', 'Entry price definition'], ['entry', 'Entry year'], ['mult', 'Entry multiple'], ['rd', 'Interest on debt'],
-  ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model']];
+  ['tv', 'Value beyond year 15'], ['capexModel', 'Capex model'], ['tvMode', 'Value beyond year 15: mode'], ['tvGrowth', 'Long-run growth']];
 const ANALYST_LAYER_KEYS = [['evidence', 'demand evidence'], ['share', 'share of pool'], ['capex', 'build capex'], ['life', 'asset life'], ['offset', 'timing offset'], ['steepness', 'curve steepness'], ['buildStart', 'build start'], ['buildYears', 'build years'],
   ['debt', 'debt'], ['unitCostDecline', 'unit-cost decline'], ['passThrough', 'pass-through']];
 const sameArr = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 function analystDiffs(G, layers, base){
   const b = modeBase(base), out = [];
   const defG = b.G;
-  ANALYST_GLOBALS.forEach(([k, label]) => { if (G[k] !== defG[k]) out.push({ scope: 'settings', key: k, label }); });
+  // A missing tvMode or tvGrowth (inputs from before model version 2) means "multiple" and 0.
+  const val = (g, k) => k === 'tvMode' ? (g.tvMode || 'multiple') : k === 'tvGrowth' ? (g.tvGrowth || 0) : g[k];
+  ANALYST_GLOBALS.forEach(([k, label]) => { if (val(G, k) !== val(defG, k)) out.push({ scope: 'settings', key: k, label }); });
   if (!sameArr(G.phases, defG.phases)) out.push({ scope: 'settings', key: 'phases', label: 'Phase boundaries' });
   layers.forEach(L => {
     const def = b.layers.find(x => x.id === L.id);

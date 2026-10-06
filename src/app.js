@@ -1,6 +1,6 @@
 const KEY = 'load-bearing-sim-v3', V2_KEY = 'load-bearing-sim-v2', OLD_KEY = 'layer-sim-v1';
 const copyLayer = (l) => Object.assign({}, l, {driftP:l.driftP.slice(), marginP:l.marginP.slice()});
-const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, phases:DEFAULT_PHASES.slice()});
+const freshG = () => Object.assign({}, DEFAULT_G, {entryDef:DEFAULT_DEF, capexModel:DEFAULT_CAPEX, tvMode:DEFAULT_TV_MODE, phases:DEFAULT_PHASES.slice()});
 let G = freshG();
 let layers = DEFAULT_LAYERS.map(copyLayer);
 let sel = 1;
@@ -17,6 +17,8 @@ function load(){
       for(const k in DEFAULT_G){ if(num(o.G[k])) G[k]=o.G[k]; }
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
       if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
+      if(o.G.tvMode==='multiple' || o.G.tvMode==='perpetuity') G.tvMode = o.G.tvMode;
+      keepGrowthGap();
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
     if(o && Array.isArray(o.layers) && o.layers.length===DEFAULT_LAYERS.length){
@@ -72,6 +74,10 @@ function syncDriverLabels(){
   $('o_disc').textContent = G.disc.toFixed(1) + '%';
   $('o_rd').textContent = G.rd.toFixed(1) + '%';
   $('o_tv').textContent = G.tv.toFixed(1) + 'x';
+  // Perpetuity: growth and the multiple it implies at the current discount rate, (1 + g) / (r - g).
+  $('o_tvg').textContent = G.tvGrowth.toFixed(1) + '% \u00b7 ' + mx(perpetuityMultiple(G.tvGrowth, G.disc));
+  document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.setAttribute('aria-pressed', b.dataset.t===G.tvMode ? 'true':'false'));
+  $('ctl_tv').hidden = G.tvMode === 'perpetuity'; $('ctl_tvg').hidden = G.tvMode !== 'perpetuity';
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
@@ -86,7 +92,9 @@ function syncDriverLabels(){
     : '<b>Replacement-cost premium.</b> You pay build capex already spent before year '+G.entry+', marked up by the premium, at year '+G.entry+'. Build capex from then on is also paid at the premium. At entry year 0 this is the v0.1 model.';
 }
 // Slider and phase-input ranges come from the shared definitions in defaults.js (also used by the snapshot validator).
-const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv'};
+const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth'};
+// Long-run growth stays at least TV_GROWTH_GAP points below the discount rate: growth is pulled down when either moves.
+function keepGrowthGap(){ if(G.tvGrowth > G.disc - TV_GROWTH_GAP){ G.tvGrowth = G.disc - TV_GROWTH_GAP; if($('g_tvg')) $('g_tvg').value = G.tvGrowth; } }
 function applyRanges(){
   for(const id in SLIDERS){ const r = GLOBAL_RANGES[SLIDERS[id]], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
   ['ph1','ph2'].forEach((id,i) => { const r = PHASE_RANGES[i], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; });
@@ -94,7 +102,7 @@ function applyRanges(){
 function syncDriverInputs(){
   $('g_speed').value = G.speed; $('g_mid').value = G.mid; $('g_pool').value = G.pool;
   $('g_prem').value = G.premium; $('g_mult').value = G.mult; $('g_entry').value = G.entry;
-  $('g_disc').value = G.disc; $('g_rd').value = G.rd; $('g_tv').value = G.tv;
+  $('g_disc').value = G.disc; $('g_rd').value = G.rd; $('g_tv').value = G.tv; $('g_tvg').value = G.tvGrowth;
   $('ph1').value = G.phases[0]; $('ph2').value = G.phases[1];
 }
 // One dash pattern per layer (in DEFAULT_LAYERS order) so no layer line can be mistaken for the solid demand line.
@@ -635,9 +643,10 @@ function setProfile(p){
   refreshInputsFromState(); save(); renderResults();
 }
 function bind(){
-  [['g_speed','speed'],['g_mid','mid'],['g_pool','pool'],['g_prem','premium'],['g_mult','mult'],['g_entry','entry'],['g_disc','disc'],['g_rd','rd'],['g_tv','tv']].forEach(p => {
-    $(p[0]).addEventListener('input', e => { G[p[1]] = parseFloat(e.target.value); update(); });
+  [['g_speed','speed'],['g_mid','mid'],['g_pool','pool'],['g_prem','premium'],['g_mult','mult'],['g_entry','entry'],['g_disc','disc'],['g_rd','rd'],['g_tv','tv'],['g_tvg','tvGrowth']].forEach(p => {
+    $(p[0]).addEventListener('input', e => { G[p[1]] = parseFloat(e.target.value); keepGrowthGap(); update(); });
   });
+  document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.addEventListener('click', () => { G.tvMode = b.dataset.t; update(); }));
   document.querySelectorAll('#scen button').forEach(b => b.addEventListener('click', () => {
     const s = SCEN[b.dataset.s]; G.speed = s.speed; G.mid = s.mid; syncDriverInputs(); update();
   }));
@@ -1221,7 +1230,7 @@ function renderSources(){
 }
 // Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
 // calculation or the rationale, and says when you have changed the value from the case.
-const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv' };
+const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth' };
 const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
 let chipN = 0;
 function chipTargets(){

@@ -9,7 +9,11 @@
 // note; judgement values need a rationale in the note, may have no source, and are always labelled on the page.
 
 const CASE_FORMAT = 'load-bearing-simulator-case';
-const CASE_SCHEMA_VERSION = 1;
+const CASE_SCHEMA_VERSION = 2;
+// Schema 2 adds two optional settings: tvMode ("multiple" or "perpetuity") and tvGrowth (an input record, long-run
+// growth in % a year). Schema 1 cases stay valid and open as "multiple" with growth 0.
+const CASE_SCHEMAS = [1, 2];
+const CASE_TV_MODES = ['multiple', 'perpetuity'];
 const CASE_MAX_LAYERS = 6;
 const CASE_MAX_VERSIONS = 3;
 const CASE_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
@@ -22,8 +26,8 @@ const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity c
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){
-  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'));
-  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES };
+  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: require('./model.js').TV_GROWTH_GAP });
+  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP };
 }
 
 /* ---------- Money unit ---------- */
@@ -96,10 +100,12 @@ function caseRecord(r, where, range, integer, ctx){
 }
 function settingRange(k, d){ return k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : d.GLOBAL_RANGES[k]; }
 function caseSettings(S, where, ctx, partial){
-  const d = caseDeps();
-  caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : [], where);
+  const d = caseDeps(), tvKeys = ctx.schema >= 2 ? ['tvMode', 'tvGrowth'] : [];
+  caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), (partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : []).concat(tvKeys), where);
   const out = {};
   CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  if ('tvGrowth' in S) out.tvGrowth = caseRecord(S.tvGrowth, where + ' tvGrowth', d.GLOBAL_RANGES.tvGrowth, false, ctx);
+  if ('tvMode' in S) { if (CASE_TV_MODES.indexOf(S.tvMode) < 0) caseErr(where + ' tvMode', 'expected "multiple" or "perpetuity"'); out.tvMode = S.tvMode; }
   if ('entryDef' in S) { if (['A', 'B'].indexOf(S.entryDef) < 0) caseErr(where + ' entryDef', 'expected "A" or "B"'); out.entryDef = S.entryDef; }
   if ('capexModel' in S) { if (['sustaining', 'vintage'].indexOf(S.capexModel) < 0) caseErr(where + ' capexModel', 'expected "sustaining" or "vintage"'); out.capexModel = S.capexModel; }
   return out;
@@ -116,6 +122,11 @@ function caseInputs(I, where, ctx, partial){
   });
   return out;
 }
+// Long-run growth must stay at least TV_GROWTH_GAP points below the discount rate.
+function growthGap(settings, where){
+  const g = settings.tvGrowth ? settings.tvGrowth.value : 0, gap = caseDeps().TV_GROWTH_GAP;
+  if (g > settings.disc.value - gap) caseErr(where, 'long-run growth ' + g + '% must be at least ' + gap + ' point below the discount rate (' + settings.disc.value + '%)');
+}
 function phaseOrder(settings, where){
   const p2 = settings.phase2Start && settings.phase2Start.value, p3 = settings.phase3Start && settings.phase3Start.value;
   if (p2 != null && p3 != null && p2 >= p3) caseErr(where, 'phase 2 must start before phase 3');
@@ -125,8 +136,8 @@ function validateCase(raw, where0){
   const where = where0 || 'Case';
   caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'], where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
-  if (raw.schemaVersion !== CASE_SCHEMA_VERSION) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMA_VERSION);
-  const c = { format: CASE_FORMAT, schemaVersion: CASE_SCHEMA_VERSION };
+  if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
+  const c = { format: CASE_FORMAT, schemaVersion: raw.schemaVersion };
   c.id = caseText(raw.id, where + ' id', 60);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(c.id)) caseErr(where + ' id', 'use lower-case letters, digits and hyphens');
   c.title = caseText(raw.title, where + ' title', 60);
@@ -153,10 +164,11 @@ function validateCase(raw, where0){
     byId[o.id] = o;
     return o;
   });
-  const ctx = { byId, asOfDate: c.asOfDate };
+  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion };
   // Settings and layers
   c.settings = caseSettings(raw.settings, where + ' settings', ctx, false);
   phaseOrder(c.settings, where + ' settings');
+  growthGap(c.settings, where + ' settings');
   if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > CASE_MAX_LAYERS) caseErr(where + ' layers', 'expected 1 to ' + CASE_MAX_LAYERS + ' layers');
   const ids = new Set();
   c.layers = raw.layers.map((L, i) => {
@@ -192,6 +204,7 @@ function validateCase(raw, where0){
     }
     if (!Object.keys(o.settings).length && !Object.keys(o.layers).length) caseErr(w, 'a version must override at least one input');
     phaseOrder(Object.assign({}, c.settings, o.settings), w + ' settings');
+    growthGap(Object.assign({}, c.settings, o.settings), w + ' settings');
     return o;
   });
   // Outcomes per layer
@@ -234,6 +247,8 @@ function caseState(c, versionId){
   G.phases = [settings.phase2Start.value, settings.phase3Start.value];
   recs['settings.phase2Start'] = settings.phase2Start; recs['settings.phase3Start'] = settings.phase3Start;
   G.entryDef = settings.entryDef; G.capexModel = settings.capexModel;
+  G.tvMode = settings.tvMode || 'multiple'; G.tvGrowth = settings.tvGrowth ? settings.tvGrowth.value : 0;
+  if (settings.tvGrowth) recs['settings.tvGrowth'] = settings.tvGrowth;
   const layers = c.layers.map(L => {
     const inp = Object.assign({}, L.inputs, v && v.layers[L.id] ? v.layers[L.id] : {});
     const o = { id: L.id, name: L.name, alloc: CASE_DEFAULT_ALLOC };

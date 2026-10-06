@@ -1,5 +1,5 @@
 {
- "modelVersion": 1,
+ "modelVersion": 2,
  "note": "Canonical model outputs. Regenerate only with a MODEL_VERSION bump.",
  "outputs": {
   "sustaining/A/e0/defaults": [
@@ -12886,6 +12886,5326 @@
     "irr": 0.36243304363982987,
     "payback": 8,
     "tv": 124.67368472388449,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/perpetuity-g0/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 388.75370412941845,
+    "npvPassThrough1": 388.75370412941845,
+    "fragility": {
+     "n": 4,
+     "m": 11,
+     "worse": 0,
+     "better": 4,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       269.6197127648259,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       523.8659457399248,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       422.2773845138637,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       201.21978519541557,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       660.5952214286232,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       237.23958313087303,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       540.2678251279639,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       237.31845477249993,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       664.5166912603199,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       351.18796408433957,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       411.2931481564657,
+       "better"
+      ]
+     ]
+    },
+    "npv": 388.75370412941845,
+    "breakEven": 371.6377075316068,
+    "breakEvenM": 138.93726313553097,
+    "irr": 0.2780743649601688,
+    "payback": 9,
+    "tv": 986.7708181050045,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": -12.361531704820806,
+    "npvPassThrough1": -12.361531704820806,
+    "fragility": {
+     "n": 6,
+     "m": 11,
+     "worse": 0,
+     "better": 6,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -77.95630369763433,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       63.656181656021424,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       43.06117386468596,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -111.69096958443744,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       131.8297895123012,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -92.70540873353661,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       67.98234532389505,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -60.46622117357058,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       80.86302354084728,
+       "better"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -62.44918509825921,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       17.691060331242312,
+       "better"
+      ]
+     ]
+    },
+    "npv": -12.361531704820806,
+    "breakEven": -6.737481244826649,
+    "breakEvenM": -7.438311387656146,
+    "irr": 0.09314670613812892,
+    "payback": 15,
+    "tv": 365.7163983191351,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -54.0673642629044,
+    "npvPassThrough1": -54.0673642629044,
+    "fragility": {
+     "n": 3,
+     "m": 11,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -100.90525676350637,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       1.3982287675062537,
+       "better"
+      ],
+      [
+       "build-late",
+       "Useful, but capital does not earn its cost",
+       -8.27145577763877,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -120.75920926817467,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       45.026107880353585,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -109.30052319717826,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       1.16579467136944,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -68.91602599030425,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -22.421217354217646,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -116.67693100470254,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -16.501624217825544,
+       null
+      ]
+     ]
+    },
+    "npv": -54.0673642629044,
+    "breakEven": -62.0242722119593,
+    "breakEvenM": -42.260640754367195,
+    "irr": 0.039416567361905686,
+    "payback": null,
+    "tv": 140.59600077862427,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 394.7318874170877,
+    "npvPassThrough1": 394.7318874170877,
+    "fragility": {
+     "n": 2,
+     "m": 11,
+     "worse": 0,
+     "better": 2,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       290.82939000728686,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       510.0503283378724,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       418.0665043590478,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       224.8573637429311,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       640.5989557580351,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       257.57784118265056,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       531.8859336515247,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       251.33058297676115,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       655.8566328160601,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       361.6740361774183,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       414.5665981608894,
+       null
+      ]
+     ]
+    },
+    "npv": 394.7318874170877,
+    "breakEven": 721.4887972427132,
+    "breakEvenM": 174.57884597698003,
+    "irr": 0.33263198583873843,
+    "payback": 8,
+    "tv": 937.3894777910759,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 109.19950077989174,
+    "npvPassThrough1": 109.19950077989174,
+    "fragility": {
+     "n": 3,
+     "m": 11,
+     "worse": 3,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       83.22387642744154,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       138.0291110100879,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       113.20797230928247,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       66.7308698613526,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       170.6662678651286,
+       "worse"
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       74.91098922128246,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       143.48801233850102,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       70.35733710221498,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       179.47389319590258,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Durable value",
+       104.6540462344372,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       111.92677350716447,
+       null
+      ]
+     ]
+    },
+    "npv": 109.19950077989174,
+    "breakEven": 762.6631800500377,
+    "breakEvenM": 193.1835094667406,
+    "irr": 0.33546810879177,
+    "payback": 7,
+    "tv": 249.34736944776898,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/perpetuity-g2/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 453.7156034404752,
+    "npvPassThrough1": 453.7156034404752,
+    "fragility": {
+     "n": 1,
+     "m": 11,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       331.5740259317768,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       589.8871356214088,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       487.2392838249205,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       238.5137806465222,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       767.8292232796118,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       283.4922771050462,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       623.9389297759044,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       266.2260301587668,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       838.3383303243318,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       412.85822271657037,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       478.2300318748181,
+       null
+      ]
+     ]
+    },
+    "npv": 453.7156034404752,
+    "breakEven": 433.739472943527,
+    "breakEvenM": 162.15409271809742,
+    "irr": 0.288421631150075,
+    "payback": 9,
+    "tv": 1258.1327930838809,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 11.714607767599134,
+    "npvPassThrough1": 11.714607767599134,
+    "fragility": {
+     "n": 5,
+     "m": 11,
+     "worse": 4,
+     "better": 0,
+     "mixed": 1,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -55.42981037719498,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       88.27811615396666,
+       null
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       67.1373133371059,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -101.98659048360088,
+       "worse"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       177.95866213589886,
+       null
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -78.26910887593027,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       101.69832441112855,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -49.75251322798418,
+       "mixed"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       145.28469331671056,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -43.200785288117416,
+       "worse"
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       44.66384360102913,
+       null
+      ]
+     ]
+    },
+    "npv": 11.714607767599134,
+    "breakEven": 6.384884333866148,
+    "breakEvenM": 7.049037485029145,
+    "irr": 0.10600609022594132,
+    "payback": 15,
+    "tv": 466.2884078568973,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -44.81153395404098,
+    "npvPassThrough1": -44.81153395404098,
+    "fragility": {
+     "n": 5,
+     "m": 11,
+     "worse": 0,
+     "better": 5,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -92.68283714849173,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       11.018032758559286,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       0.9843745312246455,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -120.75920926817467,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       69.1742770349199,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -106.47320131406319,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       16.850133405981218,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -64.79724844140918,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       2.3450473678355337,
+       "better"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -112.90716849388245,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -3.9541532301361357,
+       null
+      ]
+     ]
+    },
+    "npv": -44.81153395404098,
+    "breakEven": -51.406293206488726,
+    "breakEvenM": -35.02601178920727,
+    "irr": 0.05331739129936175,
+    "payback": null,
+    "tv": 179.25990099274594,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 456.4428741570989,
+    "npvPassThrough1": 456.4428741570989,
+    "fragility": {
+     "n": 1,
+     "m": 11,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       349.7428120212532,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       572.7466347969104,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       479.77749109905903,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       261.0386267474517,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       741.1505701355167,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       301.8860968303634,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       610.9996514838344,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       278.79152577964743,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       820.9796507260448,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       420.7517103743687,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       477.8575724267371,
+       null
+      ]
+     ]
+    },
+    "npv": 456.4428741570989,
+    "breakEven": 834.2838032176581,
+    "breakEvenM": 201.87188510707773,
+    "irr": 0.3423699280632816,
+    "payback": 8,
+    "tv": 1195.1715841836217,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 125.61473966854234,
+    "npvPassThrough1": 125.61473966854234,
+    "fragility": {
+     "n": 2,
+     "m": 11,
+     "worse": 0,
+     "better": 2,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       98.93972413458093,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       154.6906798284952,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       129.62321119793307,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       76.76367781613055,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       196.79166366314678,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       86.97554533685847,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       164.25393400022625,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       77.6619996919752,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       223.39692745926357,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       120.74012105520521,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       128.53951083654465,
+       null
+      ]
+     ]
+    },
+    "npv": 125.61473966854234,
+    "breakEven": 877.3092929231531,
+    "breakEvenM": 222.2235090509547,
+    "irr": 0.34430791972062214,
+    "payback": 7,
+    "tv": 317.9178960459054,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/perpetuity-g0/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 360.7731828958746,
+    "npvPassThrough1": 360.7731828958746,
+    "fragility": {
+     "n": 4,
+     "m": 11,
+     "worse": 0,
+     "better": 4,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       260.1608539979536,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       443.29787491826266,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       422.2773845138637,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       174.08715854470643,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       631.7668056122448,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       216.2541922057152,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       505.29217358603415,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       209.33793353895615,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       636.5361700267761,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       323.20744285079576,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       383.31262692292194,
+       "better"
+      ]
+     ]
+    },
+    "npv": 360.7731828958746,
+    "breakEven": 371.6377075316068,
+    "breakEvenM": 138.93726313553097,
+    "irr": 0.24176568288868305,
+    "payback": 9,
+    "tv": 986.7708181050045,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": -28.980265528380144,
+    "npvPassThrough1": -28.980265528380144,
+    "fragility": {
+     "n": 6,
+     "m": 11,
+     "worse": 0,
+     "better": 6,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -83.57429254098878,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       15.803630501337196,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       43.06117386468596,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -127.80096665829599,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       114.70231893904108,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -105.16945910120614,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       47.20892804444587,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -77.08495499712993,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       64.24428971728796,
+       "better"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -79.06791892181853,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       1.0723265076829875,
+       "better"
+      ]
+     ]
+    },
+    "npv": -28.980265528380144,
+    "breakEven": -6.737481244826649,
+    "breakEvenM": -7.438311387656146,
+    "irr": 0.08492881471573555,
+    "payback": 15,
+    "tv": 365.7163983191351,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -66.8611514127874,
+    "npvPassThrough1": -66.8611514127874,
+    "fragility": {
+     "n": 1,
+     "m": 11,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -105.23021642862847,
+       null
+      ],
+      [
+       "offset-early",
+       "Useful, but capital does not earn its cost",
+       -35.44063997856013,
+       null
+      ],
+      [
+       "build-late",
+       "Useful, but capital does not earn its cost",
+       -8.27145577763877,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -133.15731227940148,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       31.836636591814425,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -118.8958635595905,
+       null
+      ],
+      [
+       "scale-up",
+       "Useful, but capital does not earn its cost",
+       -14.826439265984284,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -81.70981314018725,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -35.21500450410062,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -129.47071815458554,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -29.29541136770853,
+       null
+      ]
+     ]
+    },
+    "npv": -66.8611514127874,
+    "breakEven": -62.0242722119593,
+    "breakEvenM": -42.260640754367195,
+    "irr": 0.031087701161928716,
+    "payback": null,
+    "tv": 140.59600077862427,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 372.1213652081634,
+    "npvPassThrough1": 372.1213652081634,
+    "fragility": {
+     "n": 1,
+     "m": 11,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       283.1858677714304,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       444.94481656279186,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       418.0665043590478,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       202.92515720027458,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       617.3101178828431,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       240.61994952595734,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       503.6227808903694,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       228.7200607678369,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       633.2461106071358,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       339.063513968494,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       391.9560759519651,
+       null
+      ]
+     ]
+    },
+    "npv": 372.1213652081634,
+    "breakEven": 721.4887972427132,
+    "breakEvenM": 174.57884597698003,
+    "irr": 0.28196645127181064,
+    "payback": 8,
+    "tv": 937.3894777910759,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 103.54687022766068,
+    "npvPassThrough1": 103.54687022766068,
+    "fragility": {
+     "n": 4,
+     "m": 11,
+     "worse": 4,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       81.31299586847744,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       121.75273306631779,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       113.20797230928247,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       61.247818225688476,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       164.8440583963306,
+       "worse"
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       70.67151630710916,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       136.4222241482122,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       64.70470654998391,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       173.8212626436715,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       99.00141568220613,
+       "worse"
+      ],
+      [
+       "life-up",
+       "Durable value",
+       106.27414295493341,
+       null
+      ]
+     ]
+    },
+    "npv": 103.54687022766068,
+    "breakEven": 762.6631800500377,
+    "breakEvenM": 193.1835094667406,
+    "irr": 0.2891762620157706,
+    "payback": 8,
+    "tv": 249.34736944776898,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/B/perpetuity-g2/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 425.73508220693145,
+    "npvPassThrough1": 425.73508220693145,
+    "fragility": {
+     "n": 1,
+     "m": 11,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       322.11516716490456,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       509.3190647997467,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       487.2392838249205,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       211.38115399581307,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       739.0008074632334,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       262.50688617988834,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       588.9632782339747,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       238.24550892522296,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       810.3578090907879,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       384.87770148302656,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       450.24951064127436,
+       null
+      ]
+     ]
+    },
+    "npv": 425.73508220693145,
+    "breakEven": 433.739472943527,
+    "breakEvenM": 162.15409271809742,
+    "irr": 0.25222567349307445,
+    "payback": 9,
+    "tv": 1258.1327930838809,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": -0.8683563525641035,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": -4.904126055960205,
+    "npvPassThrough1": -4.904126055960205,
+    "fragility": {
+     "n": 6,
+     "m": 11,
+     "worse": 0,
+     "better": 6,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -61.047799220549436,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       40.42556499928243,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       67.1373133371059,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -118.09658755745943,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       160.83119156263874,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -90.7331592435998,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       80.92490713167938,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -66.37124705154353,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       128.66595949315123,
+       "better"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -59.81951911167674,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       28.045109777469804,
+       "better"
+      ]
+     ]
+    },
+    "npv": -4.904126055960205,
+    "breakEven": 6.384884333866148,
+    "breakEvenM": 7.049037485029145,
+    "irr": 0.09763851145383862,
+    "payback": 15,
+    "tv": 466.2884078568973,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 75.9810131452833,
+    "minDSCR": -0.47474960596090093,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -57.60532110392397,
+    "npvPassThrough1": -57.60532110392397,
+    "fragility": {
+     "n": 3,
+     "m": 11,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -97.00779681361382,
+       null
+      ],
+      [
+       "offset-early",
+       "Useful, but capital does not earn its cost",
+       -25.820835987507095,
+       null
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       0.9843745312246455,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -133.15731227940148,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       55.984805746380744,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -116.06854167647542,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       0.8578994686274939,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -77.59103559129218,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -10.44873978204744,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -125.70095564376545,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -16.747940380019124,
+       null
+      ]
+     ]
+    },
+    "npv": -57.60532110392397,
+    "breakEven": -51.406293206488726,
+    "breakEvenM": -35.02601178920727,
+    "irr": 0.04472196279339424,
+    "payback": null,
+    "tv": 179.25990099274594,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": null,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 433.8323519481746,
+    "npvPassThrough1": 433.8323519481746,
+    "fragility": {
+     "n": 0,
+     "m": 11,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       342.09928978539676,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       507.6411230218299,
+       null
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       479.77749109905903,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       239.10642020479517,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       717.8617322603247,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       284.9282051736702,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       582.7364987226791,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       256.1810035707232,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       798.3691285171205,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       398.1411881654445,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       455.2470502178128,
+       null
+      ]
+     ]
+    },
+    "npv": 433.8323519481746,
+    "breakEven": 834.2838032176581,
+    "breakEvenM": 201.87188510707773,
+    "irr": 0.2920242411028561,
+    "payback": 8,
+    "tv": 1195.1715841836217,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 119.96210911631128,
+    "npvPassThrough1": 119.96210911631128,
+    "fragility": {
+     "n": 2,
+     "m": 11,
+     "worse": 0,
+     "better": 2,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       97.02884357561683,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       138.4143018847251,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       129.62321119793307,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       71.28062618046641,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       190.9694541943488,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       82.73607242268517,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       157.1881458099374,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       72.00936913974414,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       217.7442969070325,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       115.08749050297413,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       122.88688028431359,
+       null
+      ]
+     ]
+    },
+    "npv": 119.96210911631128,
+    "breakEven": 877.3092929231531,
+    "breakEvenM": 222.2235090509547,
+    "irr": 0.2984946858944074,
+    "payback": 8,
+    "tv": 317.9178960459054,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/perpetuity-g0/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 416.74285123448624,
+    "npvPassThrough1": 416.74285123448624,
+    "fragility": {
+     "n": 4,
+     "m": 15,
+     "worse": 4,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       297.6088598698937,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       551.8550928449927,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       439.1768039766233,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       229.20893230048338,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       688.5843685336911,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       265.2287302359409,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       568.2569722330318,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       261.5559075304145,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       697.350916625694,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       361.19484795115267,
+       "worse"
+      ],
+      [
+       "life-up",
+       "Durable value",
+       432.39390674961635,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       416.74285123448624,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       416.74285123448624,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       505.7526586902434,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       338.90091381652667,
+       null
+      ]
+     ]
+    },
+    "npv": 416.74285123448624,
+    "breakEven": 398.3945521748914,
+    "breakEvenM": 148.94034594855364,
+    "irr": 0.29880568351450865,
+    "payback": 7,
+    "tv": 986.7708181050045,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 14.497977425060569,
+    "npvPassThrough1": 14.497977425060569,
+    "fragility": {
+     "n": 9,
+     "m": 15,
+     "worse": 6,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -51.09679456775291,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       90.51569078590282,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       65.6943735659203,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -84.83146045455611,
+       "worse"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       158.68929864218256,
+       null
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -65.84589960365523,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       94.84185445377645,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -34.94155048145003,
+       "worse"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       108.52274527703221,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -17.91225156841388,
+       "worse"
+      ],
+      [
+       "life-up",
+       "Durable value",
+       60.9033697163969,
+       "better"
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       14.497977425060569,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       14.497977425060569,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       24.78691732033826,
+       null
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -0.9283405297905745,
+       "worse"
+      ]
+     ]
+    },
+    "npv": 14.497977425060569,
+    "breakEven": 7.901921325103456,
+    "breakEvenM": 8.723876066001917,
+    "irr": 0.10878263143629907,
+    "payback": 15,
+    "tv": 365.7163983191351,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -54.0673642629044,
+    "npvPassThrough1": -54.0673642629044,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -100.90525676350637,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       1.3982287675062537,
+       "better"
+      ],
+      [
+       "build-late",
+       "Useful, but capital does not earn its cost",
+       -8.27145577763877,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -120.75920926817467,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       45.026107880353585,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -109.30052319717826,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       1.16579467136944,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -68.91602599030425,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -22.421217354217646,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -131.46443212051867,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -7.836703593355367,
+       null
+      ],
+      [
+       "pt-0",
+       "Useful, but capital does not earn its cost",
+       -54.0673642629044,
+       null
+      ],
+      [
+       "pt-1",
+       "Useful, but capital does not earn its cost",
+       -54.0673642629044,
+       null
+      ],
+      [
+       "decline-down",
+       "Useful, but capital does not earn its cost",
+       -74.13112953446054,
+       null
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -44.25128209498534,
+       null
+      ]
+     ]
+    },
+    "npv": -54.0673642629044,
+    "breakEven": -62.0242722119593,
+    "breakEvenM": -42.260640754367195,
+    "irr": 0.039416567361905686,
+    "payback": null,
+    "tv": 140.59600077862427,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 405.32612666511466,
+    "npvPassThrough1": 405.32612666511466,
+    "fragility": {
+     "n": 2,
+     "m": 15,
+     "worse": 0,
+     "better": 2,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       301.4236292553138,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       520.6445675858993,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       425.7932817072357,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       235.45160299095807,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       651.1931950060621,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       268.17208043067745,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       542.4801728995517,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       261.1263384324237,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       667.4026413588255,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       375.2790442721722,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       422.60848679170937,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       405.32612666511466,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       405.32612666511466,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       485.6332489079663,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       335.13847884433494,
+       null
+      ]
+     ]
+    },
+    "npv": 405.32612666511466,
+    "breakEven": 740.8528901280796,
+    "breakEvenM": 179.2643809461129,
+    "irr": 0.3513156591852501,
+    "payback": 8,
+    "tv": 937.3894777910759,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 113.72470475888599,
+    "npvPassThrough1": 113.72470475888599,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 3,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       87.74908040643578,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       142.55431498908217,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       116.32459960141585,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       71.25607384034686,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       175.19147184412287,
+       "worse"
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       79.4361932002767,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       148.01321631749528,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       74.61077452822092,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       184.295195595605,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Durable value",
+       111.36848593950546,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       115.81569256850466,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       113.72470475888599,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       113.72470475888599,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       137.74069583896375,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       93.28695902344688,
+       null
+      ]
+     ]
+    },
+    "npv": 113.72470475888599,
+    "breakEven": 794.2677792684101,
+    "breakEvenM": 201.18899282034164,
+    "irr": 0.3642208471200553,
+    "payback": 6,
+    "tv": 249.34736944776898,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/perpetuity-g2/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 481.70475054554305,
+    "npvPassThrough1": 481.70475054554305,
+    "fragility": {
+     "n": 4,
+     "m": 15,
+     "worse": 0,
+     "better": 4,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       359.56317303684466,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       617.8762827264766,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       504.13870328768013,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       266.50292775159005,
+       "better"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       795.8183703846796,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       311.481424210114,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       651.9280768809722,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       290.4634829166813,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       871.1725556897059,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       422.86510658338347,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       499.33079046796877,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       481.70475054554305,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       481.70475054554305,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       583.9312457311099,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       392.3042478346774,
+       "better"
+      ]
+     ]
+    },
+    "npv": 481.70475054554305,
+    "breakEven": 460.4963175868117,
+    "breakEvenM": 172.1571755311201,
+    "irr": 0.3083299816212316,
+    "payback": 7,
+    "tv": 1258.1327930838809,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 38.57411689748051,
+    "npvPassThrough1": 38.57411689748051,
+    "fragility": {
+     "n": 7,
+     "m": 15,
+     "worse": 2,
+     "better": 3,
+     "mixed": 2,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -28.570301247313566,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       115.13762528384802,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       89.77051303834024,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -75.12708135371955,
+       "mixed"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       204.81817126578022,
+       null
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -51.40959974604888,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       128.55783354100996,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -24.22784253586363,
+       "mixed"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       172.9444150528955,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       1.3361482417279262,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       87.87615298618371,
+       "better"
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       38.57411689748051,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       38.57411689748051,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       50.43068046673683,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       20.63797755674736,
+       null
+      ]
+     ]
+    },
+    "npv": 38.57411689748051,
+    "breakEven": 21.02428690379623,
+    "breakEvenM": 23.21122493868721,
+    "irr": 0.12148865585732527,
+    "payback": 15,
+    "tv": 466.2884078568973,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -44.81153395404098,
+    "npvPassThrough1": -44.81153395404098,
+    "fragility": {
+     "n": 6,
+     "m": 15,
+     "worse": 0,
+     "better": 6,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -92.68283714849173,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       11.018032758559286,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       0.9843745312246455,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -120.75920926817467,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       69.1742770349199,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -106.47320131406319,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       16.850133405981218,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -64.79724844140918,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       2.3450473678355337,
+       "better"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -127.69466960969856,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       4.710767394334042,
+       "better"
+      ],
+      [
+       "pt-0",
+       "Useful, but capital does not earn its cost",
+       -44.81153395404098,
+       null
+      ],
+      [
+       "pt-1",
+       "Useful, but capital does not earn its cost",
+       -44.81153395404098,
+       null
+      ],
+      [
+       "decline-down",
+       "Useful, but capital does not earn its cost",
+       -67.62396465978968,
+       null
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -34.17535619249676,
+       null
+      ]
+     ]
+    },
+    "npv": -44.81153395404098,
+    "breakEven": -51.406293206488726,
+    "breakEvenM": -35.02601178920727,
+    "irr": 0.05331739129936175,
+    "payback": null,
+    "tv": 179.25990099274594,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 467.03711340512587,
+    "npvPassThrough1": 467.03711340512587,
+    "fragility": {
+     "n": 1,
+     "m": 15,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       360.33705126928015,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       583.3408740449373,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       487.5042684472469,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       271.63286599547865,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       751.7448093835436,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       312.48033607839034,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       621.5938907318614,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       288.58728123531,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       832.52565926881,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       434.3567184691227,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       485.8994610575571,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       467.03711340512587,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       467.03711340512587,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       560.3552133243397,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       385.62661762972334,
+       null
+      ]
+     ]
+    },
+    "npv": 467.03711340512587,
+    "breakEven": 853.6478961030248,
+    "breakEvenM": 206.5574200762106,
+    "irr": 0.36055716944226546,
+    "payback": 8,
+    "tv": 1195.1715841836217,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 130.1399436475366,
+    "npvPassThrough1": 130.1399436475366,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       103.46492811357518,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       159.2158838074895,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       132.73983849006646,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       81.28888179512481,
+       "better"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       201.31686764214106,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       91.50074931585272,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       168.77913797922048,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       81.91543711798113,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       228.21822985896603,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       127.4545607602735,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       132.42842989788483,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       130.1399436475366,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       130.1399436475366,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       157.95966762048766,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       106.53432433201726,
+       null
+      ]
+     ]
+    },
+    "npv": 130.1399436475366,
+    "breakEven": 908.9138921415256,
+    "breakEvenM": 230.22899240455573,
+    "irr": 0.37216118863094383,
+    "payback": 6,
+    "tv": 317.9178960459054,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/perpetuity-g0/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 388.7623300009424,
+    "npvPassThrough1": 388.7623300009424,
+    "fragility": {
+     "n": 5,
+     "m": 15,
+     "worse": 5,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       288.15000110302145,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       471.28702202333045,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       439.1768039766233,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       202.07630564977424,
+       "worse"
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       659.7559527173125,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       244.24333931078303,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       533.281320691102,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       233.5753862968707,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       669.3703953921503,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       333.21432671760886,
+       "worse"
+      ],
+      [
+       "life-up",
+       "Durable value",
+       404.41338551607254,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       388.7623300009424,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       388.7623300009424,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       477.35242963819644,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       311.3401004014861,
+       null
+      ]
+     ]
+    },
+    "npv": 388.7623300009424,
+    "breakEven": 398.3945521748914,
+    "breakEvenM": 148.94034594855364,
+    "irr": 0.25724692727142073,
+    "payback": 8,
+    "tv": 986.7708181050045,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": -2.120756398498756,
+    "npvPassThrough1": -2.120756398498756,
+    "fragility": {
+     "n": 7,
+     "m": 15,
+     "worse": 0,
+     "better": 6,
+     "mixed": 1,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -56.71478341110736,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       42.663139631218606,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       65.6943735659203,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -100.94145752841466,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       141.56182806892244,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -78.30994997132478,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       74.06843717432727,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -51.56028430500938,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       91.90401145347289,
+       "mixed"
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -34.5309853919732,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       44.28463589283758,
+       "better"
+      ],
+      [
+       "pt-0",
+       "Useful, but capital does not earn its cost",
+       -2.120756398498756,
+       null
+      ],
+      [
+       "pt-1",
+       "Useful, but capital does not earn its cost",
+       -2.120756398498756,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       7.918902489425534,
+       "better"
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -17.29779334599651,
+       null
+      ]
+     ]
+    },
+    "npv": -2.120756398498756,
+    "breakEven": 7.901921325103456,
+    "breakEvenM": 8.723876066001917,
+    "irr": 0.09880287356924511,
+    "payback": 15,
+    "tv": 365.7163983191351,
+    "flags": [
+     "life"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -66.8611514127874,
+    "npvPassThrough1": -66.8611514127874,
+    "fragility": {
+     "n": 1,
+     "m": 15,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -105.23021642862847,
+       null
+      ],
+      [
+       "offset-early",
+       "Useful, but capital does not earn its cost",
+       -35.44063997856013,
+       null
+      ],
+      [
+       "build-late",
+       "Useful, but capital does not earn its cost",
+       -8.27145577763877,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -133.15731227940148,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       31.836636591814425,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -118.8958635595905,
+       null
+      ],
+      [
+       "scale-up",
+       "Useful, but capital does not earn its cost",
+       -14.826439265984284,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -81.70981314018725,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -35.21500450410062,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -144.25821927040164,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -20.630490743238354,
+       null
+      ],
+      [
+       "pt-0",
+       "Useful, but capital does not earn its cost",
+       -66.8611514127874,
+       null
+      ],
+      [
+       "pt-1",
+       "Useful, but capital does not earn its cost",
+       -66.8611514127874,
+       null
+      ],
+      [
+       "decline-down",
+       "Useful, but capital does not earn its cost",
+       -87.11682349159176,
+       null
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -56.85316243762007,
+       null
+      ]
+     ]
+    },
+    "npv": -66.8611514127874,
+    "breakEven": -62.0242722119593,
+    "breakEvenM": -42.260640754367195,
+    "irr": 0.031087701161928716,
+    "payback": null,
+    "tv": 140.59600077862427,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 382.71560445619036,
+    "npvPassThrough1": 382.71560445619036,
+    "fragility": {
+     "n": 1,
+     "m": 15,
+     "worse": 0,
+     "better": 1,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       293.7801070194574,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       455.5390558108188,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       425.7932817072357,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       213.5193964483015,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       627.90435713087,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       251.21418877398426,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       514.2170201383965,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       238.51581622349948,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       644.7921191499012,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       352.66852206324796,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       399.99796458278513,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       382.71560445619036,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       382.71560445619036,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       462.6835688659081,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       312.86711446854457,
+       null
+      ]
+     ]
+    },
+    "npv": 382.71560445619036,
+    "breakEven": 740.8528901280796,
+    "breakEvenM": 179.2643809461129,
+    "irr": 0.2938045569098283,
+    "payback": 8,
+    "tv": 937.3894777910759,
+    "flags": [
+     "life"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 108.07207420665492,
+    "npvPassThrough1": 108.07207420665492,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 3,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       85.83819984747169,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       126.27793704531204,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       116.32459960141585,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       65.77302220468272,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       169.36926237532487,
+       "worse"
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       75.1967202861034,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       140.94742812720645,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       68.95814397598986,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       178.64256504337393,
+       "worse"
+      ],
+      [
+       "life-down",
+       "Durable value",
+       105.71585538727439,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       110.16306201627359,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       108.07207420665492,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       108.07207420665492,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       132.0032758284492,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       87.7191179294993,
+       null
+      ]
+     ]
+    },
+    "npv": 108.07207420665492,
+    "breakEven": 794.2677792684101,
+    "breakEvenM": 201.18899282034164,
+    "irr": 0.308826434793802,
+    "payback": 7,
+    "tv": 249.34736944776898,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/B/perpetuity-g2/defaults": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 453.72422931199924,
+    "npvPassThrough1": 453.72422931199924,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       350.10431426997235,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       537.3082119048145,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       504.13870328768013,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       239.37030110088088,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       766.9899545683011,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       290.4960332849562,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       616.9524253390425,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       262.48296168313755,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       843.192034456162,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       394.88458534983965,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       471.35026923442496,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       453.72422931199924,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       453.72422931199924,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       555.531016679063,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       364.7434344196368,
+       "better"
+      ]
+     ]
+    },
+    "npv": 453.72422931199924,
+    "breakEven": 460.4963175868117,
+    "breakEvenM": 172.1571755311201,
+    "irr": 0.2670435620244055,
+    "payback": 8,
+    "tv": 1258.1327930838809,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 21.955383073921183,
+    "npvPassThrough1": 21.955383073921183,
+    "fragility": {
+     "n": 8,
+     "m": 15,
+     "worse": 2,
+     "better": 3,
+     "mixed": 3,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -34.18829009066802,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       67.28507412916383,
+       "better"
+      ],
+      [
+       "build-late",
+       "Durable value",
+       89.77051303834024,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -91.2370784275781,
+       "mixed"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       187.6907006925201,
+       null
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -63.87365011371844,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       107.78441626156078,
+       null
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -40.84657635942298,
+       "mixed"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       156.32568122933617,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -15.282585581831398,
+       "mixed"
+      ],
+      [
+       "life-up",
+       "Durable value",
+       71.25741916262439,
+       "better"
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       21.955383073921183,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       21.955383073921183,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       33.562665635824104,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       4.268524740541423,
+       null
+      ]
+     ]
+    },
+    "npv": 21.955383073921183,
+    "breakEven": 21.02428690379623,
+    "breakEvenM": 23.21122493868721,
+    "irr": 0.11141497055868543,
+    "payback": 15,
+    "tv": 466.2884078568973,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.3388233219184648,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": -57.60532110392397,
+    "npvPassThrough1": -57.60532110392397,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -97.00779681361382,
+       null
+      ],
+      [
+       "offset-early",
+       "Useful, but capital does not earn its cost",
+       -25.820835987507095,
+       null
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       0.9843745312246455,
+       "better"
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -133.15731227940148,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       55.984805746380744,
+       "better"
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -116.06854167647542,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       0.8578994686274939,
+       "better"
+      ],
+      [
+       "disc-up",
+       "Useful, but capital does not earn its cost",
+       -77.59103559129218,
+       null
+      ],
+      [
+       "disc-down",
+       "Useful, but capital does not earn its cost",
+       -10.44873978204744,
+       null
+      ],
+      [
+       "life-down",
+       "Useful, but capital does not earn its cost",
+       -140.48845675958154,
+       null
+      ],
+      [
+       "life-up",
+       "Useful, but capital does not earn its cost",
+       -8.083019755548946,
+       null
+      ],
+      [
+       "pt-0",
+       "Useful, but capital does not earn its cost",
+       -57.60532110392397,
+       null
+      ],
+      [
+       "pt-1",
+       "Useful, but capital does not earn its cost",
+       -57.60532110392397,
+       null
+      ],
+      [
+       "decline-down",
+       "Useful, but capital does not earn its cost",
+       -80.6096586169209,
+       null
+      ],
+      [
+       "decline-up",
+       "Useful, but capital does not earn its cost",
+       -46.777236535131486,
+       null
+      ]
+     ]
+    },
+    "npv": -57.60532110392397,
+    "breakEven": -51.406293206488726,
+    "breakEvenM": -35.02601178920727,
+    "irr": 0.04472196279339424,
+    "payback": null,
+    "tv": 179.25990099274594,
+    "flags": [
+     "life",
+     "debt",
+     "tail"
+    ],
+    "bin": "Useful, but capital does not earn its cost",
+    "strandedPeakPct": 0,
+    "shortfall": 56.54653911050916,
+    "minDSCR": -9.96033604974359,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 444.42659119620157,
+    "npvPassThrough1": 444.42659119620157,
+    "fragility": {
+     "n": 0,
+     "m": 15,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       352.6935290334238,
+       null
+      ],
+      [
+       "offset-early",
+       "Pays, but fragile",
+       518.2353622698569,
+       null
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       487.5042684472469,
+       null
+      ],
+      [
+       "drift-down",
+       "Pays, but fragile",
+       249.7006594528221,
+       null
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       728.4559715083517,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       295.5224444216971,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       593.3307379707061,
+       null
+      ],
+      [
+       "disc-up",
+       "Pays, but fragile",
+       265.97675902638576,
+       null
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       809.9151370598859,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       411.7461962601984,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       463.2889388486329,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       444.42659119620157,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       444.42659119620157,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       537.4055332822816,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       363.3552532539329,
+       null
+      ]
+     ]
+    },
+    "npv": 444.42659119620157,
+    "breakEven": 853.6478961030248,
+    "breakEvenM": 206.5574200762106,
+    "irr": 0.3035279704373933,
+    "payback": 8,
+    "tv": 1195.1715841836217,
+    "flags": [
+     "life",
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 124.48731309530552,
+    "npvPassThrough1": 124.48731309530552,
+    "fragility": {
+     "n": 3,
+     "m": 15,
+     "worse": 0,
+     "better": 3,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       101.55404755461109,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       142.93950586371935,
+       "better"
+      ],
+      [
+       "build-late",
+       "Pays, but fragile",
+       132.73983849006646,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       75.80583015946067,
+       "better"
+      ],
+      [
+       "drift-up",
+       "Pays, but fragile",
+       195.49465817334305,
+       null
+      ],
+      [
+       "scale-down",
+       "Pays, but fragile",
+       87.26127640167941,
+       null
+      ],
+      [
+       "scale-up",
+       "Pays, but fragile",
+       161.71334978893165,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       76.26280656575007,
+       "better"
+      ],
+      [
+       "disc-down",
+       "Pays, but fragile",
+       222.56559930673495,
+       null
+      ],
+      [
+       "life-down",
+       "Pays, but fragile",
+       121.80193020804242,
+       null
+      ],
+      [
+       "life-up",
+       "Pays, but fragile",
+       126.77579934565375,
+       null
+      ],
+      [
+       "pt-0",
+       "Pays, but fragile",
+       124.48731309530552,
+       null
+      ],
+      [
+       "pt-1",
+       "Pays, but fragile",
+       124.48731309530552,
+       null
+      ],
+      [
+       "decline-down",
+       "Pays, but fragile",
+       152.22224760997312,
+       null
+      ],
+      [
+       "decline-up",
+       "Pays, but fragile",
+       100.96648323806967,
+       null
+      ]
+     ]
+    },
+    "npv": 124.48731309530552,
+    "breakEven": 908.9138921415256,
+    "breakEvenM": 230.22899240455573,
+    "irr": 0.31750953076791,
+    "payback": 7,
+    "tv": 317.9178960459054,
+    "flags": [
+     "tail"
+    ],
+    "bin": "Pays, but fragile",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "sustaining/A/e0/longLife80": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 355.90969471679136,
+    "npvPassThrough1": 355.90969471679136,
+    "fragility": {
+     "n": 0,
+     "m": 11,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       242.2440417960276,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       489.09595347197546,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       371.8302555925096,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       218.68105552815246,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       550.8928437615745,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       238.41231069439812,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       473.4070787391846,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       255.66107619602622,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       493.4759123033349,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       352.7516008357063,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       357.8045510454423,
+       null
+      ]
+     ]
+    },
+    "npv": 355.90969471679136,
+    "breakEven": 340.2397498154488,
+    "breakEvenM": 127.19909387896514,
+    "irr": 0.29843785836923387,
+    "payback": 7,
+    "tv": 560.8854090525023,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 4.9008744166666665,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 52.30227466040968,
+    "npvPassThrough1": 52.30227466040968,
+    "fragility": {
+     "n": 3,
+     "m": 11,
+     "worse": 3,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Useful, but capital does not earn its cost",
+       -10.474958874257268,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       127.32763342938773,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       84.90612160749252,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -20.896689816328113,
+       "worse"
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       156.3977174208449,
+       null
+      ],
+      [
+       "scale-down",
+       "Useful, but capital does not earn its cost",
+       -10.514621250463257,
+       "worse"
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       115.11917057128268,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       7.0574362253696705,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       115.84001455955233,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       47.13853154583859,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       55.400520529152395,
+       null
+      ]
+     ]
+    },
+    "npv": 52.30227466040968,
+    "breakEven": 28.506628709196136,
+    "breakEvenM": 31.471876988765562,
+    "irr": 0.12978587572436828,
+    "payback": 11,
+    "tv": 279.10819915956756,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 15.58765146606476,
+    "minDSCR": 0.4226862914749964,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": 79.11331270888034,
+    "npvPassThrough1": 79.11331270888034,
+    "fragility": {
+     "n": 0,
+     "m": 11,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       34.15434874254893,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       133.91713540803718,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       93.94077020657062,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       28.510545813816123,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       151.12980513267854,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       35.56835091233077,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       122.65827450542993,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       45.14339928434884,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       125.99662946616158,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       76.48156780797622,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       80.69235964942284,
+       null
+      ]
+     ]
+    },
+    "npv": 79.11331270888034,
+    "breakEven": 90.75614670589938,
+    "breakEvenM": 61.83729007059802,
+    "irr": 0.17842040567186024,
+    "payback": 9,
+    "tv": 189.04800038931214,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": 2.219151129743589,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 362.03949717889463,
+    "npvPassThrough1": 362.03949717889463,
+    "fragility": {
+     "n": 0,
+     "m": 11,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       263.2234810891755,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       475.566447701449,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       369.23792123785506,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       238.58265302381204,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       537.2872425426234,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       256.5267802031819,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       467.55221415460744,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       268.61756626418907,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       489.96738520999526,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       360.2726215381268,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       363.0996225633554,
+       null
+      ]
+     ]
+    },
+    "npv": 362.03949717889463,
+    "breakEven": 661.7338241487349,
+    "breakEvenM": 160.11991843160496,
+    "irr": 0.3776264724287256,
+    "payback": 6,
+    "tv": 524.944738895538,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 89.71441974926913,
+    "npvPassThrough1": 89.71441974926913,
+    "fragility": {
+     "n": 0,
+     "m": 11,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       65.01041572683934,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       118.0961573799077,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       91.65207985867488,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       58.850208710498464,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       133.52635609020132,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       63.33624050534093,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       116.0925989931973,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       66.23463847962752,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       121.83067810347232,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       89.22104794651517,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       90.0104428309215,
+       null
+      ]
+     ]
+    },
+    "npv": 89.71441974926913,
+    "breakEven": 626.5768998361654,
+    "breakEvenM": 158.71268946430482,
+    "irr": 0.3516855991212685,
+    "payback": 6,
+    "tv": 131.2361847238845,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": null,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   }
+  ],
+  "vintage/A/e0/longLife80": [
+   {
+    "id": "hw",
+    "npvPassThrough0": 363.58853598977754,
+    "npvPassThrough1": 363.58853598977754,
+    "fragility": {
+     "n": 0,
+     "m": 15,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       249.92288306901384,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       496.7747947449617,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       377.55319469785945,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       226.35989680113863,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       558.5716850345607,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       246.09115196738435,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       481.08592001217073,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       262.03840091960717,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       502.81580331108205,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       362.9900558663546,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       363.9476240638313,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       363.58853598977754,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       363.58853598977754,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       450.6023612065262,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       290.28272599877505,
+       null
+      ]
+     ]
+    },
+    "npv": 363.58853598977754,
+    "breakEven": 347.5805080818746,
+    "breakEvenM": 129.94344635506576,
+    "irr": 0.3028364705875962,
+    "payback": 7,
+    "tv": 560.8854090525023,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 5.541900057692307,
+    "shareLeftPct": 86.00583546412884
+   },
+   {
+    "id": "dc",
+    "npvPassThrough0": 64.50186332529714,
+    "npvPassThrough1": 64.50186332529714,
+    "fragility": {
+     "n": 2,
+     "m": 15,
+     "worse": 2,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Pays, but fragile",
+       1.724629790630118,
+       "worse"
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       139.52722209427517,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       93.8458733263194,
+       null
+      ],
+      [
+       "drift-down",
+       "Useful, but capital does not earn its cost",
+       -8.697101151440691,
+       "worse"
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       168.59730608573227,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       1.684967414424186,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       127.31875923617014,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       17.03238675693398,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       130.90394661687034,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       63.404649765688475,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       65.16019146106234,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       64.50186332529714,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       64.50186332529714,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       109.12465785440938,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       26.614537747209475,
+       null
+      ]
+     ]
+    },
+    "npv": 64.50186332529714,
+    "breakEven": 35.15584514830656,
+    "breakEvenM": 38.81274230041336,
+    "irr": 0.13646437569277958,
+    "payback": 11,
+    "tv": 279.10819915956756,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 10.08765146606476,
+    "minDSCR": 0.5508914196801246,
+    "shareLeftPct": 73.85691026454036
+   },
+   {
+    "id": "ml",
+    "npvPassThrough0": 85.51234710303551,
+    "npvPassThrough1": 85.51234710303551,
+    "fragility": {
+     "n": 0,
+     "m": 15,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       40.5533831367041,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       140.31616980219235,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       98.7098861276955,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       34.9095802079713,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       157.52883952683368,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       41.96738530648596,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       129.0573088995851,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       50.45783655399966,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       133.77987197261749,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       85.01361366684975,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       85.81158716474697,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       85.51234710303551,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       85.51234710303551,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       116.45482748102202,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       59.28393701422128,
+       null
+      ]
+     ]
+    },
+    "npv": 85.51234710303551,
+    "breakEven": 98.09690497232515,
+    "breakEvenM": 66.83896339780644,
+    "irr": 0.18454781687538213,
+    "payback": 9,
+    "tv": 189.04800038931214,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": 2.86017677076923,
+    "shareLeftPct": 63.32511891367892
+   },
+   {
+    "id": "ap",
+    "npvPassThrough0": 366.44240391606394,
+    "npvPassThrough1": 366.44240391606394,
+    "fragility": {
+     "n": 0,
+     "m": 15,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       267.62638782634485,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       479.9693544386182,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       372.56508178282434,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       242.98555976098135,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       541.6901492797929,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       260.9296869403512,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       471.9551208917767,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       272.332977597173,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       495.241051141001,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       366.14316385435245,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       366.62194795309085,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       366.44240391606394,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       366.44240391606394,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       445.94320392810016,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       299.6278686585252,
+       null
+      ]
+     ]
+    },
+    "npv": 366.44240391606394,
+    "breakEven": 669.7814331396336,
+    "breakEvenM": 162.0672006290199,
+    "irr": 0.3820156443635564,
+    "payback": 6,
+    "tv": 524.944738895538,
+    "flags": [],
+    "bin": "Durable value",
+    "strandedPeakPct": 0,
+    "shortfall": 0,
+    "minDSCR": null,
+    "shareLeftPct": 100
+   },
+   {
+    "id": "sv",
+    "npvPassThrough0": 90.97010511124739,
+    "npvPassThrough1": 90.97010511124739,
+    "fragility": {
+     "n": 0,
+     "m": 15,
+     "worse": 0,
+     "better": 0,
+     "mixed": 0,
+     "shocks": [
+      [
+       "offset-late",
+       "Durable value",
+       66.2661010888176,
+       null
+      ],
+      [
+       "offset-early",
+       "Durable value",
+       119.35184274188596,
+       null
+      ],
+      [
+       "build-late",
+       "Durable value",
+       92.61193501779816,
+       null
+      ],
+      [
+       "drift-down",
+       "Durable value",
+       60.105894072476744,
+       null
+      ],
+      [
+       "drift-up",
+       "Durable value",
+       134.7820414521796,
+       null
+      ],
+      [
+       "scale-down",
+       "Durable value",
+       64.5919258673192,
+       null
+      ],
+      [
+       "scale-up",
+       "Durable value",
+       117.34828435517556,
+       null
+      ],
+      [
+       "disc-up",
+       "Durable value",
+       67.31163946102164,
+       null
+      ],
+      [
+       "disc-down",
+       "Durable value",
+       123.31134445101554,
+       null
+      ],
+      [
+       "life-down",
+       "Durable value",
+       90.89529509581953,
+       null
+      ],
+      [
+       "life-up",
+       "Durable value",
+       91.0149911205041,
+       null
+      ],
+      [
+       "pt-0",
+       "Durable value",
+       90.97010511124739,
+       null
+      ],
+      [
+       "pt-1",
+       "Durable value",
+       90.97010511124739,
+       null
+      ],
+      [
+       "decline-down",
+       "Durable value",
+       110.84530511425646,
+       null
+      ],
+      [
+       "decline-up",
+       "Durable value",
+       74.2664712968627,
+       null
+      ]
+     ]
+    },
+    "npv": 90.97010511124739,
+    "breakEven": 635.3467658563312,
+    "breakEvenM": 160.9341071748302,
+    "irr": 0.3567805337195381,
+    "payback": 6,
+    "tv": 131.2361847238845,
     "flags": [],
     "bin": "Durable value",
     "strandedPeakPct": 0,

@@ -1,10 +1,13 @@
 // Placeholders, not data. Every number here was chosen to make the mechanics visible; none is sourced.
 // Defaults are neutral on timing (offset 0, steepness 1, build starts in year 0) and on phases (all three equal the v0.1 constant),
 // so the default page reproduces the v0.1 results. Anything that demonstrates a verdict must be opt-in.
-const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10 };
+const DEFAULT_G = { pool:1200, speed:8, mid:8, disc:10, rd:7, tv:5, premium:0, entry:0, mult:10, tvGrowth:0 };
 const DEFAULT_DEF = 'A';
 // Capex model: 'sustaining' (v0.1, default) or 'vintage' (opt-in cohorts with replacement at end of life).
 const DEFAULT_CAPEX = 'sustaining';
+// Value beyond year 15: 'multiple' (v0.1, default; uses tv) or 'perpetuity' (opt-in; uses tvGrowth, long-run growth in
+// % a year, a placeholder default of 0 with no view behind it, unsourced).
+const DEFAULT_TV_MODE = 'multiple';
 const DEFAULT_PHASES = [5, 10];
 const SCEN = { slow:{speed:12, mid:11}, base:{speed:8, mid:8}, fast:{speed:5, mid:5.5} };
 const SCEN_NAMES = { slow:'Slow adoption', base:'Base', fast:'Fast adoption' };
@@ -28,12 +31,14 @@ const UCD_EXAMPLE = [5, 2, 8, 0, 0];
 const LAYER_RANGES = {
   evidence:[1,5,1], share:[0,100,1], offset:[-5,5,0.5], steepness:[0.25,4,0.25], capex:[1,2000,5],
   buildStart:[0,14,1], buildYears:[1,10,1], unitCostDecline:[-10,50,0.5], passThrough:[0,1,0.05],
-  life:[1,40,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
+  life:[1,100,1], debt:[0,100,5], alloc:[0,1000,1], driftP:[-20,20,0.5], marginP:[0,90,1]
 };
 const GLOBAL_RANGES = {
   pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
-  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,12,0.5]
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,10,0.5]
 };
+// tvGrowth range (-5 to 10 % a year) is a display choice, not evidence; growth must also stay at least TV_GROWTH_GAP
+// (1 point) below the discount rate, which the inputs and every validator enforce.
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
-if (typeof module !== 'undefined') module.exports = { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };
+if (typeof module !== 'undefined') module.exports = { DEFAULT_TV_MODE, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };

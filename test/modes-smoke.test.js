@@ -302,3 +302,31 @@ test('info notes inside the entry-definition and capex-model switches open their
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('value beyond year 15: multiple by default; perpetuity shows growth with its implied multiple; growth kept 1 point below the discount rate', () => {
+  const { doc, win, errors } = load({ hash: '#analyst' });
+  const $ = (id) => doc.getElementById(id);
+  const before = $('score').textContent;
+  assert.equal(doc.querySelector('#tvSwitch [data-t="multiple"]').getAttribute('aria-pressed'), 'true');
+  assert.equal($('ctl_tv').hidden, false); assert.equal($('ctl_tvg').hidden, true);
+  click(win, doc.querySelector('#tvSwitch [data-t="perpetuity"]'));
+  assert.equal($('ctl_tv').hidden, true); assert.equal($('ctl_tvg').hidden, false);
+  assert.equal($('o_tvg').textContent, '0.0% · 10.0x', 'growth 0 at a 10% rate implies 1 / r = 10x');
+  assert.notEqual($('score').textContent, before, 'results follow the mode');
+  setMode(win, doc, 'basic'); assert.match($('hiddenText').textContent, /Value beyond year 15: mode/); setMode(win, doc, 'analyst');
+  const set = (id, v) => { $(id).value = String(v); $(id).dispatchEvent(new win.Event('input', { bubbles: true })); };
+  set('g_tvg', 2);
+  assert.equal($('o_tvg').textContent, '2.0% · 12.8x');
+  set('g_disc', 6);
+  assert.equal(+$('g_tvg').value, 2, 'still 4 points below');
+  set('g_tvg', 8);
+  assert.equal(+$('g_tvg').value, 5, 'growth pulled down to the rate minus 1 point');
+  assert.equal($('o_tvg').textContent, '5.0% · 105.0x');
+  set('g_disc', 5);
+  assert.equal(+$('g_tvg').value, 4, 'lowering the rate pulls growth down too');
+  click(win, doc.querySelector('#tvSwitch [data-t="multiple"]'));
+  assert.equal($('ctl_tv').hidden, false);
+  assert.equal(doc.querySelectorAll('#tvSwitch button[aria-pressed="true"]').length, 1);
+  assert.deepEqual(errors, []);
+  win.close();
+});

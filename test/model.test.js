@@ -561,3 +561,54 @@ test('low-share helper: share left by year 15 matches the compounded drift, and 
   assert.deepEqual(low.map(x => x.L.id), ['ml']);
   near(low[0].pct, Math.pow(0.8, H) * 100, 1e-9);
 });
+
+/* ---------- Model version 2: perpetuity terminal value ---------- */
+const perpG = (over) => ({ ...D2.DEFAULT_G, entryDef: 'A', capexModel: 'sustaining', phases: D2.DEFAULT_PHASES.slice(), ...over });
+const D2 = require('../src/defaults.js');
+const M2 = require('../src/model.js');
+const layersOf = () => D2.DEFAULT_LAYERS.map(L => ({ ...L, driftP: L.driftP.slice(), marginP: L.marginP.slice() }));
+
+test('perpetuity: implied multiple is (1 + g) / (r - g); 1 / r at g = 0; growth capped 1 point below r inside the model', () => {
+  assert.ok(Math.abs(M2.perpetuityMultiple(0, 10) - 10) < 1e-12);
+  assert.ok(Math.abs(M2.perpetuityMultiple(2, 10) - 12.75) < 1e-12);
+  assert.ok(Math.abs(M2.perpetuityMultiple(2, 6) - 25.5) < 1e-12);
+  assert.equal(M2.TV_GROWTH_GAP, 1);
+  assert.equal(M2.perpetuityMultiple(15, 10), M2.perpetuityMultiple(9, 10), 'capped at r - 1 point');
+  assert.equal(M2.tvMultipleOf({ tv: 5, disc: 10 }), 5, 'a missing tvMode means "multiple"');
+  assert.equal(M2.tvMultipleOf({ tv: 5, disc: 10, tvMode: 'multiple', tvGrowth: 3 }), 5, 'growth is ignored in multiple mode');
+});
+
+test('perpetuity at g = 0 equals the multiple mode at tv = 1 / r, for both capex models, both entry definitions and two entry years', () => {
+  for (const capexModel of ['sustaining', 'vintage']) for (const entryDef of ['A', 'B']) for (const entry of [0, 3]) for (const disc of [8, 10, 12.5]) {
+    const a = perpG({ capexModel, entryDef, entry, disc, tvMode: 'perpetuity', tvGrowth: 0 });
+    const b = perpG({ capexModel, entryDef, entry, disc, tvMode: 'multiple', tv: 100 / disc });
+    layersOf().forEach(L => {
+      const x = M2.runLayer(L, a), y = M2.runLayer(L, b);
+      assert.ok(Math.abs(x.npv - y.npv) < 1e-9, [capexModel, entryDef, entry, disc, L.id].join('/'));
+      assert.equal(x.bin, y.bin);
+    });
+  }
+});
+
+test('perpetuity: break-even gives NPV zero under both definitions; higher growth never lowers value', () => {
+  for (const g of [0, 2, 5]) for (const entry of [0, 3]) layersOf().forEach(L => {
+    const G = perpG({ tvMode: 'perpetuity', tvGrowth: g, entry });
+    const o = M2.runLayer(L, G);
+    if (isFinite(o.breakEven)) assert.ok(Math.abs(M2.runLayer(L, { ...G, premium: o.breakEven }).npv) < 1e-6, 'A ' + L.id + ' g' + g);
+    const B = { ...G, entryDef: 'B' }, ob = M2.runLayer(L, B);
+    if (isFinite(ob.breakEvenM)) assert.ok(Math.abs(M2.runLayer(L, { ...B, mult: ob.breakEvenM }).npv) < 1e-6, 'B ' + L.id + ' g' + g);
+    assert.ok(M2.runLayer(L, { ...G, tvGrowth: g + 1 }).npv >= o.npv - 1e-9);
+  });
+});
+
+test('perpetuity: defaults unchanged (multiple mode); sensitivity swaps the multiple shock for growth ±1 point', () => {
+  const base = perpG({});
+  layersOf().forEach(L => assert.equal(M2.runLayer(L, base).npv, M2.runLayer(L, { ...base, tvMode: 'multiple', tvGrowth: 0 }).npv));
+  const L = layersOf()[0];
+  const multi = M2.sensitivity(L, base).parts.tv, perp = M2.sensitivity(L, perpG({ tvMode: 'perpetuity', tvGrowth: 2 })).parts.tv;
+  assert.match(multi.n, /Value beyond year 15/);
+  assert.match(perp.n, /Long-run growth/);
+  // A discount-rate shock below the growth gap stays finite (growth is capped inside the model).
+  const f = M2.verdictFragility(L, perpG({ tvMode: 'perpetuity', tvGrowth: 6.5, disc: 8 }));
+  f.results.forEach(r => assert.ok(isFinite(r.npv), r.id));
+});

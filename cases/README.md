@@ -23,19 +23,19 @@ Historical cases for the Load Bearing Simulator, one plain file each (`cases/<id
 - **Hindsight.** `hindsightDisclosure` is one line saying what the author already knew. The page shows: "Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
 - **Allocations are personal** and are never part of a case. A case opens with a placeholder equal split.
 
-## File format (`schemaVersion` 1)
+## File format (`schemaVersion` 2; schema 1 files stay valid)
 
 | Field | Notes |
 |---|---|
 | `format` | `"load-bearing-simulator-case"` |
-| `schemaVersion` | `1` |
+| `schemaVersion` | `2` (or `1`, which opens with value beyond year 15 as a multiple) |
 | `id` | lower-case letters, digits and hyphens |
 | `title`, `subtitle` | the title replaces "AI Stack" in the page title while the case is open |
 | `asOfDate`, `asOfRule` | the date, and how it was chosen |
 | `hindsightDisclosure` | one line |
 | `moneyUnit` | for example `"$B"`, `"£m"`, `"€bn"` |
 | `sources[]` | `{ id, citation, publicationDate, kind: "period" \| "compiled" \| "outcome", seriesEndsOn }` (`seriesEndsOn` for compiled only) |
-| `settings` | `pool`, `speed`, `mid`, `disc`, `rd`, `tv`, `premium`, `entry`, `mult`, `phase2Start`, `phase3Start` as input records, plus `entryDef` (`"A"` or `"B"`) and `capexModel` (`"sustaining"` or `"vintage"`) |
+| `settings` | `pool`, `speed`, `mid`, `disc`, `rd`, `tv`, `premium`, `entry`, `mult`, `phase2Start`, `phase3Start` as input records, plus `entryDef` (`"A"` or `"B"`) and `capexModel` (`"sustaining"` or `"vintage"`). Schema 2 only, optional: `tvMode` (`"multiple"` or `"perpetuity"`) and `tvGrowth` (an input record; long-run growth, at least 1 point below the discount rate) |
 | `layers[]` | 1 to 6 layers: `{ id, name, inputs }` (names up to 40 characters, without `<`, `>`, `&` or `"`); `inputs` has `evidence`, `share`, `offset`, `steepness`, `capex`, `buildStart`, `buildYears`, `unitCostDecline`, `passThrough`, `life`, `debt` (input records) and `driftP`, `marginP` (three input records each) |
 | `versions[]` | optional, up to 3: `{ id, label, settings?, layers? }`; each overrides some settings or layer inputs; selected with a pill |
 | `outcomes[]` | `{ layer, status, summary, sourceIds, horizon }` |

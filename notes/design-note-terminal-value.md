@@ -1,6 +1,6 @@
 # Design note: terminal value and long-lived assets
 
-Status: **proposal only, not implemented.** Needs the maintainer's approval before any code changes. Nothing here is data; the numbers below are arithmetic on the formulas, not estimates.
+Status: **approved (both parts) and implemented in model version 2.** Kept here for the reasoning; not published on the site. Nothing here is data; the numbers below are arithmetic on the formulas, not estimates.
 
 ## Why
 

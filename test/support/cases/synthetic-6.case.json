@@ -1,6 +1,6 @@
 {
  "format": "load-bearing-simulator-case",
- "schemaVersion": 1,
+ "schemaVersion": 2,
  "id": "synthetic-6-layer",
  "title": "Synthetic 6-layer case",
  "subtitle": "Test fixture, not data: placeholder values and fictitious sources.",

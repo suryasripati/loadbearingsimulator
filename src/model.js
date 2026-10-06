@@ -1,11 +1,24 @@
 const H = 15;
 // Model version stamp, saved with every snapshot. Bump it whenever the maths changes (any change that can move an
 // output for the same inputs), so comparisons can flag snapshots made under older maths.
-const MODEL_VERSION = 1;
+const MODEL_VERSION = 2;
+// Version 2 added the perpetuity terminal-value option (G.tvMode, G.tvGrowth). With tvMode "multiple" (the default, and
+// what a missing tvMode means) every output equals version 1.
+// Long-run growth must stay at least this many points below the discount rate (the inputs enforce it). Inside the
+// model, growth is capped at that gap, so a discount-rate shock in the sensitivity or fragility tests stays finite.
+const TV_GROWTH_GAP = 1;
 const AMORT = 8;
 // Below this share of the layer's peak operating cash, a forward multiple on year e+1 is reported as
 // "not meaningful". This is a display cut-off for near-zero denominators, not an evidence-based threshold.
 const B_MIN_OCF_SHARE = 0.01;
+// Terminal value multiple applied to year-15 net cash. "multiple": the tv input. "perpetuity": a growing perpetuity
+// of next year's cash, (1 + g) / (r - g), with g = long-run growth and r = discount rate. Growth is an unsourced
+// placeholder input (default 0); at g = 0 the multiple is 1 / r.
+function perpetuityMultiple(g, disc){
+  const gg = Math.min(g, disc - TV_GROWTH_GAP);
+  return (1 + gg / 100) / ((disc - gg) / 100);
+}
+function tvMultipleOf(G){ return G.tvMode === 'perpetuity' ? perpetuityMultiple(G.tvGrowth || 0, G.disc) : G.tv; }
 function adoption(t, G){
   const k = Math.log(81) / G.speed;
   return 1 / (1 + Math.exp(-k * (t - G.mid)));
@@ -114,7 +127,8 @@ function runLayer(L, G){
   const opsNet = years.map(t => ocf[t] - sust[t]);
   // Terminal value: v0.1 uses year-15 cash after sustaining spend. Vintage mode uses a normalised sustaining spend,
   // capex x (1 - decline)^15 / life, instead of the lumpy year-15 replacement; at decline 0 this equals capex / life.
-  const tv = vin ? G.tv * Math.max(0, ocf[H] - vin.normSust) : G.tv * Math.max(0, opsNet[H]);
+  const tvM = tvMultipleOf(G);
+  const tv = vin ? tvM * Math.max(0, ocf[H] - vin.normSust) : tvM * Math.max(0, opsNet[H]);
 
   // Entry year e: the investor owns cash flows from e onward, valued in year-e terms.
   const disc = (t) => Math.pow(1 + r, t - e);
@@ -209,7 +223,9 @@ function sensItems(G){
     {id:'capex', n:'Build capex', lab:'±25%', L:(L,k)=>{ L.capex*=k; }, lo:1.25, hi:0.75},
     {id:'life', n:'Asset life', lab:'±25%', L:(L,k)=>{ L.life=Math.max(1,L.life*k); }, lo:0.75, hi:1.25},
     {id:'disc', n:'Discount rate', lab:'±25%', g:(g,k)=>{ g.disc*=k; }, lo:1.25, hi:0.75},
-    {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
+    G.tvMode === 'perpetuity'
+      ? {id:'tv', n:'Long-run growth (perpetuity)', lab:'\u00b11 point', g:(g,k)=>{ g.tvGrowth=(g.tvGrowth||0)+k; }, lo:-1, hi:1}
+      : {id:'tv', n:'Value beyond year 15', lab:'±25%', g:(g,k)=>{ g.tv*=k; }, lo:0.75, hi:1.25}
   ];
   if (G.capexModel === 'vintage'){
     items.push({id:'decline', n:'Unit-cost decline (\u00b13 points)', lab:'\u00b13 points', L:(L,k)=>{ L.unitCostDecline=(L.unitCostDecline||0)+k; }, lo:-3, hi:3});
@@ -312,4 +328,4 @@ function verdictFragility(L, G){
   return { bin: base.bin, npv: base.npv, flags: base.flags, results, flips, n: flips.length, m: results.length,
     worse: count('worse'), better: count('better'), mixed: count('mixed') };
 }
-if (typeof module !== 'undefined') module.exports = { MODEL_VERSION, flipDirection, runLayer, verdictFragility, lowShareLayers, LOW_SHARE_PCT, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };
+if (typeof module !== 'undefined') module.exports = { MODEL_VERSION, TV_GROWTH_GAP, perpetuityMultiple, tvMultipleOf, flipDirection, runLayer, verdictFragility, lowShareLayers, LOW_SHARE_PCT, adoption, layerAdoption, phaseOf, heatmap, sensitivity, effectiveDrift, passThroughFactor, verdictIfBuildLater, buildStartOf, BUILD_SHIFT, H };

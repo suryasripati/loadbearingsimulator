@@ -84,6 +84,23 @@ test('validation: a judgement value needs no source; a sourced value may carry a
   assert.doesNotThrow(() => C.validateCase(c), 'unknown outcomes need no source');
 });
 
+test('case schema 1 stays valid and opens as "multiple"; schema 2 adds tvMode and tvGrowth, with the growth guard', () => {
+  const old = fresh(); old.schemaVersion = 1; old.versions = old.versions.filter(v => v.id !== 'long-run');
+  const c1 = C.validateCase(old), st1 = C.caseState(c1, 'base');
+  assert.deepEqual([st1.G.tvMode, st1.G.tvGrowth], ['multiple', 0]);
+  const bad1 = fresh(); bad1.schemaVersion = 1; assert.throws(() => C.validateCase(bad1), /unknown field "tvMode"/);
+  const c2 = C.validateCase(fresh()), lr = C.caseState(c2, 'long-run');
+  assert.deepEqual([lr.G.tvMode, lr.G.tvGrowth], ['perpetuity', 2]);
+  assert.equal(lr.recs['settings.tvGrowth'].basis, 'judgement');
+  assert.equal(C.caseState(c2, 'base').G.tvMode, 'multiple');
+  const g = fresh(); g.settings.tvMode = 'perpetuity'; g.settings.tvGrowth = { value: 9.5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' };
+  assert.throws(() => C.validateCase(g), /long-run growth 9.5% must be at least 1 point below the discount rate \(10%\)/);
+  g.settings.tvGrowth.value = 9; assert.doesNotThrow(() => C.validateCase(g));
+  const v = fresh(); v.versions[0].settings.disc = { value: 5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' }; v.settings.tvGrowth = { value: 4.5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' };
+  assert.throws(() => C.validateCase(v), /version 1 settings: long-run growth 4.5% must be at least 1 point below/);
+  const m = fresh(); m.settings.tvMode = 'forever'; assert.throws(() => C.validateCase(m), /expected "multiple" or "perpetuity"/);
+});
+
 test('date rules: period sources on or before the as-of date; compiled by series end; outcomes strictly after', () => {
   const a = '1845-06-30';
   assert.equal(C.sourceForInput({ kind: 'period', publicationDate: a }, a), true);

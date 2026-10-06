@@ -228,7 +228,7 @@ test('versions: pills switch the case version (with a prompt) and only the overr
   const c = FIX[3], { doc, win, asked } = load();
   openCase(win, doc, c.id);
   const pills = [...doc.querySelectorAll('#caseVersions button')];
-  assert.deepEqual(pills.map(b => b.textContent), ['Base', 'Hype', 'Measured']);
+  assert.deepEqual(pills.map(b => b.textContent), ['Base', 'Hype', 'Measured', 'Long run']);
   assert.equal(pills[0].getAttribute('aria-pressed'), 'true');
   const pool = sliderVal(doc, 'g_pool');
   click(win, pills[2]);

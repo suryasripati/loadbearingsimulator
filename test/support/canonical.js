@@ -18,6 +18,17 @@ function cases(){
     const G = { ...D.DEFAULT_G, entryDef, entry, capexModel, phases: D.DEFAULT_PHASES.slice() };
     out.push({ key: [capexModel, entryDef, 'e' + entry, set].join('/'), G, layers: sets[set] });
   }
+  // Model version 2: the perpetuity terminal value (g = 0 and g = 2, every capex model and entry definition) and one
+  // long-lived layer set (asset life 80, inside the widened range), both on the default layers otherwise.
+  const longLife = sets.defaults.map(L => ({ ...L, life: 80 }));
+  for (const capexModel of ['sustaining', 'vintage']) for (const entryDef of ['A', 'B']) for (const tvGrowth of [0, 2]) {
+    const G = { ...D.DEFAULT_G, entryDef, entry: 0, capexModel, phases: D.DEFAULT_PHASES.slice(), tvMode: 'perpetuity', tvGrowth };
+    out.push({ key: [capexModel, entryDef, 'perpetuity-g' + tvGrowth, 'defaults'].join('/'), G, layers: sets.defaults });
+  }
+  for (const capexModel of ['sustaining', 'vintage']) {
+    const G = { ...D.DEFAULT_G, entryDef: 'A', entry: 0, capexModel, phases: D.DEFAULT_PHASES.slice() };
+    out.push({ key: [capexModel, 'A', 'e0', 'longLife80'].join('/'), G, layers: longLife });
+  }
   return out;
 }
 const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
