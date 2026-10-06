@@ -325,6 +325,7 @@ td .bchipwrap{margin-left:3px}
   <span class="casebtns"><button class="pill" type="button" id="caseWhat" aria-haspopup="dialog" aria-controls="whModal">What happened</button><button class="pill" type="button" id="caseSources" aria-haspopup="dialog" aria-controls="sourcesModal">Sources</button><button class="reset" type="button" id="caseReset">Reset to case</button><button class="reset" type="button" id="caseReturn">Return to my scenario</button></span>
 </div>
 
+<div class="notice slim" id="linkNotice" role="alert" hidden></div>
 <section class="kpis" id="kpis" aria-label="Key figures"></section>
 <div class="notice slim" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
 
@@ -486,11 +487,10 @@ td .bchipwrap{margin-left:3px}
           <label class="muted" for="cmpB" style="font-size:13px">After</label><select id="cmpB" class="txt sel"></select>
           <button id="cmpGo">Compare</button>
         </div>
-        <h3 style="margin-top:14px">Export and import</h3>
-        <label class="chk"><input type="checkbox" id="expAlloc"> Include my allocations in the export</label>
-        <p class="notice" id="expWarn" style="margin-top:6px">This page and its code repository are public. Allocations are your personal split and are left out of exports unless you tick the box. Keep any file that includes them private, and never commit snapshot files.</p>
-        <div class="seg"><button id="snapExport">Export snapshots (.json)</button>
-          <label class="btn" for="snapImport">Import snapshots</label><input type="file" id="snapImport" accept=".json,application/json" class="vh"></div>
+        <h3 style="margin-top:14px">Share as a link</h3>
+        <p class="notice slim" id="linkWarn" style="margin-top:6px">A link carries your current settings and layer inputs in the address. Anyone who has the link can read them. It never includes your allocations, snapshot names, notes or kill criteria. In a case, it carries the case and only the inputs you changed.</p>
+        <div class="seg" style="align-items:center"><button id="copyLink" type="button">Copy link</button><input type="text" id="linkOut" class="txt" readonly aria-label="Link to the current settings" hidden style="flex:1;min-width:200px"></div>
+        <p class="legend" id="linkMsg" role="status"></p>
         <p class="legend" id="snapErr" role="alert"></p>
       </div>
     </div>
@@ -1552,11 +1552,10 @@ function placeTip(anchor, tip, vp, margin, gap){
 // Snapshots: dated views of the whole simulation (inputs, outputs, note, kill criteria), so a past view can be compared
 // with the current one. Pure functions, no DOM. CommonJS export for tests; the build strips the export line and runs
 // this file in the page after the defaults and before the UI code.
-// Snapshots live in the browser's local storage only. Exports are files the user downloads; they are never committed
-// (exports/ and *.snapshot.json are gitignored). Allocations are excluded from exports unless the user ticks a box.
-// Two version stamps: schemaVersion is the file and snapshot format; modelVersion is the maths (MODEL_VERSION).
+// Snapshots live in the browser's local storage only; there is no file export or import (removed; old .snapshot.json
+// files can no longer be read). A scenario can be shared as a link instead (settings only, see "Links" below).
+// Two version stamps: schemaVersion is the snapshot format; modelVersion is the maths (MODEL_VERSION).
 
-const SNAP_FORMAT = 'load-bearing-simulator-snapshots';
 const SNAP_SCHEMA_VERSION = 5;
 // Older schemas are still read. Schema 1 had no answer date on kill criteria (filled in as blank); schemas 1 and 2
 // had no trigger response (filled in as null).
@@ -1660,33 +1659,25 @@ function makeSnapshot(opts){
   };
 }
 
-// Export: allocations are removed unless the caller asks to include them. The stored list is not modified.
-function exportSnapshots(list, opts){
-  const include = !!(opts && opts.includeAllocations);
-  const snaps = list.map(s => {
-    const c = JSON.parse(JSON.stringify(s));
-    if (!include) c.inputs.layers.forEach(L => { delete L.alloc; });
-    return c;
-  });
-  return { format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: ((opts && opts.now) || new Date()).toISOString(),
-    includesAllocations: include, snapshots: snaps };
-}
-function exportSnapshotsText(list, opts){ return JSON.stringify(exportSnapshots(list, opts), null, 2); }
-
-// Strict import. Never trusts the file. Order: size, JSON parse, scan for prototype keys, then a structural check
-// that rebuilds every snapshot from whitelisted fields into fresh plain objects (nothing parsed is merged into
-// existing objects). Returns { ok: true, snapshots } or { ok: false, error } naming what was rejected.
-// Free text is kept as text; the page renders it with textContent, never as HTML.
-function importSnapshotsText(text, opts){
+// Reads what this page stored in local storage ({ snapshots: [...], draftKill }). Never trusts it. Order: size, JSON
+// parse, scan for prototype keys, then a structural check that rebuilds every snapshot from whitelisted fields into
+// fresh plain objects (nothing parsed is merged into existing objects). Returns { ok: true, snapshots } or
+// { ok: false, error } naming what was rejected. Free text is kept as text; the page renders it with textContent.
+function snapReadStoredText(text){
   const fail = (msg) => ({ ok: false, error: msg });
-  if (typeof text !== 'string') return fail('the file could not be read as text.');
-  if (snapByteLength(text) > SNAP_MAX_BYTES) return fail('the file is larger than 1 MB.');
+  if (typeof text !== 'string') return fail('the stored data could not be read as text.');
+  if (snapByteLength(text) > SNAP_MAX_BYTES) return fail('the stored data is larger than 1 MB.');
   let data;
-  try { data = JSON.parse(text); } catch (e) { return fail('the file is not valid JSON.'); }
+  try { data = JSON.parse(text); } catch (e) { return fail('the stored data is not valid JSON.'); }
   const bad = snapForbiddenKey(data, 0);
-  if (bad) return fail('the file contains a forbidden key "' + bad + '".');
-  try { return { ok: true, snapshots: snapCheckFile(data, opts || {}) }; }
-  catch (e) { return fail(e.message); }
+  if (bad) return fail('the stored data contains a forbidden key "' + bad + '".');
+  try {
+    if (!snapIsObj(data)) snapErr('Stored data', 'expected an object');
+    snapKeys(data, ['snapshots'], ['draftKill'], 'Stored data');
+    if (!Array.isArray(data.snapshots)) snapErr('Stored snapshots', 'expected a list');
+    if (data.snapshots.length > SNAP_MAX_COUNT) snapErr('Stored snapshots', 'more than ' + SNAP_MAX_COUNT + ' snapshots');
+    return { ok: true, snapshots: data.snapshots.map((x, i) => snapCheckOne(x, 'Snapshot ' + (i + 1))) };
+  } catch (e) { return fail(e.message); }
 }
 function snapByteLength(text){
   if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text).length;
@@ -1743,20 +1734,50 @@ function snapSchema(v, where){
   if (SNAP_SCHEMA_READABLE.indexOf(v) < 0) snapErr(where, 'schema version ' + String(v).slice(0, 20) + ' is not compatible (this page reads schema versions ' + SNAP_SCHEMA_READABLE.join(' and ') + ')');
   return v;
 }
-function snapCheckFile(data, opts){
-  if (!snapIsObj(data)) snapErr('File', 'expected an object');
-  if (data.format !== SNAP_FORMAT) snapErr('File', 'not a Load Bearing Simulator snapshot file');
-  snapSchema(data.schemaVersion, 'File');
-  snapKeys(data, ['format', 'schemaVersion', 'exportedAt', 'includesAllocations', 'snapshots'], [], 'File');
-  snapDate(data.exportedAt, 'File exportedAt');
-  if (typeof data.includesAllocations !== 'boolean') snapErr('File includesAllocations', 'expected true or false');
-  if (!Array.isArray(data.snapshots)) snapErr('File snapshots', 'expected a list');
-  const max = opts.maxCount || SNAP_MAX_COUNT;
-  if (data.snapshots.length > max) snapErr('File snapshots', 'more than ' + max + ' snapshots');
-  return data.snapshots.map((s, i) => snapCheckOne(s, 'Snapshot ' + (i + 1), data.includesAllocations));
+// Checks settings and layer inputs and returns fresh objects built from whitelisted fields only. Shared by stored
+// snapshots and links. o: { schema, caseId (null for your own five-layer scenario), alloc (allocations allowed),
+// names (layer names required; otherwise the default names are used) }.
+function snapCheckInputs(G, Ls, where, o){
+  const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id), res = { G: {}, layers: [] };
+  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], o.schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
+  SNAP_GLOBAL_KEYS.forEach(k => { res.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
+  res.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
+  res.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
+  res.G.tvMode = o.schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
+  res.G.tvGrowth = o.schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
+  snapGrowthGap(res.G, where + ' setting tvGrowth');
+  if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
+  const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
+  const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
+  if (p1 >= p2) snapErr(where + ' setting phases', 'phase 2 must start before phase 3');
+  res.G.phases = [p1, p2];
+  // Layers: your own scenario has the five default layers; a case snapshot has the case's 1 to 6 layers.
+  if (!Array.isArray(Ls) || Ls.length < 1 || Ls.length > SNAP_MAX_LAYERS) snapErr(where + ' layers', 'expected 1 to ' + SNAP_MAX_LAYERS + ' layers');
+  if (o.caseId === null && Ls.length !== defIds.length) snapErr(where + ' layers', 'expected ' + defIds.length + ' layers');
+  const ids = Ls.map((L, i) => {
+    if (!snapIsObj(L) || typeof L.id !== 'string' || !/^[a-z][a-z0-9-]{0,29}$/.test(L.id)) snapErr(where + ' layer ' + (i + 1), 'unexpected layer id');
+    if (o.caseId === null && L.id !== defIds[i]) snapErr(where + ' layer ' + (i + 1), 'expected layer id "' + defIds[i] + '"');
+    return L.id;
+  });
+  if (new Set(ids).size !== ids.length) snapErr(where + ' layers', 'duplicate layer id');
+  Ls.forEach((L, i) => {
+    const w = where + ' layer ' + (i + 1), x = { id: ids[i] };
+    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP'], o.names ? ['name'] : []), o.alloc ? ['alloc'] : [], w);
+    x.name = o.names ? snapStr(L.name, 40, w + ' name') : d.DEFAULT_LAYERS[i].name;
+    // Layer names are drawn into charts and tables, so markup characters are refused rather than trusted.
+    if (!x.name.trim() || /[<>&"]/.test(x.name)) snapErr(w + ' name', 'must not be empty or contain < > & or "');
+    SNAP_LAYER_NUM_KEYS.forEach(k => { x[k] = snapNum(L[k], d.LAYER_RANGES[k], w + ' ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
+    ['driftP', 'marginP'].forEach(k => {
+      if (!Array.isArray(L[k]) || L[k].length !== 3) snapErr(w + ' ' + k, 'expected three phase values');
+      x[k] = L[k].map(v => snapNum(v, d.LAYER_RANGES[k], w + ' ' + k));
+    });
+    if (o.alloc && Object.prototype.hasOwnProperty.call(L, 'alloc')) x.alloc = snapNum(L.alloc, d.LAYER_RANGES.alloc, w + ' alloc');
+    res.layers.push(x);
+  });
+  return res;
 }
 // Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
-function snapCheckOne(s, where, withAlloc){
+function snapCheckOne(s, where){
   const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
   const schema = snapSchema(s.schemaVersion, where);
@@ -1772,42 +1793,8 @@ function snapCheckOne(s, where, withAlloc){
   }
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
-  const G = s.inputs.G;
-  snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
-  SNAP_GLOBAL_KEYS.forEach(k => { out.inputs.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
-  out.inputs.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
-  out.inputs.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
-  out.inputs.G.tvMode = schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
-  out.inputs.G.tvGrowth = schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
-  snapGrowthGap(out.inputs.G, where + ' setting tvGrowth');
-  if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
-  const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
-  const p2 = snapNum(G.phases[1], d.PHASE_RANGES[1], where + ' setting phases', true);
-  if (p1 >= p2) snapErr(where + ' setting phases', 'phase 2 must start before phase 3');
-  out.inputs.G.phases = [p1, p2];
-  // Layers: your own scenario has the five default layers; a case snapshot has the case's 1 to 6 layers.
-  if (!Array.isArray(s.inputs.layers) || s.inputs.layers.length < 1 || s.inputs.layers.length > SNAP_MAX_LAYERS) snapErr(where + ' layers', 'expected 1 to ' + SNAP_MAX_LAYERS + ' layers');
-  if (out.caseId === null && s.inputs.layers.length !== defIds.length) snapErr(where + ' layers', 'expected ' + defIds.length + ' layers');
-  const ids = s.inputs.layers.map((L, i) => {
-    if (!snapIsObj(L) || typeof L.id !== 'string' || !/^[a-z][a-z0-9-]{0,29}$/.test(L.id)) snapErr(where + ' layer ' + (i + 1), 'unexpected layer id');
-    if (out.caseId === null && L.id !== defIds[i]) snapErr(where + ' layer ' + (i + 1), 'expected layer id "' + defIds[i] + '"');
-    return L.id;
-  });
-  if (new Set(ids).size !== ids.length) snapErr(where + ' layers', 'duplicate layer id');
-  s.inputs.layers.forEach((L, i) => {
-    const w = where + ' layer ' + (i + 1), o = { id: ids[i] };
-    snapKeys(L, ['id'].concat(SNAP_LAYER_NUM_KEYS, ['driftP', 'marginP'], schema >= 4 ? ['name'] : []), withAlloc ? ['alloc'] : [], w);
-    o.name = schema >= 4 ? snapStr(L.name, 40, w + ' name') : d.DEFAULT_LAYERS[i].name;
-    // Layer names are drawn into charts and tables, so markup characters are refused rather than trusted.
-    if (!o.name.trim() || /[<>&"]/.test(o.name)) snapErr(w + ' name', 'must not be empty or contain < > & or "');
-    SNAP_LAYER_NUM_KEYS.forEach(k => { o[k] = snapNum(L[k], d.LAYER_RANGES[k], w + ' ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
-    ['driftP', 'marginP'].forEach(k => {
-      if (!Array.isArray(L[k]) || L[k].length !== 3) snapErr(w + ' ' + k, 'expected three phase values');
-      o[k] = L[k].map(v => snapNum(v, d.LAYER_RANGES[k], w + ' ' + k));
-    });
-    if (Object.prototype.hasOwnProperty.call(L, 'alloc')) o.alloc = snapNum(L.alloc, d.LAYER_RANGES.alloc, w + ' alloc');
-    out.inputs.layers.push(o);
-  });
+  out.inputs = snapCheckInputs(s.inputs.G, s.inputs.layers, where, { schema, caseId: out.caseId, alloc: true, names: schema >= 4 });
+  const ids = out.inputs.layers.map(L => L.id);
   // Outputs (kept for comparison; recomputed when the model version differs)
   if (!Array.isArray(s.outputs) || s.outputs.length !== ids.length) snapErr(where + ' outputs', 'expected ' + ids.length + ' layers');
   s.outputs.forEach((o, i) => {
@@ -1941,8 +1928,7 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
   const d = snapDeps(), cur = currentModelVersion || d.MODEL_VERSION;
   let checked;
   try {
-    const wrapped = { format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: [snapshot] };
-    const r = importSnapshotsText(JSON.stringify(wrapped));
+    const r = snapReadStoredText(JSON.stringify({ snapshots: [snapshot] }));
     if (!r.ok) return { ok: false, error: r.error };
     checked = r.snapshots[0];
   } catch (e) { return { ok: false, error: 'the snapshot could not be read.' }; }
@@ -1964,6 +1950,108 @@ function snapPrepareLoad(snapshot, currentLayers, currentModelVersion){
     ? 'This snapshot was saved under model version ' + checked.modelVersion + '; this page uses version ' + cur + '. Its inputs will load, and results will recompute under the current model, so they may differ from the stored ones.'
     : '';
   return { ok: true, caseId: checked.caseId, state: { G, layers, draftKill }, warning, hasAllocations: checked.inputs.layers.every(L => typeof L.alloc === 'number') };
+}
+
+/* ---------- Links ---------- */
+// "Copy link" puts the current scenario in the URL hash as #s=<base64url JSON>. Settings and layer inputs only: never
+// allocations, snapshot names, notes or kill criteria. Anyone who has the link can read it.
+// Your own scenario: { v, m, g, l } with every input. A case: { v, m, c (case id), ver (version id), d } where d holds
+// only the inputs changed from that case version, keyed like the diff paths ("settings.disc", "layer hw.capex",
+// "layer hw.driftP[2]", "settings.phases[0]"). v is the link format version, m the model version.
+// Opening a link goes through the same strict checks as stored snapshots: size cap before decoding, base64url
+// charset, JSON parse, prototype-key rejection, whitelisted fields, shared ranges, fresh objects.
+const LINK_SCHEMA_VERSION = 1;
+const LINK_MAX_CHARS = 6000;
+const LINK_MAX_DIFFS = 200;
+const LINK_SETTING_STRINGS = { entryDef: ['A', 'B'], capexModel: ['sustaining', 'vintage'], tvMode: SNAP_TV_MODES };
+function linkB64Encode(text){
+  const bytes = new TextEncoder().encode(text);
+  let bin = ''; bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function linkB64Decode(s){
+  if (!/^[A-Za-z0-9_-]+$/.test(s)) snapErr('Link', 'unexpected characters');
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4));
+  const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+}
+// Builds the link text (without "#"). opts: { caseId, versionId, base: { G, layers } } for a case.
+function makeLinkText(G, layers, opts){
+  const o = opts || {}, d = snapDeps(), cur = snapInputs(G, layers);
+  const p = { v: LINK_SCHEMA_VERSION, m: d.MODEL_VERSION };
+  if (o.caseId) {
+    const a = snapFlatten(snapInputs(o.base.G, o.base.layers)), b = snapFlatten(cur), diff = {};
+    Object.keys(b).forEach(k => { if (!/\.alloc$/.test(k) && a[k] !== b[k]) diff[k] = b[k]; });
+    Object.assign(p, { c: o.caseId, ver: o.versionId || 'base', d: diff });
+  } else {
+    p.g = cur.G;
+    p.l = cur.layers.map(L => { const x = Object.assign({}, L); delete x.alloc; delete x.name; return x; });
+  }
+  return 's=' + linkB64Encode(JSON.stringify(p));
+}
+// Parses and checks a link (the hash, with or without "#"). Returns { ok: false, error } or { ok: true, kind: 'own',
+// state: { G, layers } } or { ok: true, kind: 'case', caseId, versionId, diffs }. A case link is checked again,
+// in full, by linkApplyCase once the case it names is known.
+function parseLinkText(text){
+  const fail = (msg) => ({ ok: false, error: msg });
+  try {
+    if (typeof text !== 'string') return fail('the link could not be read.');
+    const t = text.replace(/^#/, '');
+    if (t.slice(0, 2) !== 's=') return fail('this is not a scenario link.');
+    if (t.length > LINK_MAX_CHARS) return fail('the link is longer than ' + LINK_MAX_CHARS + ' characters.');
+    let p;
+    try { p = JSON.parse(linkB64Decode(t.slice(2))); } catch (e) { return fail('the link is damaged (it could not be decoded).'); }
+    const bad = snapForbiddenKey(p, 0);
+    if (bad) return fail('the link contains a forbidden key "' + bad + '".');
+    if (!snapIsObj(p)) return fail('the link is damaged (expected an object).');
+    const d = snapDeps();
+    if (p.v !== LINK_SCHEMA_VERSION) return fail('link format version ' + String(p.v).slice(0, 12) + ' is not supported (this page reads version ' + LINK_SCHEMA_VERSION + ').');
+    if (typeof p.m !== 'number' || Math.round(p.m) !== p.m || p.m < 1) return fail('the link has no valid model version.');
+    if (p.m > d.MODEL_VERSION) return fail('the link was made with model version ' + p.m + ', newer than this page (model version ' + d.MODEL_VERSION + '). Update the page first.');
+    if ('c' in p) {
+      snapKeys(p, ['v', 'm', 'c', 'ver', 'd'], [], 'Link');
+      const caseId = snapStr(p.c, 60, 'Link case');
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(caseId)) snapErr('Link case', 'unexpected case id');
+      const versionId = snapStr(p.ver, 30, 'Link version');
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(versionId)) snapErr('Link version', 'unexpected version id');
+      if (!snapIsObj(p.d)) snapErr('Link changes', 'expected an object');
+      const keys = Object.keys(p.d);
+      if (keys.length > LINK_MAX_DIFFS) snapErr('Link changes', 'more than ' + LINK_MAX_DIFFS + ' changes');
+      const nums = SNAP_GLOBAL_KEYS.concat(['tvGrowth']).join('|'), strs = Object.keys(LINK_SETTING_STRINGS).join('|'), lk = SNAP_LAYER_NUM_KEYS.join('|');
+      const re = new RegExp('^(settings\\.(' + nums + '|' + strs + '|phases\\[[01]\\])|layer [a-z][a-z0-9-]{0,29}\\.((' + lk + ')|(driftP|marginP)\\[[0-2]\\]))$');
+      const diffs = {};
+      keys.forEach(k => {
+        if (!re.test(k)) snapErr('Link changes', 'unknown input "' + k.slice(0, 60) + '"');
+        const m = /^settings\.(\w+)$/.exec(k), v = p.d[k];
+        if (m && LINK_SETTING_STRINGS[m[1]]) diffs[k] = snapOneOf(v, LINK_SETTING_STRINGS[m[1]], 'Link ' + k);
+        else diffs[k] = snapNum(v, null, 'Link ' + k);
+      });
+      return { ok: true, kind: 'case', caseId, versionId, diffs, modelVersion: p.m };
+    }
+    snapKeys(p, ['v', 'm', 'g', 'l'], [], 'Link');
+    const state = snapCheckInputs(p.g, p.l, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: null, alloc: false, names: false });
+    return { ok: true, kind: 'own', state, modelVersion: p.m };
+  } catch (e) { return fail(e.message); }
+}
+// Applies a case link's changes to fresh copies of the case version's inputs and checks the result in full.
+function linkApplyCase(parsed, base){
+  try {
+    const G = JSON.parse(JSON.stringify(base.G)), layers = base.layers.map(L => JSON.parse(JSON.stringify(L)));
+    Object.keys(parsed.diffs).forEach(k => {
+      const v = parsed.diffs[k];
+      let m = /^settings\.phases\[(\d)\]$/.exec(k);
+      if (m) { G.phases[+m[1]] = v; return; }
+      m = /^settings\.(\w+)$/.exec(k);
+      if (m) { G[m[1]] = v; return; }
+      m = /^layer ([a-z][a-z0-9-]*)\.(\w+)(?:\[(\d)\])?$/.exec(k);
+      const L = layers.find(x => x.id === m[1]);
+      if (!L) snapErr('Link changes', 'the case has no layer "' + m[1] + '"');
+      if (m[3] === undefined) L[m[2]] = v; else L[m[2]][+m[3]] = v;
+    });
+    const inputs = snapInputs(G, layers);
+    inputs.layers.forEach(L => { delete L.alloc; });
+    return { ok: true, state: snapCheckInputs(inputs.G, inputs.layers, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: parsed.caseId, alloc: false, names: true }) };
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 
@@ -2652,13 +2740,13 @@ function el(tag, props, kids){
 }
 function snapLoad(){
   let raw = null;
-  try{ raw = localStorage.getItem(SNAP_KEY); }catch(e){ $('snapErr').textContent = 'This browser blocks local storage, so snapshots cannot be kept here. Export them to keep a copy.'; return; }
+  try{ raw = localStorage.getItem(SNAP_KEY); }catch(e){ $('snapErr').textContent = 'This browser blocks local storage, so snapshots cannot be kept here.'; return; }
   if(!raw) return;
   try{
     const o = JSON.parse(raw);
-    // Stored data goes through the same strict check as an import (fresh objects, whitelisted fields only).
+    // Stored data goes through the strict check (fresh objects, whitelisted fields only).
     const list = o && Array.isArray(o.snapshots) ? o.snapshots.slice(0, SNAP_MAX_COUNT) : [];
-    const r = importSnapshotsText(JSON.stringify({ format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: list }));
+    const r = snapReadStoredText(JSON.stringify({ snapshots: list }));
     if(r.ok) snapStore.snapshots = r.snapshots; else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
     if(Array.isArray(o.draftKill) && o.draftKill.length === layers.length) snapStore.draftKill = o.draftKill.map((k,i) => snapCleanKill(k, i));
   }catch(e){ $('snapErr').textContent = 'Saved snapshots could not be read and were ignored.'; }
@@ -2902,30 +2990,61 @@ function snapLabel(path){
   if(m){ const L = layers.find(x => x.id===m[1]); return (L ? L.name : m[1]) + ': ' + m[2]; }
   return path.replace(/^settings\./, 'Setting: ');
 }
-function snapExport(){
-  const include = $('expAlloc').checked;
-  const text = exportSnapshotsText(snapStore.snapshots, { includeAllocations: include });
-  const blob = new Blob([text], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = el('a', { href: url, download: 'load-bearing-' + snapTodayLocal() + (include ? '-with-allocations' : '') + '.snapshot.json' });
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(e){} }, 1000);
-  $('snapErr').textContent = 'Exported ' + snapStore.snapshots.length + ' snapshot' + (snapStore.snapshots.length===1?'':'s') + (include ? ', including allocations.' : ', without allocations.');
+/* ---------- links ---------- */
+// "Copy link" puts the current settings in the address (#s=...), never allocations or notes, and copies the address.
+function copyLink(){
+  const text = caseCtx ? makeLinkText(G, layers, { caseId: caseCtx.c.id, versionId: caseCtx.versionId, base: caseCtx.st }) : makeLinkText(G, layers);
+  try{ history.replaceState(null, '', location.pathname + location.search + '#' + text); }catch(e){}
+  const url = location.href, out = $('linkOut');
+  out.value = url; out.hidden = false;
+  const done = () => { $('linkMsg').textContent = 'Link copied. Anyone who has it can read these settings; your allocations are not in it.'; };
+  const manual = () => { out.focus(); out.select(); $('linkMsg').textContent = 'The browser did not allow copying. The link is selected above: copy it yourself.'; };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, manual); else manual(); }catch(e){ manual(); }
 }
-function snapImportFile(file){
-  const err = $('snapErr');
-  if(!file) return;
-  if(file.size > SNAP_MAX_BYTES){ err.textContent = 'Import rejected: the file is larger than 1 MB.'; return Promise.resolve(); }
-  return file.text().then(text => {
-    const r = importSnapshotsText(text);
-    if(!r.ok){ err.textContent = 'Import rejected: ' + r.error; return; }
-    if(snapStore.snapshots.length + r.snapshots.length > SNAP_MAX_COUNT){ err.textContent = 'Import rejected: this browser holds at most ' + SNAP_MAX_COUNT + ' snapshots, and this file would take it to ' + (snapStore.snapshots.length + r.snapshots.length) + '.'; return; }
-    const before = snapStore.snapshots;
-    snapStore.snapshots = before.concat(r.snapshots);
-    if(!snapSaveStore()){ snapStore.snapshots = before; err.textContent = 'Import not kept: the browser refused to store more. Export and delete some snapshots, then try again.'; return; }
-    snapRenderList();
-    err.textContent = 'Imported ' + r.snapshots.length + ' snapshot' + (r.snapshots.length===1?'':'s') + '.';
-  }, () => { err.textContent = 'Import rejected: the file could not be read.'; });
+// The address keeps the view mode only, once a link has been read.
+function clearLinkHash(){ try{ history.replaceState(null, '', location.pathname + location.search + '#' + mode); }catch(e){} }
+function linkNotice(text){ const n = $('linkNotice'); n.textContent = text; n.hidden = !text; }
+// Opening a link: strict checks first; then ask (in-page) before replacing anything. Your allocations stay.
+function openLink(hash){
+  if(!/^#s=/.test(hash || '')) return;
+  const r = parseLinkText(hash);
+  const fail = (msg) => { linkNotice('This link could not be opened: ' + msg); clearLinkHash(); };
+  if(!r.ok) return fail(r.error);
+  linkNotice('');
+  if(r.kind === 'own'){
+    const st = r.state;
+    const same = !caseCtx && caseInputsOf(G, layers) === caseInputsOf(st.G, st.layers.map((L, i) => Object.assign({}, L, { name: layers[i].name })));
+    if(same){ clearLinkHash(); return; }
+    askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
+      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : ''),
+      onOk: () => {
+        snapUndo = snapPageState();
+        const mine = caseCtx ? caseCtx.mine : null;
+        if(caseCtx) setCaseContext(null);
+        const own = mine ? mine.layers : layers;
+        G = Object.assign(freshG(), st.G);
+        layers = st.layers.map((L, i) => Object.assign(copyLayer(L), { name: own[i].name, alloc: own[i].alloc }));
+        if(mine) restoreMineDraft(mine);
+        syncDriverInputs(); buildInputs(); update(); snapBuildKillTable();
+        $('snapUndo').hidden = false; $('snapMsg').textContent = 'Opened the link. Undo restores your previous settings.';
+      } });
+    clearLinkHash();
+    return;
+  }
+  const c = CASES.find(x => x.id === r.caseId);
+  if(!c) return fail('it is for the case “' + r.caseId + '”, which this page does not include.');
+  if(r.versionId !== 'base' && !c.versions.some(v => v.id === r.versionId)) return fail('the case “' + c.title + '” has no version “' + r.versionId + '”.');
+  const st = caseState(c, r.versionId), a = linkApplyCase(r, st);
+  if(!a.ok) return fail(a.error);
+  askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
+    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.',
+    onOk: () => {
+      openCase(c.id, r.versionId, { noConfirm: true });
+      G = Object.assign(freshG(), a.state.G);
+      layers = a.state.layers.map((L, i) => Object.assign(copyLayer(L), { alloc: layers[i].alloc }));
+      syncDriverInputs(); buildInputs(); update();
+    } });
+  clearLinkHash();
 }
 function snapInit(){
   snapLoad(); snapBuildKillTable(); snapRenderList();
@@ -2935,9 +3054,7 @@ function snapInit(){
   $('snapRespSkip').addEventListener('click', () => snapCommitSave(null));
   $('snapRespCancel').addEventListener('click', snapHideRespond);
   $('cmpGo').addEventListener('click', snapRenderCompare);
-  $('snapExport').addEventListener('click', snapExport);
-  $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });
-  $('snapImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; snapImportFile(f); e.target.value = ''; });
+  $('copyLink').addEventListener('click', copyLink);
 }
 /* ---------- view modes, KPI tiles, hidden state ---------- */
 // Modes only change what is shown (CSS hides elements tagged data-min above the current mode). Every input stays in
@@ -2999,7 +3116,7 @@ function resetHidden(){
 }
 function bindModes(){
   document.querySelectorAll('[data-mode-btn]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeBtn)));
-  window.addEventListener('hashchange', () => { const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
+  window.addEventListener('hashchange', () => { if(/^#s=/.test(location.hash)){ openLink(location.hash); return; } const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
   $('hiddenGo').addEventListener('click', () => setMode('analyst'));
   $('hiddenReset').addEventListener('click', resetHidden);
   bindTips(); bindBehind();
@@ -3346,9 +3463,11 @@ function bindCases(){
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
-  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
+  const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
+  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
+  if(linkHash) openLink(linkHash);
   let rz = null;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { adoptChart(); quadChart(runAll(G)); }, 80); });
 }

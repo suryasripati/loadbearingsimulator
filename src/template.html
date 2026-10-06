@@ -325,6 +325,7 @@ td .bchipwrap{margin-left:3px}
   <span class="casebtns"><button class="pill" type="button" id="caseWhat" aria-haspopup="dialog" aria-controls="whModal">What happened</button><button class="pill" type="button" id="caseSources" aria-haspopup="dialog" aria-controls="sourcesModal">Sources</button><button class="reset" type="button" id="caseReset">Reset to case</button><button class="reset" type="button" id="caseReturn">Return to my scenario</button></span>
 </div>
 
+<div class="notice slim" id="linkNotice" role="alert" hidden></div>
 <section class="kpis" id="kpis" aria-label="Key figures"></section>
 <div class="notice slim" id="hiddenState" hidden><span id="hiddenText"></span> <button id="hiddenGo" class="linkish">Switch to Analyst to see them</button> <button id="hiddenReset" class="reset">Reset to simple defaults</button></div>
 
@@ -486,11 +487,10 @@ td .bchipwrap{margin-left:3px}
           <label class="muted" for="cmpB" style="font-size:13px">After</label><select id="cmpB" class="txt sel"></select>
           <button id="cmpGo">Compare</button>
         </div>
-        <h3 style="margin-top:14px">Export and import</h3>
-        <label class="chk"><input type="checkbox" id="expAlloc"> Include my allocations in the export</label>
-        <p class="notice" id="expWarn" style="margin-top:6px">This page and its code repository are public. Allocations are your personal split and are left out of exports unless you tick the box. Keep any file that includes them private, and never commit snapshot files.</p>
-        <div class="seg"><button id="snapExport">Export snapshots (.json)</button>
-          <label class="btn" for="snapImport">Import snapshots</label><input type="file" id="snapImport" accept=".json,application/json" class="vh"></div>
+        <h3 style="margin-top:14px">Share as a link</h3>
+        <p class="notice slim" id="linkWarn" style="margin-top:6px">A link carries your current settings and layer inputs in the address. Anyone who has the link can read them. It never includes your allocations, snapshot names, notes or kill criteria. In a case, it carries the case and only the inputs you changed.</p>
+        <div class="seg" style="align-items:center"><button id="copyLink" type="button">Copy link</button><input type="text" id="linkOut" class="txt" readonly aria-label="Link to the current settings" hidden style="flex:1;min-width:200px"></div>
+        <p class="legend" id="linkMsg" role="status"></p>
         <p class="legend" id="snapErr" role="alert"></p>
       </div>
     </div>

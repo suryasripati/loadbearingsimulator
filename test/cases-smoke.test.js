@@ -305,3 +305,34 @@ test('the input guide labels follow the case money unit', () => {
   assert.match(doc.querySelector('#guideTable tr[data-key="capex"] td').textContent, /£m/);
   win.close();
 });
+
+test('case-mode link: carries the case, version and only the changed inputs; opening it opens the case with those changes', () => {
+  const S = require('../src/snapshots.js');
+  let { doc, win } = load({ hash: '#analyst' });
+  openCase(win, doc, 'synthetic-3-layer');
+  click(win, doc.querySelector('#caseVersions button[data-version="measured"]')); click(win, $(doc, 'confirmOk'));
+  setInput(win, $(doc, 'g_disc'), 12);
+  setInput(win, doc.querySelector('#scoreLite input[data-k="alloc"]'), 61);
+  Object.defineProperty(win.navigator, 'clipboard', { value: { writeText: () => Promise.resolve() }, configurable: true });
+  click(win, $(doc, 'copyLink'));
+  const hash = win.location.hash;
+  const p = JSON.parse(Buffer.from(hash.slice(3).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert.deepEqual([p.c, p.ver, p.d], ['synthetic-3-layer', 'measured', { 'settings.disc': 12 }]);
+  win.close();
+  ({ doc, win } = load({ hash }));
+  assert.equal($(doc, 'confirmModal').hidden, false);
+  assert.match($(doc, 'confirmText').textContent, /Open the case “Synthetic 3-layer case” \(as of 1845-06-30\) with the 1 change in this link\?/);
+  click(win, $(doc, 'confirmOk'));
+  assert.equal($(doc, 'caseBar').hidden, false);
+  assert.equal(doc.querySelector('#caseVersions button[data-version="measured"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(sliderVal(doc, 'g_disc'), 12);
+  assert.equal(sliderVal(doc, 'g_speed'), 12, 'the version value');
+  assert.equal($(doc, 'caseModified').hidden, false);
+  assert.ok(!/^#s=/.test(win.location.hash));
+  // An unknown version is refused with a plain message.
+  win.close();
+  const bad = '#s=' + S.linkB64Encode(JSON.stringify({ ...p, ver: 'nope' }));
+  ({ doc, win } = load({ hash: bad }));
+  assert.match($(doc, 'linkNotice').textContent, /has no version “nope”/);
+  win.close();
+});

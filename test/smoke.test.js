@@ -22,7 +22,7 @@ function load(opts = {}){
     errors.push(e.message);
   });
   // A URL gives the page a working localStorage; no network requests are made (external resources are not loaded).
-  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'http://localhost/', virtualConsole: vc, pretendToBeVisual: true,
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'http://localhost/' + (opts.hash || ''), virtualConsole: vc, pretendToBeVisual: true,
     beforeParse: (w) => { if (opts.storage) for (const k in opts.storage) w.localStorage.setItem(k, opts.storage[k]); if (opts.beforeParse) opts.beforeParse(w); } });
   return { dom, doc: dom.window.document, win: dom.window, errors };
 }
@@ -257,8 +257,8 @@ test('every input range on the page equals the range the snapshot import validat
   // The validator accepts each range's ends and rejects just beyond them.
   const S = require('../src/snapshots.js');
   const G = { ...D.DEFAULT_G, entryDef: 'A', capexModel: 'sustaining', phases: D.DEFAULT_PHASES.slice() };
-  const base = () => JSON.parse(S.exportSnapshotsText([S.makeSnapshot({ name: 'r', G, layers: D.DEFAULT_LAYERS.map(L => ({ ...L })) })], { includeAllocations: true }));
-  const tryVal = (set) => { const f = base(); set(f.snapshots[0]); return S.importSnapshotsText(JSON.stringify(f)).ok; };
+  const base = () => JSON.parse(JSON.stringify({ snapshots: [S.makeSnapshot({ name: 'r', G, layers: D.DEFAULT_LAYERS.map(L => ({ ...L })) })] }));
+  const tryVal = (set) => { const f = base(); set(f.snapshots[0]); return S.snapReadStoredText(JSON.stringify(f)).ok; };
   for (const k in D.LAYER_RANGES) {
     const [lo, hi] = D.LAYER_RANGES[k];
     const put = (v) => (s) => { const L = s.inputs.layers[0]; if (Array.isArray(L[k])) L[k][0] = v; else L[k] = v; };
@@ -289,7 +289,7 @@ test('every input range on the page equals the range the snapshot import validat
 test('build inlines every source file in order and strips their export lines', () => {
   const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
   assert.ok(!/module\.exports/.test(html), 'no export lines in the page');
-  const order = ['function runLayer(', 'const DEFAULT_LAYERS', 'function importSnapshotsText(', 'function snapInit('].map(m => html.indexOf(m));
+  const order = ['function runLayer(', 'const DEFAULT_LAYERS', 'function snapReadStoredText(', 'function snapInit('].map(m => html.indexOf(m));
   order.forEach((i, k) => assert.ok(i > 0, 'marker ' + k + ' present'));
   assert.deepEqual(order.slice().sort((a, b) => a - b), order, 'model, then defaults, then snapshots, then UI');
   for (const f of ['src/model.js', 'src/defaults.js', 'src/guide.js', 'src/cases.js', 'src/modes.js', 'src/snapshots.js']) {
@@ -328,13 +328,6 @@ test('existing saved settings still load (v3, v2 and v1 keys)', () => {
 
 /* ---------- Snapshots UI ---------- */
 function setVal(win, el, v, ev = 'input'){ el.value = v; el.dispatchEvent(new win.Event(ev, { bubbles: true })); }
-function stubDownloads(win){
-  const blobs = [];
-  win.URL.createObjectURL = (b) => { blobs.push(b); return 'blob:test/' + blobs.length; };
-  win.URL.revokeObjectURL = () => {};
-  win.HTMLAnchorElement.prototype.click = function(){};
-  return blobs;
-}
 function snapStored(win){ return JSON.parse(win.localStorage.getItem('load-bearing-snapshots-v1') || '{"snapshots":[]}'); }
 
 test('snapshots: save, list, review, compare, delete', () => {
@@ -389,45 +382,28 @@ test('snapshots: save, list, review, compare, delete', () => {
   win.close();
 });
 
-test('snapshots: export leaves allocations out unless ticked; import is strict and shows what was rejected', async () => {
-  const { doc, win, errors } = load();
-  const blobs = stubDownloads(win);
-  setVal(win, doc.getElementById('snapName'), 'For export');
-  click(win, doc.getElementById('snapSave'));
-  assert.ok(/public/.test(doc.getElementById('expWarn').textContent), 'public-repo warning is visible');
-  click(win, doc.getElementById('snapExport'));
-  const plain = JSON.parse(await blobs[0].text());
-  assert.equal(plain.includesAllocations, false);
-  assert.ok(plain.snapshots[0].inputs.layers.every(L => !('alloc' in L)));
-  doc.getElementById('expAlloc').checked = true;
-  doc.getElementById('expAlloc').dispatchEvent(new win.Event('change', { bubbles: true }));
-  click(win, doc.getElementById('snapExport'));
-  const withAlloc = JSON.parse(await blobs[1].text());
-  assert.equal(withAlloc.includesAllocations, true);
-  assert.equal(withAlloc.snapshots[0].inputs.layers[0].alloc, D.DEFAULT_LAYERS[0].alloc);
-  // Import through the file input: a good file adds snapshots; a bad one is rejected with a reason.
-  const input = doc.getElementById('snapImport');
-  const send = async (text) => {
-    const file = new win.File([text], 'x.snapshot.json', { type: 'application/json' });
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    input.dispatchEvent(new win.Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 30));
-  };
-  plain.snapshots[0].name = 'Imported <script>window.__y=1</script>';
-  await send(JSON.stringify(plain));
-  assert.ok(/Imported 1 snapshot/.test(doc.getElementById('snapErr').textContent), doc.getElementById('snapErr').textContent);
+test('snapshots: no file import or export remains; stored snapshot names render as plain text', () => {
+  const S = require('../src/snapshots.js');
+  const G = { ...D.DEFAULT_G, entryDef: 'A', capexModel: 'sustaining', tvMode: 'multiple', phases: D.DEFAULT_PHASES.slice() };
+  const snapA = S.makeSnapshot({ name: 'Stored <script>window.__y=1</script>', G, layers: D.DEFAULT_LAYERS.map(L => ({ ...L })) });
+  const { doc, win, errors } = load({ storage: { 'load-bearing-snapshots-v1': JSON.stringify({ snapshots: [snapA] }) } });
+  for (const id of ['snapExport', 'snapImport', 'expAlloc', 'expWarn']) assert.equal(doc.getElementById(id), null, id + ' is gone');
+  assert.equal(doc.querySelectorAll('input[type="file"]').length, 0);
+  assert.ok(![...doc.querySelectorAll('button, label')].some(b => /export|import/i.test(b.textContent)), 'no export or import controls');
+  for (const f of ['exportSnapshots', 'exportSnapshotsText', 'importSnapshotsText']) assert.equal(S[f], undefined, f + ' removed');
+  assert.ok(!/function (exportSnapshots|importSnapshotsText|snapImportFile|snapExport)\(/.test(html));
   const rows = doc.querySelectorAll('#snapList tbody tr');
-  assert.equal(rows.length, 2);
-  assert.equal(rows[1].cells[0].textContent, 'Imported <script>window.__y=1</script>');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].cells[0].textContent, 'Stored <script>window.__y=1</script>');
   assert.equal(win.__y, undefined);
-  const bad = JSON.parse(JSON.stringify(plain)); bad.snapshots[0].inputs.G.disc = 99;
-  await send(JSON.stringify(bad));
-  assert.ok(/Import rejected: Snapshot 1 setting disc: value 99 is outside 5 to 20/.test(doc.getElementById('snapErr').textContent), doc.getElementById('snapErr').textContent);
-  await send('{"__proto__": {"polluted": 1}}');
-  assert.ok(/forbidden key "__proto__"/.test(doc.getElementById('snapErr').textContent));
-  assert.equal(doc.querySelectorAll('#snapList tbody tr').length, 2, 'rejected files add nothing');
   assert.deepEqual(errors, []);
   win.close();
+  // Stored data that fails the strict check is ignored with a reason, never half-loaded.
+  const bad = JSON.parse(JSON.stringify(snapA)); bad.inputs.G.disc = 99;
+  const b = load({ storage: { 'load-bearing-snapshots-v1': JSON.stringify({ snapshots: [bad] }) } });
+  assert.match(b.doc.getElementById('snapErr').textContent, /Saved snapshots could not be read and were ignored: Snapshot 1 setting disc: value 99 is outside 5 to 20/);
+  assert.equal(b.doc.querySelectorAll('#snapList tbody tr td').length, 1, 'only the "No snapshots yet" row');
+  b.win.close();
 });
 
 test('snapshots: the browser holds at most 50, with a clear message', () => {

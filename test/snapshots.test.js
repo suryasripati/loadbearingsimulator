@@ -8,9 +8,10 @@ const baseG = () => ({ ...D.DEFAULT_G, entryDef: D.DEFAULT_DEF, capexModel: D.DE
 const baseLayers = () => D.DEFAULT_LAYERS.map(L => ({ ...L, driftP: L.driftP.slice(), marginP: L.marginP.slice() }));
 const NOW = new Date('2026-10-05T12:00:00.000Z');
 const snap = (over = {}) => S.makeSnapshot({ name: 'Base view', note: 'First pass', G: baseG(), layers: baseLayers(), now: NOW, ...over });
-const fileOf = (list, opts) => S.exportSnapshotsText(list, { now: NOW, ...opts });
+// What the page keeps in local storage (allocations included; they never leave the browser).
+const fileOf = (list) => JSON.stringify({ snapshots: JSON.parse(JSON.stringify(list)) }, null, 2);
 const reject = (text, pattern) => {
-  const r = S.importSnapshotsText(text);
+  const r = S.snapReadStoredText(text);
   assert.equal(r.ok, false, 'expected rejection');
   assert.match(r.error, pattern);
 };
@@ -32,28 +33,14 @@ test('snapshot holds the model version, all inputs and per-layer outputs equal t
 
 test('serialise and deserialise round trip (with allocations ticked)', () => {
   const s = snap({ kill: S.snapBlankKill().map((k, i) => ({ ...k, text: 'Revise if utilisation stays low', metric: 'utilisation', direction: 'below', threshold: 0.6, reviewBy: '2027-03-31', status: i ? '' : 'unknown' })) });
-  const r = S.importSnapshotsText(fileOf([s], { includeAllocations: true }));
+  const r = S.snapReadStoredText(fileOf([s], { includeAllocations: true }));
   assert.equal(r.ok, true, r.error);
   assert.deepEqual(r.snapshots, [JSON.parse(JSON.stringify(s))]);
 });
 
-test('export excludes allocations by default and includes them only when ticked', () => {
-  const off = JSON.parse(fileOf([snap()]));
-  assert.equal(off.includesAllocations, false);
-  off.snapshots[0].inputs.layers.forEach(L => assert.ok(!('alloc' in L)));
-  assert.ok(!/"alloc"/.test(fileOf([snap()])));
-  const on = JSON.parse(fileOf([snap()], { includeAllocations: true }));
-  assert.equal(on.includesAllocations, true);
-  on.snapshots[0].inputs.layers.forEach((L, i) => assert.equal(L.alloc, D.DEFAULT_LAYERS[i].alloc));
-  // The stored list is not modified by exporting.
-  const s = snap(); S.exportSnapshots([s]); assert.equal(s.inputs.layers[0].alloc, D.DEFAULT_LAYERS[0].alloc);
-});
-
-test('import checks schema version (file and snapshot) and model version, and says which is incompatible', () => {
-  reject(mutate(f => { f.schemaVersion = 6; }), /File: schema version 6 is not compatible \(this page reads schema versions 1 and 2 and 3 and 4 and 5\)/);
+test('stored snapshots: schema version and model version are checked, and the message says which is incompatible, and says which is incompatible', () => {
   reject(mutate(f => { f.snapshots[0].schemaVersion = 9; }), /Snapshot 1: schema version 9 is not compatible/);
   reject(mutate(f => { f.snapshots[0].modelVersion = M.MODEL_VERSION + 1; }), new RegExp('Snapshot 1: model version ' + (M.MODEL_VERSION + 1) + ' is not compatible: it is newer than this page'));
-  reject(mutate(f => { f.format = 'something-else'; }), /not a Load Bearing Simulator snapshot file/);
   assert.equal(snap().schemaVersion, S.SNAP_SCHEMA_VERSION);
 });
 
@@ -72,11 +59,9 @@ test('import rejects out-of-range values', () => {
 });
 
 test('import rejects unknown fields, including prototype keys', () => {
-  reject(mutate(f => { f.extra = 1; }), /File: unknown field "extra"/);
+  reject(mutate(f => { f.extra = 1; }), /Stored data: unknown field "extra"/);
   reject(mutate(f => { f.snapshots[0].inputs.layers[0].secret = 1; }), /layer 1: unknown field "secret"/);
   reject(mutate(f => { f.snapshots[0].kill[0].extra = 'x'; }), /kill criteria 1: unknown field "extra"/);
-  // Allocations are an unknown field in a file that says it has none.
-  reject(mutate(f => { f.snapshots[0].inputs.layers[0].alloc = 5; }), /layer 1: unknown field "alloc"/);
 });
 
 test('import rejects files over 1 MB', () => {
@@ -86,7 +71,7 @@ test('import rejects files over 1 MB', () => {
 
 test('import keeps HTML in notes as plain text (it is rendered with textContent, never as HTML)', () => {
   const html = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
-  const r = S.importSnapshotsText(mutate(f => { f.snapshots[0].note = html; f.snapshots[0].kill[0].text = html; }));
+  const r = S.snapReadStoredText(mutate(f => { f.snapshots[0].note = html; f.snapshots[0].kill[0].text = html; }));
   assert.equal(r.ok, true, r.error);
   assert.equal(r.snapshots[0].note, html);
   assert.equal(r.snapshots[0].kill[0].text, html);
@@ -102,7 +87,7 @@ test('diff lists exactly the changed inputs', () => {
   assert.deepEqual(diff.find(d => d.path === 'settings.disc'), { path: 'settings.disc', before: 10, after: 12 });
   assert.deepEqual(S.diffInputs(a.inputs, a.inputs), []);
   // Allocations are only compared when both sides hold them.
-  const noAlloc = S.importSnapshotsText(fileOf([b])).snapshots[0];
+  const noAlloc = JSON.parse(JSON.stringify(b)); noAlloc.inputs.layers.forEach(L => { delete L.alloc; });
   assert.ok(!S.diffInputs(a.inputs, noAlloc.inputs).some(d => /alloc/.test(d.path)));
 });
 
@@ -180,12 +165,12 @@ test('criterion states: time zones use local calendar dates for both today and t
   }
 });
 
-test('schema 1 files (no answer date, no response) still import, with a blank answer date and no response', () => {
+test('schema 1 snapshots (no answer date, no response) still import, with a blank answer date and no response', () => {
   const f = JSON.parse(fileOf([snap()]));
-  f.schemaVersion = 1; f.snapshots[0].schemaVersion = 1;
+  f.snapshots[0].schemaVersion = 1;
   f.snapshots[0].kill.forEach(k => { delete k.answeredAt; });
   delete f.snapshots[0].response; delete f.snapshots[0].caseId; delete f.snapshots[0].inputs.G.tvMode; delete f.snapshots[0].inputs.G.tvGrowth; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
-  const r = S.importSnapshotsText(JSON.stringify(f));
+  const r = S.snapReadStoredText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.ok(r.snapshots[0].kill.every(k => k.answeredAt === ''));
   assert.equal(r.snapshots[0].response, null);
@@ -212,7 +197,7 @@ test('load into simulator: loading then saving reproduces the inputs', () => {
 });
 
 test('load into simulator: allocations are restored only if the snapshot has them', () => {
-  const s = S.importSnapshotsText(fileOf([snap()])).snapshots[0]; // exported without allocations
+  const s = JSON.parse(JSON.stringify(snap())); s.inputs.layers.forEach(L => { delete L.alloc; }); // a snapshot without allocations
   const current = baseLayers().map((L, i) => ({ ...L, alloc: 70 + i }));
   const plan = S.snapPrepareLoad(s, current);
   assert.equal(plan.ok, true, plan.error);
@@ -272,7 +257,7 @@ test('import hardening: checks size before parsing', () => {
 test('import hardening: returns fresh plain objects with whitelisted fields only, never the parsed objects', () => {
   const text = fileOf([snap()], { includeAllocations: true });
   const parsed = JSON.parse(text);
-  const r = S.importSnapshotsText(text);
+  const r = S.snapReadStoredText(text);
   assert.equal(r.ok, true, r.error);
   const s0 = r.snapshots[0];
   const walk = (v) => { if (v && typeof v === 'object') { if (!Array.isArray(v)) assert.equal(Object.getPrototypeOf(v), Object.prototype); Object.values(v).forEach(walk); } };
@@ -281,7 +266,7 @@ test('import hardening: returns fresh plain objects with whitelisted fields only
   assert.deepEqual(Object.keys(s0).sort(), ['caseId', 'created', 'inputs', 'kill', 'modelVersion', 'name', 'note', 'outputs', 'response', 'schemaVersion']);
   assert.deepEqual(Object.keys(s0.inputs.layers[0]).sort(), ['alloc', 'buildStart', 'buildYears', 'capex', 'debt', 'driftP', 'evidence', 'id', 'life', 'marginP', 'name', 'offset', 'passThrough', 'share', 'steepness', 'unitCostDecline']);
   // Importing twice gives independent objects (nothing is merged or shared).
-  const r2 = S.importSnapshotsText(text);
+  const r2 = S.snapReadStoredText(text);
   r2.snapshots[0].inputs.layers[0].share = 99;
   assert.notEqual(r.snapshots[0].inputs.layers[0].share, 99);
 });
@@ -289,7 +274,7 @@ test('import hardening: returns fresh plain objects with whitelisted fields only
 test('import caps the number of snapshots per file', () => {
   const many = Array.from({ length: S.SNAP_MAX_COUNT + 1 }, () => snap());
   reject(fileOf(many), new RegExp('more than ' + S.SNAP_MAX_COUNT + ' snapshots'));
-  assert.equal(S.importSnapshotsText(fileOf(many.slice(0, S.SNAP_MAX_COUNT))).ok, true);
+  assert.equal(S.snapReadStoredText(fileOf(many.slice(0, S.SNAP_MAX_COUNT))).ok, true);
 });
 
 test('dates: created is ISO UTC; overdue compares local calendar dates, so a late-evening save cannot flip the badge', () => {
@@ -328,7 +313,7 @@ test('trigger response: "revised" lists exactly the changed inputs (never alloca
   assert.equal(kept.reason, 'Evidence not strong enough');
   // Round trip through export and strict import.
   const later = snap({ name: 'Later', now: new Date('2026-10-06T12:00:00.000Z'), response: rev });
-  const r = S.importSnapshotsText(fileOf([from, later]));
+  const r = S.snapReadStoredText(fileOf([from, later]));
   assert.equal(r.ok, true, r.error);
   assert.deepEqual(r.snapshots[1].response, JSON.parse(JSON.stringify(rev)));
   assert.equal(r.snapshots[0].response, null);
@@ -337,7 +322,7 @@ test('trigger response: "revised" lists exactly the changed inputs (never alloca
 test('trigger response: strict import rejects bad responses', () => {
   const rev = { kind: 'revised', reason: '', triggers: [{ name: 'A', created: '2026-10-05T12:00:00.000Z', layerId: 'dc' }], changedInputs: [{ path: 'settings.disc', before: 10, after: 12 }] };
   const withResp = (r) => fileOf([snap({ response: r })]);
-  assert.equal(S.importSnapshotsText(withResp(rev)).ok, true);
+  assert.equal(S.snapReadStoredText(withResp(rev)).ok, true);
   reject(withResp({ ...rev, kind: 'kept', changedInputs: [] }), /"kept my view" needs a reason/);
   reject(withResp({ ...rev, kind: 'kept', reason: 'x' }), /"kept my view" cannot list changed inputs/);
   reject(withResp({ ...rev, kind: 'ignored' }), /response kind: unexpected value/);
@@ -348,16 +333,16 @@ test('trigger response: strict import rejects bad responses', () => {
   reject(mutate(f => { f.snapshots[0].response = { ...rev, extra: 1 }; }), /response: unknown field "extra"/);
 });
 
-test('trigger response: schema 2 files migrate with no response', () => {
+test('trigger response: schema 2 snapshots migrate with no response', () => {
   const f = JSON.parse(fileOf([snap()]));
-  f.schemaVersion = 2; f.snapshots[0].schemaVersion = 2; delete f.snapshots[0].response;
+  f.snapshots[0].schemaVersion = 2; delete f.snapshots[0].response;
   delete f.snapshots[0].caseId; delete f.snapshots[0].inputs.G.tvMode; delete f.snapshots[0].inputs.G.tvGrowth; f.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
-  const r = S.importSnapshotsText(JSON.stringify(f));
+  const r = S.snapReadStoredText(JSON.stringify(f));
   assert.equal(r.ok, true, r.error);
   assert.equal(r.snapshots[0].response, null);
   assert.equal(r.snapshots[0].schemaVersion, S.SNAP_SCHEMA_VERSION);
   // A schema 2 file must not carry a response field.
-  const g = JSON.parse(fileOf([snap()])); g.schemaVersion = 2; g.snapshots[0].schemaVersion = 2;
+  const g = JSON.parse(fileOf([snap()])); g.snapshots[0].schemaVersion = 2;
   delete g.snapshots[0].caseId; delete g.snapshots[0].inputs.G.tvMode; delete g.snapshots[0].inputs.G.tvGrowth; g.snapshots[0].inputs.layers.forEach(L => { delete L.name; });
   reject(JSON.stringify(g), /unknown field "response"/);
 });
@@ -373,7 +358,7 @@ test('schema 4: a case snapshot records the case id and its own layers (1, 3 or 
     assert.equal(s.caseId, c.id);
     assert.equal(s.inputs.layers.length, n); assert.equal(s.kill.length, n); assert.equal(s.outputs.length, n);
     assert.deepEqual(s.inputs.layers.map(L => L.name), c.layers.map(L => L.name));
-    const r = S.importSnapshotsText(fileOf([s], { includeAllocations: true }));
+    const r = S.snapReadStoredText(fileOf([s], { includeAllocations: true }));
     assert.equal(r.ok, true, r.error);
     assert.deepEqual(r.snapshots[0], JSON.parse(JSON.stringify(s)));
   }
@@ -404,7 +389,7 @@ test('schema 4: views of different stacks cannot be compared; loading a case sna
 test('schema 5: terminal-value mode and growth are saved and checked; older schemas load as "multiple" with growth 0', () => {
   const s = snap({ G: { ...baseG(), tvMode: 'perpetuity', tvGrowth: 2 } });
   assert.deepEqual([s.inputs.G.tvMode, s.inputs.G.tvGrowth], ['perpetuity', 2]);
-  const r = S.importSnapshotsText(fileOf([s]));
+  const r = S.snapReadStoredText(fileOf([s]));
   assert.equal(r.ok, true, r.error);
   assert.deepEqual([r.snapshots[0].inputs.G.tvMode, r.snapshots[0].inputs.G.tvGrowth], ['perpetuity', 2]);
   assert.equal(snap().inputs.G.tvMode, 'multiple', 'inputs without a mode are "multiple"');

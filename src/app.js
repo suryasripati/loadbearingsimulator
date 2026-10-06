@@ -683,13 +683,13 @@ function el(tag, props, kids){
 }
 function snapLoad(){
   let raw = null;
-  try{ raw = localStorage.getItem(SNAP_KEY); }catch(e){ $('snapErr').textContent = 'This browser blocks local storage, so snapshots cannot be kept here. Export them to keep a copy.'; return; }
+  try{ raw = localStorage.getItem(SNAP_KEY); }catch(e){ $('snapErr').textContent = 'This browser blocks local storage, so snapshots cannot be kept here.'; return; }
   if(!raw) return;
   try{
     const o = JSON.parse(raw);
-    // Stored data goes through the same strict check as an import (fresh objects, whitelisted fields only).
+    // Stored data goes through the strict check (fresh objects, whitelisted fields only).
     const list = o && Array.isArray(o.snapshots) ? o.snapshots.slice(0, SNAP_MAX_COUNT) : [];
-    const r = importSnapshotsText(JSON.stringify({ format: SNAP_FORMAT, schemaVersion: SNAP_SCHEMA_VERSION, exportedAt: new Date().toISOString(), includesAllocations: true, snapshots: list }));
+    const r = snapReadStoredText(JSON.stringify({ snapshots: list }));
     if(r.ok) snapStore.snapshots = r.snapshots; else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
     if(Array.isArray(o.draftKill) && o.draftKill.length === layers.length) snapStore.draftKill = o.draftKill.map((k,i) => snapCleanKill(k, i));
   }catch(e){ $('snapErr').textContent = 'Saved snapshots could not be read and were ignored.'; }
@@ -933,30 +933,61 @@ function snapLabel(path){
   if(m){ const L = layers.find(x => x.id===m[1]); return (L ? L.name : m[1]) + ': ' + m[2]; }
   return path.replace(/^settings\./, 'Setting: ');
 }
-function snapExport(){
-  const include = $('expAlloc').checked;
-  const text = exportSnapshotsText(snapStore.snapshots, { includeAllocations: include });
-  const blob = new Blob([text], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = el('a', { href: url, download: 'load-bearing-' + snapTodayLocal() + (include ? '-with-allocations' : '') + '.snapshot.json' });
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(e){} }, 1000);
-  $('snapErr').textContent = 'Exported ' + snapStore.snapshots.length + ' snapshot' + (snapStore.snapshots.length===1?'':'s') + (include ? ', including allocations.' : ', without allocations.');
+/* ---------- links ---------- */
+// "Copy link" puts the current settings in the address (#s=...), never allocations or notes, and copies the address.
+function copyLink(){
+  const text = caseCtx ? makeLinkText(G, layers, { caseId: caseCtx.c.id, versionId: caseCtx.versionId, base: caseCtx.st }) : makeLinkText(G, layers);
+  try{ history.replaceState(null, '', location.pathname + location.search + '#' + text); }catch(e){}
+  const url = location.href, out = $('linkOut');
+  out.value = url; out.hidden = false;
+  const done = () => { $('linkMsg').textContent = 'Link copied. Anyone who has it can read these settings; your allocations are not in it.'; };
+  const manual = () => { out.focus(); out.select(); $('linkMsg').textContent = 'The browser did not allow copying. The link is selected above: copy it yourself.'; };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, manual); else manual(); }catch(e){ manual(); }
 }
-function snapImportFile(file){
-  const err = $('snapErr');
-  if(!file) return;
-  if(file.size > SNAP_MAX_BYTES){ err.textContent = 'Import rejected: the file is larger than 1 MB.'; return Promise.resolve(); }
-  return file.text().then(text => {
-    const r = importSnapshotsText(text);
-    if(!r.ok){ err.textContent = 'Import rejected: ' + r.error; return; }
-    if(snapStore.snapshots.length + r.snapshots.length > SNAP_MAX_COUNT){ err.textContent = 'Import rejected: this browser holds at most ' + SNAP_MAX_COUNT + ' snapshots, and this file would take it to ' + (snapStore.snapshots.length + r.snapshots.length) + '.'; return; }
-    const before = snapStore.snapshots;
-    snapStore.snapshots = before.concat(r.snapshots);
-    if(!snapSaveStore()){ snapStore.snapshots = before; err.textContent = 'Import not kept: the browser refused to store more. Export and delete some snapshots, then try again.'; return; }
-    snapRenderList();
-    err.textContent = 'Imported ' + r.snapshots.length + ' snapshot' + (r.snapshots.length===1?'':'s') + '.';
-  }, () => { err.textContent = 'Import rejected: the file could not be read.'; });
+// The address keeps the view mode only, once a link has been read.
+function clearLinkHash(){ try{ history.replaceState(null, '', location.pathname + location.search + '#' + mode); }catch(e){} }
+function linkNotice(text){ const n = $('linkNotice'); n.textContent = text; n.hidden = !text; }
+// Opening a link: strict checks first; then ask (in-page) before replacing anything. Your allocations stay.
+function openLink(hash){
+  if(!/^#s=/.test(hash || '')) return;
+  const r = parseLinkText(hash);
+  const fail = (msg) => { linkNotice('This link could not be opened: ' + msg); clearLinkHash(); };
+  if(!r.ok) return fail(r.error);
+  linkNotice('');
+  if(r.kind === 'own'){
+    const st = r.state;
+    const same = !caseCtx && caseInputsOf(G, layers) === caseInputsOf(st.G, st.layers.map((L, i) => Object.assign({}, L, { name: layers[i].name })));
+    if(same){ clearLinkHash(); return; }
+    askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
+      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : ''),
+      onOk: () => {
+        snapUndo = snapPageState();
+        const mine = caseCtx ? caseCtx.mine : null;
+        if(caseCtx) setCaseContext(null);
+        const own = mine ? mine.layers : layers;
+        G = Object.assign(freshG(), st.G);
+        layers = st.layers.map((L, i) => Object.assign(copyLayer(L), { name: own[i].name, alloc: own[i].alloc }));
+        if(mine) restoreMineDraft(mine);
+        syncDriverInputs(); buildInputs(); update(); snapBuildKillTable();
+        $('snapUndo').hidden = false; $('snapMsg').textContent = 'Opened the link. Undo restores your previous settings.';
+      } });
+    clearLinkHash();
+    return;
+  }
+  const c = CASES.find(x => x.id === r.caseId);
+  if(!c) return fail('it is for the case “' + r.caseId + '”, which this page does not include.');
+  if(r.versionId !== 'base' && !c.versions.some(v => v.id === r.versionId)) return fail('the case “' + c.title + '” has no version “' + r.versionId + '”.');
+  const st = caseState(c, r.versionId), a = linkApplyCase(r, st);
+  if(!a.ok) return fail(a.error);
+  askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
+    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.',
+    onOk: () => {
+      openCase(c.id, r.versionId, { noConfirm: true });
+      G = Object.assign(freshG(), a.state.G);
+      layers = a.state.layers.map((L, i) => Object.assign(copyLayer(L), { alloc: layers[i].alloc }));
+      syncDriverInputs(); buildInputs(); update();
+    } });
+  clearLinkHash();
 }
 function snapInit(){
   snapLoad(); snapBuildKillTable(); snapRenderList();
@@ -966,9 +997,7 @@ function snapInit(){
   $('snapRespSkip').addEventListener('click', () => snapCommitSave(null));
   $('snapRespCancel').addEventListener('click', snapHideRespond);
   $('cmpGo').addEventListener('click', snapRenderCompare);
-  $('snapExport').addEventListener('click', snapExport);
-  $('expAlloc').addEventListener('change', () => { $('expWarn').classList.toggle('strong', $('expAlloc').checked); });
-  $('snapImport').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; snapImportFile(f); e.target.value = ''; });
+  $('copyLink').addEventListener('click', copyLink);
 }
 /* ---------- view modes, KPI tiles, hidden state ---------- */
 // Modes only change what is shown (CSS hides elements tagged data-min above the current mode). Every input stays in
@@ -1030,7 +1059,7 @@ function resetHidden(){
 }
 function bindModes(){
   document.querySelectorAll('[data-mode-btn]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeBtn)));
-  window.addEventListener('hashchange', () => { const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
+  window.addEventListener('hashchange', () => { if(/^#s=/.test(location.hash)){ openLink(location.hash); return; } const m = modeFromHash(location.hash); if(m && m !== mode) setMode(m, { noHash: true }); });
   $('hiddenGo').addEventListener('click', () => setMode('analyst'));
   $('hiddenReset').addEventListener('click', resetHidden);
   bindTips(); bindBehind();
@@ -1377,9 +1406,11 @@ function bindCases(){
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
-  setMode(initialMode(), { noStore: false }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
+  const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
+  setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
+  if(linkHash) openLink(linkHash);
   let rz = null;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { adoptChart(); quadChart(runAll(G)); }, 80); });
 }
