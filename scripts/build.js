@@ -50,7 +50,7 @@ function build(options){
   const casesJs = '// Case library, bundled at build time' + (opts.dev ? ' (DEV BUILD: includes synthetic fixtures, never published)' : '') + '.\n'
     + 'const CASES = ' + JSON.stringify(cases).replace(/</g, '\\u003c') + ';\n';
   const app = [strip(read('src/defaults.js')), strip(read('src/guide.js')), strip(read('src/cases.js')), casesJs,
-    strip(read('src/modes.js')), strip(read('src/snapshots.js')), read('src/app.js')].join('\n');
+    strip(read('src/modes.js')), strip(read('src/solve.js')), strip(read('src/snapshots.js')), read('src/app.js')].join('\n');
   const out = template.replace('/*MODEL*/', () => model).replace('/*APP*/', () => app);
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'index.html'), out);

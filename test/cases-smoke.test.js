@@ -384,3 +384,30 @@ test('phone header: one non-sticky row; Behind the tool, Cases and Share in the 
   assert.equal($(doc, 'caseBar').hidden, false);
   win.close();
 });
+
+test('What must be true panel: Advanced and Analyst, four rows for the selected layer, for 1, 3 and 6 layers; values match the solver', () => {
+  const S = require('../src/solve.js');
+  const { doc, win } = load({ hash: '#advanced' });
+  const card = $(doc, 'mbtCard');
+  assert.ok(card.closest('#detailSection').getAttribute('data-min') === 'advanced', 'shown in Advanced and Analyst');
+  assert.ok(card.querySelector('.info') && /present value to be exactly zero/.test($(doc, 'tipMbt').textContent));
+  for (const id of ['synthetic-1-layer', 'synthetic-3-layer', 'synthetic-6-layer']) {
+    click(win, $(doc, 'casesBtn')); click(win, doc.querySelector('[data-case="' + id + '"]')); click(win, $(doc, 'confirmOk'));
+    const n = +id.match(/\d/)[0];
+    for (let i = 0; i < n; i++) {
+      click(win, doc.querySelectorAll('#layerPick button')[i]);
+      const rows = [...doc.querySelectorAll('#mbtTable tbody tr')];
+      assert.deepEqual(rows.map(r => r.dataset.key), ['share', 'margin', 'speed', 'capex'], id + ' layer ' + i);
+      const st = C.caseState(FIX[n], 'base');
+      const expect = S.mustBeTrue(st.layers[i], { ...D.DEFAULT_G, ...st.G }, st.ranges);
+      rows.forEach((tr, k) => {
+        const e = expect[k];
+        if (e.breakEven === null) assert.equal(tr.children[2].textContent, 'no break-even within the range');
+        else assert.equal(tr.children[3].textContent, (e.changePct > 0 ? '+' : '') + e.changePct.toFixed(0) + '%');
+      });
+    }
+    click(win, $(doc, 'caseReturn'));
+  }
+  assert.match($(doc, 'mbtNote').textContent, /^Range searched: share 0-100%, margin 0-90%, speed 1-20 years/);
+  win.close();
+});

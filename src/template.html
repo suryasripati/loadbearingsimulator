@@ -242,6 +242,10 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+.stackcol{display:flex;flex-direction:column;gap:inherit;min-width:0}
+.stackcol > .card{margin:0}
+#mbtTable td,#mbtTable th{white-space:nowrap}
+#mbtTable td.l,#mbtTable th.l{white-space:normal}
 /* Analyst on phones: a one-line note, and every section below the Timing | Money row collapsed by default. */
 .analystnote,.sectoggle,.phonehead{display:none}
 @media (max-width:599px){
@@ -498,7 +502,9 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
   <div class="pickrow"><h2 id="detailTitle" class="ctitle">Selected layer</h2><div class="seg compact" id="layerPick" role="group" aria-label="Choose a layer"></div></div>
   <div class="twocol">
     <div class="card"><h3 class="ctitle"><span>Cumulative cash to the investor</span><span class="tipwrap"><button class="info" type="button" aria-label="About: Cumulative cash to the investor" aria-expanded="false" aria-controls="tip19">i</button><span class="tip" role="tooltip" id="tip19">Includes your entry premium and sustaining spend. Excludes value beyond year 15. <span id="cashNote"></span></span></span></h3><div id="cashChart"></div></div>
-    <div class="card"><h3 class="ctitle"><span>What moves the answer most</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What moves the answer most" aria-expanded="false" aria-controls="tip20">i</button><span class="tip" role="tooltip" id="tip20">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption. <span id="tornadoNote"></span></span></span></h3><div id="tornado"></div></div>
+    <div class="stackcol"><div class="card"><h3 class="ctitle"><span>What moves the answer most</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What moves the answer most" aria-expanded="false" aria-controls="tip20">i</button><span class="tip" role="tooltip" id="tip20">Change in present value when each input moves 25% (drift and premium move by points, timing offset by two years; build start moves two years later only). Longest bar is your biggest assumption. <span id="tornadoNote"></span></span></span></h3><div id="tornado"></div></div>
+      <div class="card" id="mbtCard"><h3 class="ctitle"><span>What must be true</span><span class="tipwrap"><button class="info" type="button" aria-label="About: What must be true" aria-expanded="false" aria-controls="tipMbt">i</button><span class="tip" role="tooltip" id="tipMbt">For the selected layer, the value each input would need for present value to be exactly zero, with every other input held as it is. Searched only within the input's allowed range.</span></span></h3><div class="scroll"><table id="mbtTable" class="cards" aria-label="Break-even value of each input for the selected layer"></table></div><p class="legend" id="mbtNote"></p></div>
+    </div>
   </div>
 </section>
 

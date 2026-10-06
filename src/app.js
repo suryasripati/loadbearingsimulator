@@ -532,6 +532,29 @@ function cashChart(o){
   $('cashChart').innerHTML = s;
 }
 
+// What must be true: the break-even value of share, cash margin, adoption speed and build capex for the selected layer
+// (present value zero, everything else held). Capex uses the case's declared range while a case is open.
+function mustBeTruePanel(){
+  const t = $('mbtTable'); if(!t) return;
+  const ranges = caseCtx && caseCtx.st.ranges ? caseCtx.st.ranges : undefined;
+  const rows = mustBeTrue(layers[sel], G, ranges);
+  const fmt = (r, v) => r.key === 'capex' ? money(v) : r.key === 'speed' ? v.toFixed(1) : (Math.round(v * 10) / 10).toFixed(1);
+  t.textContent = '';
+  t.appendChild(el('thead', null, [el('tr', null, ['Input', 'Now', 'Break-even', 'Change needed'].map((h,i) => el('th', {cls: i ? '' : 'l', text: h})))]));
+  const tb = el('tbody');
+  rows.forEach(r => {
+    const be = r.breakEven === null ? el('td', {cls:'l muted', colspan:'2', text: 'no break-even within the range'})
+      : el('td', {text: fmt(r, r.breakEven) + (r.monotonic ? '' : ' *')});
+    const cells = [el('td', {cls:'l', text: r.label.replace('Build capex', 'Build capex, ' + moneyUnit)}), el('td', {text: fmt(r, r.current)}), be];
+    if(r.breakEven !== null) cells.push(el('td', {cls: r.changePct === null ? '' : (Math.abs(r.changePct) > 50 ? 'neg' : ''), text: r.changePct === null ? 'n/a' : (r.changePct > 0 ? '+' : '') + r.changePct.toFixed(0) + '%'}));
+    tb.appendChild(el('tr', {'data-key': r.key}, cells));
+  });
+  t.appendChild(tb);
+  labelCells(t);
+  const nm = rows.some(r => r.breakEven !== null && !r.monotonic);
+  $('mbtNote').textContent = 'Range searched: share 0-100%, margin 0-90%, speed ' + rows[2].lo + '-' + rows[2].hi + ' years, capex ' + money(rows[3].lo) + '-' + money(rows[3].hi) + '.'
+    + (nm ? ' * Present value is not monotonic over the range; the first crossing (from the low end) is shown.' : '');
+}
 function tornado(){
   const sens = sensitivity(layers[sel], G), base = sens.base, rows = sens.rows;
   const W=420, rowH=26, m={l:190,r:12,t:8,b:8}, Hh=m.t+m.b+rows.length*rowH;
@@ -624,7 +647,7 @@ function renderResults(){
   if(caseCtx){ renderCaseBar(); updateChips(); renderWhatHappened(res); }
   $('detailTitle').textContent = 'Detail: ' + layers[sel].name;
   buildLayerPick();
-  adoptChart(); cashChart(res[sel]); tornado(); heatChart(); expoTable();
+  adoptChart(); cashChart(res[sel]); tornado(); mustBeTruePanel(); heatChart(); expoTable();
 }
 // Verdict fragility panel: one row per layer listing the tested shocks that change its verdict. It folds in the two
 // earlier notes: the summary lines keep "timing offset set to 0" (when any offset is set) and "build starts two
