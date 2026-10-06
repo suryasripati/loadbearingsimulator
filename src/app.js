@@ -1343,7 +1343,7 @@ function fillGuideTips(){ document.querySelectorAll('.tip[data-guide]').forEach(
   t.textContent = x; }); }
 // Header pill: "Placeholder data" in my own scenario, "Case data" in a case (its tooltip explains the bases).
 let phDefault = null;
-const CASE_DATA_TIP = 'Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored with hindsight. Not financial advice.';
+const CASE_DATA_TIP = 'Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored by tool author. Not financial advice.';
 function setDataPill(inCase){
   if(phDefault === null) phDefault = { text: $('phPill').textContent, html: $('phTip').innerHTML };
   $('phPill').textContent = inCase ? 'Case data' : phDefault.text;

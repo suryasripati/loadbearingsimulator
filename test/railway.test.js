@@ -237,7 +237,7 @@ test('case data pill: "Case data" with its tooltip in a case; "Placeholder data"
   assert.match($('tip14').textContent, /placeholder/, 'tool default tips keep their wording outside a case');
   open(win, doc);
   assert.equal($('phPill').textContent, 'Case data');
-  assert.equal($('phTip').textContent, 'Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored with hindsight. Not financial advice.');
+  assert.equal($('phTip').textContent, 'Inputs in a case are sourced, derived, judgement or default (see the chips). The case is scored by tool author. Not financial advice.');
   assert.ok(![...doc.querySelectorAll('#inputs thead th')].some(th => /placeholder/i.test(th.textContent)), 'no placeholder wording in the case input headers');
   assert.ok(![...doc.querySelectorAll('.tip[data-guide]')].some(t => /placeholder/i.test(t.textContent)), 'no placeholder wording in the slider notes');
   // Phones: the header pill is hidden there, so a case line shows instead of the placeholder line.
