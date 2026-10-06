@@ -1387,6 +1387,9 @@ function renderWhatHappened(res){
     tb.appendChild(el('tr', null, [el('td', {cls:'l', text: r.layer}), el('td', {cls:'l', text: r.verdict}), el('td', {text: r.earnsCost ? 'yes' : 'no'}),
       el('td', {cls:'l', 'data-outcome': r.outcome || '', text: r.outcome || 'not recorded'}), el('td', {cls:'l', text: r.summary || '\u2014'}), srcs, el('td', {cls:'l', text: r.horizon || '\u2014'})]));
   });
+  // Phones show each row as a card; every cell carries its column name.
+  const heads = [...t.querySelectorAll('thead th')].map(h => h.textContent);
+  tb.querySelectorAll('tr').forEach(tr => [...tr.children].forEach((td, i) => td.setAttribute('data-label', heads[i])));
   t.appendChild(tb);
   const k = w.counts;
   $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';

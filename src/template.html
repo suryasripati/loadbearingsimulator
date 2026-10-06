@@ -271,6 +271,11 @@ body.case-mode .tb-sub{display:none}
   .guidetable td[hidden]{display:none}
   .guidetable td::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:var(--cap);text-transform:none}
   .guidetable td.k::before{content:none}
+  table.outcomes thead{display:none}
+  table.outcomes,table.outcomes tbody,table.outcomes tr,table.outcomes td{display:block;width:auto;min-width:0 !important;text-align:left}
+  table.outcomes tr{border:1px solid var(--hair);border-radius:6px;margin:0 0 8px;padding:4px 0}
+  table.outcomes td{border:none;padding:3px 10px}
+  table.outcomes td::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:var(--cap)}
 }
 .tb-name{overflow:hidden;text-overflow:ellipsis}
 .modal.wide{max-width:1000px}
@@ -293,7 +298,8 @@ body.case-mode .tb-sub{display:none}
 .bchip.edited{border-style:dashed;opacity:.7}
 td .bchipwrap{margin-left:3px}
 .cctl-h .bchipwrap{margin-left:2px}
-#outcomeTable td{white-space:normal;vertical-align:top}
+table.outcomes td{white-space:normal;vertical-align:top}
+table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
 .guide h4{margin:10px 0 2px;font-size:14px;color:var(--ink)}
 .guide p{margin:0 0 3px;font-size:12.5px}
 .caselist .case{border-top:1px solid var(--hair);padding:10px 0;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
@@ -389,7 +395,7 @@ td .bchipwrap{margin-left:3px}
   <div class="card" id="whBody">
     <p class="notice slim" id="whBanner" style="margin-top:0"></p>
     <p class="legend" id="whHindsight"></p>
-    <div class="scroll"><table id="outcomeTable" aria-label="What happened, by layer"></table></div>
+    <div class="scroll"><table id="outcomeTable" class="outcomes" aria-label="What happened, by layer"></table></div>
     <p class="legend" id="whCounts"></p>
   </div>
 </section>
@@ -552,16 +558,16 @@ td .bchipwrap{margin-left:3px}
   </div>
 </div>
 <div class="modal-back" id="casesModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="casesTitle" tabindex="-1">
+  <div class="modal tall" role="dialog" aria-modal="true" aria-labelledby="casesTitle" tabindex="-1">
     <div class="modal-head"><h2 id="casesTitle">Cases</h2><button class="reset" type="button" id="casesClose" aria-label="Close">Close</button></div>
     <p class="legend">Historical cases, each filled in as of a date with cited sources. Opening one keeps your own scenario in memory so you can return to it.</p>
-    <div id="casesList"></div>
+    <div class="modal-body" id="casesList"></div>
   </div>
 </div>
 <div class="modal-back" id="whModal" hidden>
-  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="whModalTitle" tabindex="-1">
+  <div class="modal wide tall" role="dialog" aria-modal="true" aria-labelledby="whModalTitle" tabindex="-1">
     <div class="modal-head"><h2 id="whModalTitle">What happened</h2><button class="reset" type="button" id="whClose" aria-label="Close">Close</button></div>
-    <div id="whModalBody"></div>
+    <div class="modal-body" id="whModalBody"></div>
   </div>
 </div>
 <div class="modal-back" id="confirmModal" hidden>
@@ -572,9 +578,9 @@ td .bchipwrap{margin-left:3px}
   </div>
 </div>
 <div class="modal-back" id="sourcesModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sourcesTitle" tabindex="-1">
+  <div class="modal wide tall" role="dialog" aria-modal="true" aria-labelledby="sourcesTitle" tabindex="-1">
     <div class="modal-head"><h2 id="sourcesTitle">Sources</h2><button class="reset" type="button" id="sourcesClose" aria-label="Close">Close</button></div>
-    <div class="scroll"><table id="sourcesTable" aria-label="Sources for this case"></table></div>
+    <div class="scroll modal-body"><table id="sourcesTable" aria-label="Sources for this case"></table></div>
   </div>
 </div>
 <script>

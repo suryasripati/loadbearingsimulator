@@ -336,3 +336,14 @@ test('case-mode link: carries the case, version and only the changed inputs; ope
   assert.match($(doc, 'linkNotice').textContent, /has no version “nope”/);
   win.close();
 });
+
+test('What happened: the card and the dialog copy share the wrapping rule (a class, not the id)', () => {
+  const { doc, win } = load();
+  openCase(win, doc, 'synthetic-3-layer');
+  click(win, $(doc, 'caseWhat'));
+  assert.ok($(doc, 'whModalBody').querySelector('table.outcomes'));
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(css.includes('table.outcomes td{white-space:normal;vertical-align:top}'));
+  assert.ok([...doc.querySelectorAll('#outcomeTable tbody td')].every(td => td.dataset.label), 'cells carry column names for the phone cards');
+  win.close();
+});
