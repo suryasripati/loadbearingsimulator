@@ -349,6 +349,7 @@ body.case-mode .tb-sub{display:none}
 .bchip.b-sourced{color:var(--green)}
 .bchip.b-derived{color:var(--ink)}
 .bchip.b-judgement{color:var(--amber);background:var(--amber-bg)}
+.bchip.b-default{color:var(--cap);border-style:dotted}
 .bchip.edited{border-style:dashed;opacity:.7}
 td .bchipwrap{margin-left:3px}
 .cctl-h .bchipwrap{margin-left:2px}
@@ -456,6 +457,9 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
     <p class="legend" id="whHindsight"></p>
     <div class="scroll"><table id="outcomeTable" class="outcomes" aria-label="What happened, by layer"></table></div>
     <p class="legend" id="whCounts"></p>
+    <div id="versionBlock" hidden><h3 style="margin:12px 0 4px">Each version as the case defines it</h3>
+    <p class="legend" style="margin:0 0 6px">Present value and verdict for every version, with the case's own inputs (your edits are not applied), beside the recorded outcome.</p>
+    <div class="scroll"><table id="versionTable" class="outcomes cards" aria-label="Each version against the recorded outcomes"></table></div></div>
   </div>
 </section>
 
@@ -1041,7 +1045,7 @@ const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
 
 const GUIDE_INTRO = [
   'What each input means, its range and default, and in which view it appears. Turn on case guidance to add where to look at a chosen as-of date, a recipe for estimating it, and the hindsight trap to avoid.',
-  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled.',
+  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled. Default: a neutral tool setting the case does not use; it is shown but not counted as judgement.',
   'Examples below are symbolic. They show the shape of a calculation, never a figure from a real episode.'
 ];
 
@@ -1215,7 +1219,13 @@ function guideDeps(){
 }
 const guideNum = (v) => String(Math.round(v * 1000) / 1000);
 // "Range and default" text, generated from the shared ranges and defaults (never typed by hand).
-function guideRange(k, d){
+// o (optional, case mode): { ranges: { pool: [min, max, step], capex: [...] }, values: { pool, capex: [by layer] }, unit }.
+function guideRange(k, d, o){
+  const cr = o && o.ranges && o.ranges[k];
+  if (cr) {
+    const v = o.values && o.values[k], vs = Array.isArray(v) ? 'case values by layer ' + v.map(guideNum).join(', ') : 'case value ' + guideNum(v);
+    return guideNum(cr[0]) + ' to ' + guideNum(cr[1]) + ', step ' + guideNum(cr[2]) + ' (this case\'s range' + (o.unit ? ', ' + o.unit : '') + '); ' + vs;
+  }
   const r = d.GLOBAL_RANGES[k] || d.LAYER_RANGES[k] || (k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : null);
   if (k === 'entryDef') return 'A (premium) or B (multiple); default ' + d.DEFAULT_DEF;
   if (k === 'capexModel') return 'sustaining or vintage; default ' + d.DEFAULT_CAPEX;
@@ -1234,12 +1244,12 @@ function guideRange(k, d){
   return span + '; default ' + def;
 }
 // One row per input, in group order: what the guide table shows.
-function guideRows(){
+function guideRows(o){
   const d = guideDeps();
   const rows = [];
   GUIDE_GROUPS.forEach(g => Object.keys(GUIDE).filter(k => GUIDE[k].group === g).forEach(k => {
     const x = GUIDE[k];
-    rows.push({ key: k, group: g, label: x.label, meaning: x.meaning, range: guideRange(k, d),
+    rows.push({ key: k, group: g, label: x.label, meaning: x.meaning, range: guideRange(k, d, o),
       shownIn: GUIDE_FIRST_SCREEN.indexOf(k) >= 0 ? 'Basic, Advanced, Analyst' : 'Analyst', where: x.where, recipe: x.recipe, trap: x.trap });
   }));
   return rows;
@@ -1255,27 +1265,32 @@ function guideRows(){
 // date (a period source published on or before it, or a compiled series that ends on or before it). Outcomes cite
 // sources published after it. Sourced and derived values need sources; derived values show their calculation in the
 // note; judgement values need a rationale in the note, may have no source, and are always labelled on the page.
+// Schema 3: a "default" basis for neutral tool settings the case does not use (no source, no rationale needed; shown
+// and counted separately, never as judgement), a note on each source, a name for the base version, a description,
+// and per-case money ranges for the value pool and build capex in the case's own money unit.
 
 const CASE_FORMAT = 'load-bearing-simulator-case';
-const CASE_SCHEMA_VERSION = 2;
+const CASE_SCHEMA_VERSION = 3;
 // Schema 2 adds two optional settings: tvMode ("multiple" or "perpetuity") and tvGrowth (an input record, long-run
 // growth in % a year). Schema 1 cases stay valid and open as "multiple" with growth 0.
-const CASE_SCHEMAS = [1, 2];
+const CASE_SCHEMAS = [1, 2, 3];
+const CASE_MONEY_KEYS = ['pool', 'capex'];
+const CASE_DEFAULT_NOTE = 'Neutral default, not used.';
 const CASE_TV_MODES = ['multiple', 'perpetuity'];
 const CASE_MAX_LAYERS = 6;
 const CASE_MAX_VERSIONS = 3;
 const CASE_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
 const CASE_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline', 'passThrough', 'life', 'debt'];
 const CASE_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
-const CASE_BASIS = ['sourced', 'derived', 'judgement'];
+const CASE_BASIS = ['sourced', 'derived', 'judgement', 'default'];
 const CASE_SOURCE_KINDS = ['period', 'compiled', 'outcome'];
 const CASE_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
 const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){
-  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: require('./model.js').TV_GROWTH_GAP });
-  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP };
+  if (typeof module !== 'undefined' && typeof require === 'function') { const m = require('./model.js'); return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: m.TV_GROWTH_GAP, runLayer: m.runLayer }); }
+  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP, runLayer, DEFAULT_G };
 }
 
 /* ---------- Money unit ---------- */
@@ -1332,7 +1347,7 @@ function sourceForOutcome(src, asOfDate){ return src.publicationDate > asOfDate;
 function caseRecord(r, where, range, integer, ctx){
   caseKeys(r, ['value', 'basis', 'sourceIds', 'note'], [], where);
   const out = { value: caseNum(r.value, range, where + ' value', integer), basis: r.basis, sourceIds: [], note: caseText(r.note, where + ' note', 2000, true) };
-  if (CASE_BASIS.indexOf(r.basis) < 0) caseErr(where + ' basis', 'expected sourced, derived or judgement');
+  if (CASE_BASIS.indexOf(r.basis) < 0 || (r.basis === 'default' && ctx.schema < 3)) caseErr(where + ' basis', 'expected sourced, derived or judgement' + (ctx.schema >= 3 ? ', or default' : ''));
   if (!Array.isArray(r.sourceIds)) caseErr(where + ' sourceIds', 'expected a list');
   r.sourceIds.forEach(id => {
     const s = ctx.byId[id];
@@ -1341,7 +1356,8 @@ function caseRecord(r, where, range, integer, ctx){
       + (s.kind === 'compiled' ? ' (a compiled series must end on or before it)' : s.kind === 'outcome' ? ' (an outcome source cannot back an input)' : ' (published ' + s.publicationDate + ')'));
     out.sourceIds.push(id);
   });
-  if (out.basis !== 'judgement' && !out.sourceIds.length) caseErr(where, 'a ' + out.basis + ' value needs at least one source');
+  if (out.basis === 'default' && out.sourceIds.length) caseErr(where, 'a default value is a neutral tool setting and cites no source');
+  if ((out.basis === 'sourced' || out.basis === 'derived') && !out.sourceIds.length) caseErr(where, 'a ' + out.basis + ' value needs at least one source');
   if (out.basis === 'derived' && !out.note.trim()) caseErr(where, 'a derived value needs its calculation in the note');
   if (out.basis === 'judgement' && !out.note.trim()) caseErr(where, 'a judgement needs a rationale in the note');
   return out;
@@ -1351,7 +1367,7 @@ function caseSettings(S, where, ctx, partial){
   const d = caseDeps(), tvKeys = ctx.schema >= 2 ? ['tvMode', 'tvGrowth'] : [];
   caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), (partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : []).concat(tvKeys), where);
   const out = {};
-  CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, k === 'pool' && ctx.moneyRanges.pool ? ctx.moneyRanges.pool : settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
   if ('tvGrowth' in S) out.tvGrowth = caseRecord(S.tvGrowth, where + ' tvGrowth', d.GLOBAL_RANGES.tvGrowth, false, ctx);
   if ('tvMode' in S) { if (CASE_TV_MODES.indexOf(S.tvMode) < 0) caseErr(where + ' tvMode', 'expected "multiple" or "perpetuity"'); out.tvMode = S.tvMode; }
   if ('entryDef' in S) { if (['A', 'B'].indexOf(S.entryDef) < 0) caseErr(where + ' entryDef', 'expected "A" or "B"'); out.entryDef = S.entryDef; }
@@ -1362,7 +1378,7 @@ function caseInputs(I, where, ctx, partial){
   const d = caseDeps(), all = CASE_LAYER_KEYS.concat(['driftP', 'marginP']);
   caseKeys(I, partial ? [] : all, partial ? all : [], where);
   const out = {};
-  CASE_LAYER_KEYS.forEach(k => { if (k in I) out[k] = caseRecord(I[k], where + ' ' + k, d.LAYER_RANGES[k], CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  CASE_LAYER_KEYS.forEach(k => { if (k in I) out[k] = caseRecord(I[k], where + ' ' + k, k === 'capex' && ctx.moneyRanges.capex ? ctx.moneyRanges.capex : d.LAYER_RANGES[k], CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
   ['driftP', 'marginP'].forEach(k => {
     if (!(k in I)) return;
     if (!Array.isArray(I[k]) || I[k].length !== 3) caseErr(where + ' ' + k, 'expected three phase values');
@@ -1382,7 +1398,8 @@ function phaseOrder(settings, where){
 
 function validateCase(raw, where0){
   const where = where0 || 'Case';
-  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'], where);
+  const schema3 = raw && raw.schemaVersion >= 3 ? ['description', 'baseLabel', 'moneyRanges'] : [];
+  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'].concat(schema3), where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
   if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
   const c = { format: CASE_FORMAT, schemaVersion: raw.schemaVersion };
@@ -1396,13 +1413,31 @@ function validateCase(raw, where0){
   if (/\n/.test(c.hindsightDisclosure)) caseErr(where + ' hindsightDisclosure', 'must be one line');
   if (!parseMoneyUnit(raw.moneyUnit)) caseErr(where + ' moneyUnit', 'expected a currency symbol and an optional unit, e.g. "$B" or "£m"');
   c.moneyUnit = raw.moneyUnit;
+  // Schema 3: description (context, not a finding), base version name, money ranges in the case's own unit.
+  c.description = raw.description === undefined ? '' : caseText(raw.description, where + ' description', 600);
+  if (/\n/.test(c.description)) caseErr(where + ' description', 'must be one paragraph');
+  c.baseLabel = raw.baseLabel === undefined ? 'Base' : caseText(raw.baseLabel, where + ' baseLabel', 30);
+  c.moneyRanges = {};
+  if (raw.moneyRanges !== undefined) {
+    caseKeys(raw.moneyRanges, [], CASE_MONEY_KEYS, where + ' moneyRanges');
+    CASE_MONEY_KEYS.forEach(k => {
+      if (!(k in raw.moneyRanges)) return;
+      const r = raw.moneyRanges[k], w = where + ' moneyRanges ' + k;
+      if (!Array.isArray(r) || r.length !== 2) caseErr(w, 'expected [min, max]');
+      r.forEach(v => { if (typeof v !== 'number' || !isFinite(v)) caseErr(w, 'expected numbers'); });
+      if (!(r[0] > 0)) caseErr(w, 'min must be above 0');
+      if (!(r[0] < r[1])) caseErr(w, 'min must be below max');
+      c.moneyRanges[k] = [r[0], r[1]];
+    });
+  }
   // Sources
   if (!Array.isArray(raw.sources) || raw.sources.length > 200) caseErr(where + ' sources', 'expected a list');
   const byId = {};
   c.sources = raw.sources.map((s, i) => {
     const w = where + ' source ' + (i + 1);
-    caseKeys(s, ['id', 'citation', 'publicationDate', 'kind'], ['seriesEndsOn'], w);
-    const o = { id: caseText(s.id, w + ' id', 40), citation: caseText(s.citation, w + ' citation', 1000), publicationDate: caseDay(s.publicationDate, w + ' publicationDate'), kind: s.kind, seriesEndsOn: null };
+    caseKeys(s, ['id', 'citation', 'publicationDate', 'kind'], ['seriesEndsOn'].concat(raw.schemaVersion >= 3 ? ['note'] : []), w);
+    const o = { id: caseText(s.id, w + ' id', 40), citation: caseText(s.citation, w + ' citation', 1000), publicationDate: caseDay(s.publicationDate, w + ' publicationDate'), kind: s.kind, seriesEndsOn: null,
+      note: s.note === undefined ? '' : caseText(s.note, w + ' note', 1000, true) };
     if (!/^[A-Za-z0-9_-]+$/.test(o.id)) caseErr(w + ' id', 'use letters, digits, hyphens and underscores');
     if (byId[o.id]) caseErr(w + ' id', 'duplicate source id "' + o.id + '"');
     if (CASE_SOURCE_KINDS.indexOf(s.kind) < 0) caseErr(w + ' kind', 'expected period, compiled or outcome');
@@ -1412,7 +1447,7 @@ function validateCase(raw, where0){
     byId[o.id] = o;
     return o;
   });
-  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion };
+  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion, moneyRanges: c.moneyRanges };
   // Settings and layers
   c.settings = caseSettings(raw.settings, where + ' settings', ctx, false);
   phaseOrder(c.settings, where + ' settings');
@@ -1506,7 +1541,54 @@ function caseState(c, versionId){
     inp.marginP.forEach((r, j) => { recs['layer ' + L.id + '.marginP[' + j + ']'] = r; });
     return o;
   });
-  return { G, layers, recs, versionId: v ? v.id : 'base', versionLabel: v ? v.label : 'Base' };
+  return { G, layers, recs, versionId: v ? v.id : 'base', versionLabel: v ? v.label : c.baseLabel || 'Base', ranges: caseRanges(c) };
+}
+// Slider and input ranges [min, max, step] for the case's money inputs; empty when the case declares none. The step
+// is the finest precision of the case's own values for that input (base and versions), so no value is rounded.
+function caseRanges(c){
+  const out = {}, decimals = (v) => { const t = String(v); return t.indexOf('.') < 0 ? 0 : t.length - t.indexOf('.') - 1; };
+  CASE_MONEY_KEYS.forEach(k => {
+    const r = c.moneyRanges && c.moneyRanges[k]; if (!r) return;
+    const vals = [];
+    if (k === 'pool') { vals.push(c.settings.pool.value); c.versions.forEach(v => { if (v.settings.pool) vals.push(v.settings.pool.value); }); }
+    else { c.layers.forEach(L => vals.push(L.inputs.capex.value)); c.versions.forEach(v => Object.keys(v.layers).forEach(id => { if (v.layers[id].capex) vals.push(v.layers[id].capex.value); })); }
+    const d = Math.max(0, ...vals.concat(r).map(decimals));
+    out[k] = [r[0], r[1], Math.pow(10, -d)];
+  });
+  return out;
+}
+// How the case's inputs are based. Per-phase inputs (share drift, cash margin) count once per layer: judgement if any
+// phase is judgement, default only if every phase is default. Defaults (neutral settings the case does not use) are
+// counted separately and never as case-specific inputs. Base inputs only; versions are counted in versionInputs.
+function caseBasisCounts(c){
+  const n = { total: 0, judgement: 0, sourced: 0, derived: 0, defaults: 0, versionInputs: 0, versionJudgement: 0 };
+  const add = (recs) => {
+    const b = recs.every(r => r.basis === 'default') ? 'default' : recs.some(r => r.basis === 'judgement') ? 'judgement' : recs[0].basis;
+    if (b === 'default') { n.defaults++; return; }
+    n.total++; n[b]++;
+  };
+  CASE_SETTING_KEYS.concat(['tvGrowth']).forEach(k => { if (c.settings[k]) add([c.settings[k]]); });
+  c.layers.forEach(L => { CASE_LAYER_KEYS.forEach(k => add([L.inputs[k]])); add(L.inputs.driftP); add(L.inputs.marginP); });
+  c.versions.forEach(v => {
+    const recs = Object.keys(v.settings).filter(k => v.settings[k] && v.settings[k].basis).map(k => v.settings[k]);
+    Object.keys(v.layers).forEach(id => Object.keys(v.layers[id]).forEach(k => { const r = v.layers[id][k]; if (Array.isArray(r)) recs.push(...r); else recs.push(r); }));
+    recs.forEach(r => { if (r.basis !== 'default') { n.versionInputs++; if (r.basis === 'judgement') n.versionJudgement++; } });
+  });
+  return n;
+}
+function caseCountText(c){
+  const n = caseBasisCounts(c);
+  return n.judgement + ' of ' + n.total + ' case-specific inputs are judgement' + (n.defaults ? '; ' + n.defaults + ' neutral default' + (n.defaults === 1 ? '' : 's') + ' not counted' : '') + '.';
+}
+// Each version as defined in the case (no page edits), run through the model, beside each layer's recorded outcome.
+function caseVersionRows(c){
+  const d = caseDeps();
+  const versions = [{ id: 'base', label: c.baseLabel || 'Base' }].concat(c.versions.map(v => ({ id: v.id, label: v.label })));
+  return versions.map(v => {
+    const st = caseState(c, v.id), G = Object.assign({}, d.DEFAULT_G || {}, st.G);
+    return { id: v.id, label: v.label, layers: st.layers.map(L => { const o = d.runLayer(L, G), oc = c.outcomes.find(x => x.layer === L.id) || null;
+      return { layer: L.name, npv: o.npv, bin: o.bin, earnsCost: o.npv >= 0, outcome: oc ? oc.status : null }; }) };
+  });
 }
 
 /* ---------- What happened ---------- */
@@ -1524,7 +1606,7 @@ function caseOutcomeRows(c, layers, results){
 
 
 // Case library, bundled at build time.
-const CASES = [];
+const CASES = [{"format":"load-bearing-simulator-case","schemaVersion":3,"id":"railway-mania-1845","title":"British railway mania, 1840s","subtitle":"Original lines and lines authorised 1844-45","asOfDate":"1845-09-30","asOfRule":"Last quarter-end before the primary railway share index peak (6 October 1845, per Campbell). Uses hindsight. To be applied the same way to later cases.","hindsightDisclosure":"Scored by someone who knew the outcome: that railway shares peaked in 1845 and fell by about two-thirds by 1849, and that the new lines cost more and earned less than promised.","moneyUnit":"£m","description":"The original-lines result depends heavily on asset life and terminal value, which are judgement inputs. See the verdict fragility panel.","baseLabel":"Promoters' plans","moneyRanges":{"pool":[1,50],"capex":[1,500]},"sources":[{"id":"P1","citation":"The Railway Chronicle, 16 August 1845, p. 1015, table of railway lines authorised in 1845.","publicationDate":"1845-08-16","kind":"period","seriesEndsOn":null,"note":"Known to the case author only through Odlyzko (2012, note 7); original not opened."},{"id":"C1","citation":"Odlyzko, A. (2012). The Railway Mania: Fraud, disappointed expectations, and the modern economy, revised 14 Aug 2012, Table 1, derived from Tooke and Newmarch, A History of Prices, vol. 5 (1857), p. 352.","publicationDate":"2012-08-14","kind":"compiled","seriesEndsOn":"1844-12-31","note":"Only the 1844 row is used: 2,240 miles in service, £35,700 construction cost per mile, £3,280 revenue per mile; later rows are not used."},{"id":"C2","citation":"Odlyzko, A. (2011). The collapse of the Railway Mania, the development of capital markets, and the forgotten role of Robert Lucas Nash, Accounting History Review 21(3), pp. 309-345 (SSRN 1625738), Hyde Clarke revenue per mile series.","publicationDate":"2011-11-01","kind":"compiled","seriesEndsOn":"1844-12-31","note":"Only the 1842-1844 values are used: £3,036, £3,081, £3,283. Publication date approximate."},{"id":"C3","citation":"Odlyzko, A. (2010). Collective Hallucinations and Inefficient Markets: The British Railway Mania of the 1840s (SSRN 1537338).","publicationDate":"2010-01-15","kind":"compiled","seriesEndsOn":"1845-08-31","note":"Used for: long-term government bond yield of about 3% at the end of 1844; authorised mileage of 805 in 1844 and about 2,700 in 1845 (the 1845 figure differs across sources, 2,700 to 2,896; verify against the paper). Publication date approximate. Series end 1845-08-31 to verify: that the 1845 session closed in August 1845."},{"id":"O1","citation":"Odlyzko (2011), same paper as C2.","publicationDate":"2011-11-01","kind":"outcome","seriesEndsOn":null,"note":"York and North Midland shareholders' committee: lines authorised before 1845 earned 7.65% after interest on debt, those authorised in 1845 earned 4.15%, those authorised in 1846 earned 0.07%. Publication date approximate."},{"id":"O2","citation":"Odlyzko (2012), same paper as C1.","publicationDate":"2012-08-14","kind":"outcome","seriesEndsOn":null,"note":"Share index fell from 167.9 in summer 1845 to 60.5 at the end of 1849, a drop of 64% (Gayer, Rostow and Schwartz, 1953, as reported); East Anglian lines planned at £8,786 and £1,070 revenue per mile, actual £18,342 per mile and £687 revenue per mile in 1855; revenue on new lines largely £1,000-1,500 per mile; actual costs 50% to 100% above promoters' estimates."},{"id":"O3","citation":"Managerial failure in early Victorian Britain: Network and capital expansion during the Railway Mania, Business History (2022), doi 10.1080/00076791.2022.2096877.","publicationDate":"2022-12-31","kind":"outcome","seriesEndsOn":null,"note":"Author names to be added when verified. Publication date approximate, latest possible. Reports that all of the York and North Midland's 1844-45 authorisations were unremunerative."}],"settings":{"pool":{"value":13.19,"basis":"derived","sourceIds":["C1","P1","C3"],"note":"(2,240 miles x £3,280 + 3,500 miles x £1,670) / 1,000 = £13.19m a year; new lines at the promoters' £1,670 a mile."},"speed":{"value":4,"basis":"judgement","sourceIds":[],"note":"Authorised lines expected to be built over several years; no source found for the legal completion deadlines; high sensitivity."},"mid":{"value":3,"basis":"judgement","sourceIds":[],"note":"Same rationale as adoption speed: authorised lines expected to be built over several years; no source found for the legal completion deadlines."},"disc":{"value":5,"basis":"judgement","sourceIds":["C3"],"note":"Long-term government bonds yielded about 3% at the end of 1844 (C3); 2 points added for equity risk; no source for the premium."},"rd":{"value":7,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"tv":{"value":5,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"premium":{"value":0,"basis":"judgement","sourceIds":[],"note":"No share price is sourced for 30 September 1845; 0 tests the economics at replacement cost, not whether the market price was too high."},"entry":{"value":0,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"mult":{"value":10,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"phase2Start":{"value":5,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"phase3Start":{"value":10,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"tvGrowth":{"value":0,"basis":"judgement","sourceIds":[],"note":"Long-lived infrastructure; implied multiple 20x at a 5% rate; growth of 0 is a placeholder."},"tvMode":"perpetuity","entryDef":"A","capexModel":"sustaining"},"layers":[{"id":"original","name":"Original lines in operation","inputs":{"evidence":{"value":5,"basis":"judgement","sourceIds":["C2"],"note":"Revenue per mile rose from £3,036 (1842) to £3,081 (1843) and £3,283 (1844)."},"share":{"value":55.7,"basis":"derived","sourceIds":["C1"],"note":"2,240 x £3,280 = £7.35m, divided by £13.19m."},"offset":{"value":-6,"basis":"derived","sourceIds":["C1"],"note":"Chosen so the modelled year-0 revenue (about £7.08m) is close to the 1844 actual of £7.35m."},"steepness":{"value":1,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"capex":{"value":80,"basis":"derived","sourceIds":["C1"],"note":"2,240 miles x £35,700 per mile = £79.97m, the replacement cost of the network at 1844 construction costs."},"buildStart":{"value":0,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"buildYears":{"value":1,"basis":"judgement","sourceIds":[],"note":"The asset already exists."},"unitCostDecline":{"value":0,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"passThrough":{"value":0.5,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"life":{"value":60,"basis":"judgement","sourceIds":[],"note":"No period depreciation convention found; earthworks and structures are long-lived; high sensitivity."},"debt":{"value":0,"basis":"judgement","sourceIds":[],"note":"Not modelled."},"driftP":[{"value":0,"basis":"judgement","sourceIds":[],"note":"Revenue per mile was still rising at the as-of date."},{"value":0,"basis":"judgement","sourceIds":[],"note":"Revenue per mile was still rising at the as-of date."},{"value":0,"basis":"judgement","sourceIds":[],"note":"Revenue per mile was still rising at the as-of date."}],"marginP":[{"value":60,"basis":"derived","sourceIds":["P1"],"note":"Working expenses taken at 40% of revenue, the ratio the promoters used for new lines (P1), applied as a proxy; no period operating-cost figure found for the established lines."},{"value":60,"basis":"derived","sourceIds":["P1"],"note":"Working expenses taken at 40% of revenue, the ratio the promoters used for new lines (P1), applied as a proxy; no period operating-cost figure found for the established lines."},{"value":60,"basis":"derived","sourceIds":["P1"],"note":"Working expenses taken at 40% of revenue, the ratio the promoters used for new lines (P1), applied as a proxy; no period operating-cost figure found for the established lines."}]}},{"id":"authorised","name":"Lines authorised 1844-45","inputs":{"evidence":{"value":2,"basis":"judgement","sourceIds":[],"note":"Only promoters' claims; no measured traffic on the new lines."},"share":{"value":44.3,"basis":"derived","sourceIds":["P1","C3"],"note":"3,500 x £1,670 = £5.85m, divided by £13.19m."},"offset":{"value":2,"basis":"judgement","sourceIds":[],"note":"New lines open and ramp up after the established ones."},"steepness":{"value":1,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"capex":{"value":54.6,"basis":"derived","sourceIds":["P1","C3"],"note":"3,500 miles x £15,600 per mile."},"buildStart":{"value":0,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"buildYears":{"value":4,"basis":"judgement","sourceIds":[],"note":"Judgement: lines authorised in 1844-45 were expected to open over several years; no source found for completion deadlines."},"unitCostDecline":{"value":0,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"passThrough":{"value":0.5,"basis":"default","sourceIds":[],"note":"Neutral default, not used."},"life":{"value":60,"basis":"judgement","sourceIds":[],"note":"Same as layer 1: no period depreciation convention found; earthworks and structures are long-lived; high sensitivity."},"debt":{"value":0,"basis":"judgement","sourceIds":[],"note":"Not modelled."},"driftP":[{"value":0,"basis":"judgement","sourceIds":[],"note":"No dilution was visible in September 1845."},{"value":0,"basis":"judgement","sourceIds":[],"note":"No dilution was visible in September 1845."},{"value":0,"basis":"judgement","sourceIds":[],"note":"No dilution was visible in September 1845."}],"marginP":[{"value":60,"basis":"sourced","sourceIds":["P1"],"note":"Expenses at 40% of revenue."},{"value":60,"basis":"sourced","sourceIds":["P1"],"note":"Expenses at 40% of revenue."},{"value":60,"basis":"sourced","sourceIds":["P1"],"note":"Expenses at 40% of revenue."}]}}],"versions":[{"id":"existing-line-costs","label":"Existing-line costs","settings":{},"layers":{"authorised":{"capex":{"value":125,"basis":"judgement","sourceIds":["C1"],"note":"3,500 miles x £35,700 = £124.95m, the cost per mile of the lines already built in 1844 (C1); assumes the new lines cost the same; a stress test, not a forecast."}}}}],"outcomes":[{"layer":"original","status":"contested","summary":"For: assets earned decent returns: the York and North Midland committee found its pre-1845 lines earned 7.65% after interest (O1). Against: shareholders at the peak lost: the railway share index fell 64% between summer 1845 and the end of 1849 (O2).","sourceIds":["O1","O2"],"horizon":"to 1849-1850"},{"layer":"authorised","status":"no","summary":"The committee found 4.15% for lines authorised in 1845 and 0.07% for those authorised in 1846 (O1); new lines' revenue was largely £1,000-1,500 per mile and costs ran 50-100% above plan (O2); all of the company's 1844-45 authorisations were unremunerative (O3).","sourceIds":["O1","O2","O3"],"horizon":"to 1850, with 1855 revenue evidence"}]}];
 
 // View modes (Basic, Advanced, Analyst), KPI tiles and the hidden-state check. Pure functions, no DOM; no new
 // maths: everything here reads existing model outputs (runLayer, verdictFragility). Modes only change what is
@@ -1818,8 +1900,17 @@ function snapSchema(v, where){
 // Checks settings and layer inputs and returns fresh objects built from whitelisted fields only. Shared by stored
 // snapshots and links. o: { schema, caseId (null for your own five-layer scenario), alloc (allocations allowed),
 // names (layer names required; otherwise the default names are used) }.
+// A case may declare its own money ranges (value pool, build capex). The page registers a lookup by case id; inputs of
+// a case snapshot or case link are then checked against those ranges, everything else against the shared ranges.
+let snapCaseRangesFn = null;
+function snapSetCaseRanges(fn){ snapCaseRangesFn = typeof fn === 'function' ? fn : null; }
+function snapRangesFor(caseId){
+  const d = snapDeps(), r = caseId && snapCaseRangesFn ? (snapCaseRangesFn(caseId) || {}) : {};
+  return { G: Object.assign({}, d.GLOBAL_RANGES, r.pool ? { pool: r.pool } : {}), L: Object.assign({}, d.LAYER_RANGES, r.capex ? { capex: r.capex } : {}) };
+}
 function snapCheckInputs(G, Ls, where, o){
-  const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id), res = { G: {}, layers: [] };
+  const d0 = snapDeps(), rg = snapRangesFor(o.caseId), d = Object.assign({}, d0, { GLOBAL_RANGES: rg.G, LAYER_RANGES: rg.L });
+  const defIds = d.DEFAULT_LAYERS.map(L => L.id), res = { G: {}, layers: [] };
   snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], o.schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
   SNAP_GLOBAL_KEYS.forEach(k => { res.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
   res.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
@@ -2257,8 +2348,10 @@ function syncDriverLabels(){
 const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth'};
 // Long-run growth stays at least TV_GROWTH_GAP points below the discount rate: growth is pulled down when either moves.
 function keepGrowthGap(){ if(G.tvGrowth > G.disc - TV_GROWTH_GAP){ G.tvGrowth = G.disc - TV_GROWTH_GAP; if($('g_tvg')) $('g_tvg').value = G.tvGrowth; } }
+// Ranges for an input: a case's own money ranges (value pool, build capex) while it is open, the shared ones otherwise.
+function rangeOf(k){ const c = caseCtx && caseCtx.st.ranges && caseCtx.st.ranges[k]; return c || GLOBAL_RANGES[k] || LAYER_RANGES[k]; }
 function applyRanges(){
-  for(const id in SLIDERS){ const r = GLOBAL_RANGES[SLIDERS[id]], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
+  for(const id in SLIDERS){ const r = rangeOf(SLIDERS[id]), e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
   ['ph1','ph2'].forEach((id,i) => { const r = PHASE_RANGES[i], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; });
 }
 function syncDriverInputs(){
@@ -2355,6 +2448,7 @@ const getV = (L, c) => c[5]===undefined ? L[c[0]] : L[c[0]][c[5]];
 const COL_MODE = {};
 const dm = (k) => COL_MODE[k] ? ' data-min="'+COL_MODE[k]+'"' : '';
 function cellInput(L, i, c){
+  if(c[5] === undefined){ const r = rangeOf(c[0]); c = [c[0], c[1], r[0], r[1], r[2]]; }
   return '<td'+(c[5]===undefined ? dm(c[0]) : '')+'><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
 }
 function phaseLabels(){
@@ -2466,7 +2560,8 @@ function onLayerInput(e){
   const col = COLS.concat(PCOLS).find(c => c[0]===k);
   let v = parseFloat(inp.value);
   if(!isFinite(v)) return;
-  v = clamp(v, col[2], col[3]);
+  const rg = p===undefined ? rangeOf(k) : col.slice(2, 4);
+  v = clamp(v, rg[0], rg[1]);
   if(p===undefined) layers[i][k] = v; else layers[i][k][+p] = v;
   // The allocation is editable in two places (compact scorecard and Analyst layer table): keep the other in step.
   if(k==='alloc') document.querySelectorAll('input[data-k="alloc"][data-i="'+i+'"]').forEach(x => { if(x !== inp) x.value = v; });
@@ -3425,7 +3520,10 @@ function renderGuide(){
   t.appendChild(el('thead', null, [el('tr', null, GUIDE_COLS.map(c => el('th', {scope:'col', cls: c[2] === 'cg' ? 'cg' : '', text: c[1]})))]));
   const tb = el('tbody');
   let group = null;
-  guideRows().forEach(r => {
+  // In a case, the money inputs show the case's own ranges and values.
+  const go = caseCtx && Object.keys(caseCtx.st.ranges || {}).length ? { ranges: caseCtx.st.ranges, unit: moneyUnit,
+    values: { pool: caseCtx.st.G.pool, capex: caseCtx.st.layers.map(L => L.capex) } } : undefined;
+  guideRows(go).forEach(r => {
     if(r.group !== group){ group = r.group; tb.appendChild(el('tr', {cls:'grp', 'data-group': group}, [el('th', {colspan: String(GUIDE_COLS.length), scope:'colgroup', text: group})])); }
     tb.appendChild(el('tr', {'data-key': r.key, 'data-group': r.group, 'data-name': guideLabel(r.label).toLowerCase()}, GUIDE_COLS.map(c => {
       const td = el('td', {cls: c[2] || '', 'data-label': c[1]});
@@ -3488,7 +3586,8 @@ function setCaseContext(ctx){
   document.querySelector('.tb-name').title = name + ': Load Bearing Simulator'; // full title when it is cut with an ellipsis
   document.body.classList.toggle('case-mode', !!ctx);
   if(!ctx && modalOpen === 'whModal') closeModal(true);
-  renderGuide(); // labels carry the money unit
+  applyRanges(); // a case may bring its own money ranges
+  renderGuide(); // labels carry the money unit; ranges follow the case
   $('caseBar').hidden = !ctx;
   $('whatHappened').hidden = !ctx;
   if(ctx) renderCaseBar();
@@ -3499,7 +3598,7 @@ function openCase(id, versionId, opts){
   const o = opts || {};
   const switching = caseCtx && caseCtx.c.id === id;
   if(!o.noConfirm){
-    const label = versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label;
+    const label = versionId === 'base' ? c.baseLabel : (c.versions.find(v => v.id === versionId) || {}).label;
     askConfirm(switching
       ? { title: 'Switch version', ok: 'Switch version', returnTo: o.returnTo,
           text: 'Switch to the \u201c' + label + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : ''),
@@ -3534,10 +3633,10 @@ function renderCaseBar(){
   const c = caseCtx.c;
   $('caseBadgeText').textContent = c.title + ', as of ' + c.asOfDate;
   const tip = $('caseTip'); tip.textContent = '';
-  [c.subtitle, 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
+  [c.subtitle, c.description, caseCountText(c), 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].filter(Boolean).forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
   const vb = $('caseVersions'); vb.textContent = '';
   if(c.versions.length){
-    [{ id: 'base', label: 'Base' }].concat(c.versions).forEach(v => {
+    [{ id: 'base', label: c.baseLabel }].concat(c.versions).forEach(v => {
       const b = el('button', {type:'button', 'data-version': v.id, 'aria-pressed': String(v.id === caseCtx.versionId)}, [v.label]);
       b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id, { returnTo: () => document.querySelector('#caseVersions button[aria-pressed="true"]') }); });
       vb.appendChild(b);
@@ -3551,23 +3650,25 @@ function renderCasesList(){
   CASES.forEach(c => {
     const open = el('button', {type:'button', 'data-case': c.id}, [caseCtx && caseCtx.c.id === c.id ? 'Open again' : 'Open']);
     open.addEventListener('click', () => openCase(c.id, 'base', { returnTo: $('casesBtn') }));
-    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'})]), open]));
+    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'}),
+      c.description ? el('p', {text: c.description, style:'margin:4px 0 0;font-size:13px'}) : null,
+      el('p', {cls:'muted casecount', text: caseCountText(c), style:'margin:4px 0 0;font-size:12.5px'})]), open]));
   });
   box.appendChild(list);
 }
 function renderSources(){
   const t = $('sourcesTable'); t.textContent = '';
   if(!caseCtx) return;
-  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 2 ? 'l' : '', text: h})))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Note', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 3 ? 'l' : '', text: h})))]));
   const tb = el('tbody');
-  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
+  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {cls:'l', text: s.note || '\u2014', style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
   t.appendChild(tb);
   labelCells(t);
 }
 // Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
 // calculation or the rationale, and says when you have changed the value from the case.
 const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth' };
-const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
+const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J', default: 'N' };
 let chipN = 0;
 function chipTargets(){
   const out = [];
@@ -3584,6 +3685,8 @@ function chipTargets(){
 function chipTip(rec, edited, cur){
   const cite = (ids) => ids.map(id => { const s = caseCtx.c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; });
   const parts = [];
+  if(rec.basis === 'default'){ parts.push('Neutral default, not used by this case.'); if(rec.note && rec.note !== CASE_DEFAULT_NOTE) parts.push(rec.note);
+    if(edited) parts.push('You changed this from the case value ' + rec.value + ' (now ' + cur + ').'); return parts; }
   parts.push(rec.basis === 'sourced' ? 'Sourced.' : rec.basis === 'derived' ? 'Derived.' : 'Judgement.');
   if(rec.basis === 'derived') parts.push('Calculation: ' + rec.note);
   if(rec.basis === 'judgement') parts.push('Rationale: ' + rec.note);
@@ -3644,6 +3747,15 @@ function renderWhatHappened(res){
   t.appendChild(tb);
   const k = w.counts;
   $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
+  // Each version as the case defines it (page edits not applied), beside the recorded outcomes.
+  const vt = $('versionTable'); vt.textContent = '';
+  const vr = caseVersionRows(c);
+  $('versionBlock').hidden = vr.length < 2;
+  vt.appendChild(el('thead', null, [el('tr', null, ['Version', 'Layer', 'Present value', 'Model verdict', 'Model: capital earns its cost?', 'What happened'].map((h,i) => el('th', {cls: i === 2 ? '' : 'l', text: h})))]));
+  const vb = el('tbody');
+  vr.forEach(v => v.layers.forEach(r => vb.appendChild(el('tr', {'data-version': v.id}, [el('td', {cls:'l', text: v.label}), el('td', {cls:'l', text: r.layer}),
+    el('td', {cls: r.npv < 0 ? 'neg' : 'pos', text: money(r.npv)}), el('td', {cls:'l', text: r.bin}), el('td', {cls:'l', text: r.earnsCost ? 'yes' : 'no'}), el('td', {cls:'l', text: r.outcome || 'not recorded'})]))));
+  vt.appendChild(vb); labelCells(vt);
   if(modalOpen === 'whModal') renderWhModal();
 }
 // The "What happened" dialog (any mode) shows a copy of the card's content, without its ids.
@@ -3684,6 +3796,8 @@ function setupCollapsibles(){
   });
 }
 function init(){
+  // Case snapshots and case links are checked against the case's own money ranges.
+  snapSetCaseRanges(id => { const c = CASES.find(x => x.id === id); return c ? caseRanges(c) : null; });
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address

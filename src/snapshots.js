@@ -188,8 +188,17 @@ function snapSchema(v, where){
 // Checks settings and layer inputs and returns fresh objects built from whitelisted fields only. Shared by stored
 // snapshots and links. o: { schema, caseId (null for your own five-layer scenario), alloc (allocations allowed),
 // names (layer names required; otherwise the default names are used) }.
+// A case may declare its own money ranges (value pool, build capex). The page registers a lookup by case id; inputs of
+// a case snapshot or case link are then checked against those ranges, everything else against the shared ranges.
+let snapCaseRangesFn = null;
+function snapSetCaseRanges(fn){ snapCaseRangesFn = typeof fn === 'function' ? fn : null; }
+function snapRangesFor(caseId){
+  const d = snapDeps(), r = caseId && snapCaseRangesFn ? (snapCaseRangesFn(caseId) || {}) : {};
+  return { G: Object.assign({}, d.GLOBAL_RANGES, r.pool ? { pool: r.pool } : {}), L: Object.assign({}, d.LAYER_RANGES, r.capex ? { capex: r.capex } : {}) };
+}
 function snapCheckInputs(G, Ls, where, o){
-  const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id), res = { G: {}, layers: [] };
+  const d0 = snapDeps(), rg = snapRangesFor(o.caseId), d = Object.assign({}, d0, { GLOBAL_RANGES: rg.G, LAYER_RANGES: rg.L });
+  const defIds = d.DEFAULT_LAYERS.map(L => L.id), res = { G: {}, layers: [] };
   snapKeys(G, SNAP_GLOBAL_KEYS.concat(['entryDef', 'capexModel', 'phases'], o.schema >= 5 ? ['tvMode', 'tvGrowth'] : []), [], where + ' settings');
   SNAP_GLOBAL_KEYS.forEach(k => { res.G[k] = snapNum(G[k], d.GLOBAL_RANGES[k], where + ' setting ' + k, SNAP_INT_KEYS.indexOf(k) >= 0); });
   res.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
@@ -522,4 +531,4 @@ function linkApplyCase(parsed, base){
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
-if (typeof module !== 'undefined') module.exports = { snapSameStack, SNAP_MAX_LAYERS, snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj, SNAP_SCHEMA_READABLE, snapTriggeredList, snapMakeResponse, snapCriterionState, snapLaterSaved, snapPrepareLoad, SNAP_SCHEMA_VERSION, snapReadStoredText, snapCheckInputs, LINK_SCHEMA_VERSION, LINK_MAX_CHARS, makeLinkText, parseLinkText, linkApplyCase, linkB64Encode, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };
+if (typeof module !== 'undefined') module.exports = { snapSameStack, SNAP_MAX_LAYERS, snapByteLength, snapForbiddenKey, snapKeys, snapNum, snapStr, snapOneOf, snapDate, snapErr, snapIsObj, SNAP_SCHEMA_READABLE, snapTriggeredList, snapMakeResponse, snapCriterionState, snapLaterSaved, snapPrepareLoad, snapSetCaseRanges, SNAP_SCHEMA_VERSION, snapReadStoredText, snapCheckInputs, LINK_SCHEMA_VERSION, LINK_MAX_CHARS, makeLinkText, parseLinkText, linkApplyCase, linkB64Encode, SNAP_MAX_BYTES, SNAP_MAX_COUNT, makeSnapshot, snapInputs, snapOutputs, snapBlankKill, snapIsOverdue, snapTodayLocal, diffInputs, compareSnapshots };

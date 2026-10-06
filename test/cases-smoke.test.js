@@ -45,8 +45,10 @@ test('Cases pill: shown in the dev build; the dialog lists title, as-of date and
   assert.equal($(doc, 'casesModal').hidden, false);
   assert.equal(doc.activeElement, $(doc, 'casesClose'));
   const rows = [...doc.querySelectorAll('#casesList .case')];
-  assert.equal(rows.length, 3);
-  rows.forEach(r => { assert.match(r.querySelector('h3').textContent, /^Synthetic \d-layer case$/); assert.match(r.textContent, /As of 1845-06-30\. Test fixture, not data/); });
+  // The dev build has the three synthetic fixtures plus the shipped railway case.
+  assert.equal(rows.length, 4);
+  rows.filter(r => /^Synthetic/.test(r.querySelector('h3').textContent)).forEach(r => { assert.match(r.querySelector('h3').textContent, /^Synthetic \d-layer case$/); assert.match(r.textContent, /As of 1845-06-30\. Test fixture, not data/); });
+  assert.equal(rows.filter(r => /^Synthetic/.test(r.querySelector('h3').textContent)).length, 3);
   click(win, $(doc, 'casesClose'));
   assert.equal($(doc, 'casesModal').hidden, true);
   assert.deepEqual(errors, []);
@@ -107,7 +109,7 @@ test('What happened button: in every mode, opens the outcome content in a dialog
   assert.equal(m.hidden, false);
   assert.equal(doc.activeElement, $(doc, 'whClose'));
   assert.equal(body.querySelector('[data-wh="whBanner"]').textContent, $(doc, 'whBanner').textContent);
-  assert.equal(body.querySelectorAll('tbody tr').length, 6);
+  assert.equal(body.querySelectorAll('[data-wh="outcomeTable"] tbody tr').length, 6);
   assert.equal(body.querySelector('[data-wh="whCounts"]').textContent, $(doc, 'whCounts').textContent);
   assert.equal(body.querySelectorAll('[id]').length, 0, 'no duplicate ids in the copy');
   // Sources dates stay whole.
@@ -220,7 +222,7 @@ test('Sources dialog lists every source with publication date, kind and series e
   click(win, $(doc, 'caseSources'));
   assert.equal($(doc, 'sourcesModal').hidden, false);
   const rows = [...doc.querySelectorAll('#sourcesTable tbody tr')].map(tr => [...tr.children].map(td => td.textContent));
-  assert.deepEqual(rows, c.sources.map(s => [s.id, s.citation, s.publicationDate, s.kind, s.seriesEndsOn || '—']));
+  assert.deepEqual(rows, c.sources.map(s => [s.id, s.citation, s.note || '—', s.publicationDate, s.kind, s.seriesEndsOn || '—']));
   assert.ok($(doc, 'sourcesTable').classList.contains('cards'));
   assert.ok([...doc.querySelectorAll('#sourcesTable tbody td')].every(td => td.dataset.label), 'phone cards: every cell labelled');
   win.close();
@@ -371,7 +373,7 @@ test('phone header: one non-sticky row; Behind the tool, Cases and Share in the 
   assert.deepEqual([...doc.querySelectorAll('#moreMenu [role="menuitem"]')].filter(b => !b.hidden).map(b => b.textContent), ['Behind the tool', 'Cases', 'Share a link']);
   more.focus(); click(win, more); click(win, $(doc, 'moreCases'));
   assert.equal($(doc, 'casesModal').hidden, false); assert.equal($(doc, 'moreMenu').hidden, true);
-  assert.equal(doc.querySelectorAll('#casesList .case').length, 3);
+  assert.equal(doc.querySelectorAll('#casesList .case').length, 4);
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(doc.activeElement, more, 'focus returns to More');
   click(win, more); click(win, $(doc, 'moreBehind'));

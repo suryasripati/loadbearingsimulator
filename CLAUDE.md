@@ -28,7 +28,7 @@ Status: Drop 1 is built (layer timing, calendar phases, entry year with both pri
 - `src/app.js` UI logic, vanilla JS, no framework.
 - `src/guide.js` the single source of text about each input: group, label, info-icon note (`tip`), meaning, where to look, recipe (formulas in backticks, shown in monospace) and hindsight trap. `guideRows()` adds "Range and default" generated from `src/defaults.js` and "Shown in". Used by the "Input guide" tab and the slider info icons.
 - `src/cases.js` case format, validation (`validateCase`), case state with versions (`caseState`), money unit and the "What happened" rows. Pure; stripped and inlined before the modes.
-- `cases/` case files (`*.case.json`) and README. Empty of cases for now. `calibration/private/` and `*.private.json` stay gitignored.
+- `cases/` case files (`*.case.json`) and README. First case: `railway-mania-1845` (case schema 3: source notes, base version name, description, basis "default" for neutral unused settings, per-case money ranges for pool and capex; see `cases/README.md`). Its hindsight disclosure is the owner's draft. `calibration/private/` and `*.private.json` stay gitignored.
 - `src/template.html` markup and CSS with `/*MODEL*/` and `/*APP*/` placeholders.
 - `scripts/build.js` assembles the page.
 - `test/model.test.js` property tests plus a regression test against `test/fixtures/v0_1_defaults.json`.
@@ -157,6 +157,7 @@ After drop 1, re-run the sensitivity ranking at the placeholder defaults and rep
 - Case file format and rules: `cases/README.md`. Validation in `src/cases.js`; the build fails on any error, refuses synthetic ids in the live build and duplicate ids.
 - Case mode in the page: Cases button (hidden when no cases are bundled), confirm before opening, your scenario kept in memory for "Return to my scenario" (one step, not saved), title prefix and money unit from the case, badge "Case: TITLE, as of DATE", version pills, "modified from case" marker (allocations excluded), Reset to case, basis chips on every case input, Sources dialog, "What happened" card (Advanced and Analyst). Edits in a case are not written to local storage. Snapshots (schema 4) record `caseId` and layer names; loading a case snapshot opens its case; snapshots of different stacks cannot be compared.
 - Layer names refuse `< > & "` in both cases and snapshot imports, because names are drawn into charts and tables.
+- Case schema 3 and money ranges: `caseRanges` gives [min, max, step] for pool and capex while a case is open (`rangeOf` in the page); `snapSetCaseRanges` lets stored snapshots and links of a case be checked against them. Shared timing offset range is -10..10. `caseBasisCounts` / `caseCountText` give the judgement share (per-phase inputs once, defaults apart); `caseVersionRows` runs each version as defined for the What happened comparison.
 
 ### 3. Calibration scaffold (original spec)
 - Scaffold only, no data: a structure for scoring past episodes (British railways 1840s, telecom and fibre 1996-2001, dot-com applications, electricity) blind, using only what was knowable at the time. Do not populate with invented numbers. Every row needs a cited, period-appropriate source. Ask the maintainer for sources, or propose them for review.

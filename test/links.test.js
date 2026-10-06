@@ -215,7 +215,7 @@ test('phones: Share moves into a "More" overflow menu (CSS below 600px); the men
   more.focus(); click(win, more);
   assert.equal(menu.hidden, false); assert.equal(doc.activeElement, doc.getElementById('moreBehind'), 'focus on the first item');
   doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-  assert.equal(doc.activeElement, doc.getElementById('moreShare'), 'Cases is hidden without cases, so Share is next');
+  assert.equal(doc.activeElement, doc.getElementById('moreCases'), 'the live build ships a case, so Cases is in the menu');
   assert.equal(doc.getElementById('moreShare').getAttribute('role'), 'menuitem');
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(menu.hidden, true); assert.equal(doc.activeElement, more);

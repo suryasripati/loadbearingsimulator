@@ -7,7 +7,7 @@
 
 const GUIDE_INTRO = [
   'What each input means, its range and default, and in which view it appears. Turn on case guidance to add where to look at a chosen as-of date, a recipe for estimating it, and the hindsight trap to avoid.',
-  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled.',
+  'In a case, every number shows its basis. Sourced: the value appears in a cited source. Derived: computed from cited sources, with the calculation shown. Judgement: a call made with a stated rationale; it may have no source and is always labelled. Default: a neutral tool setting the case does not use; it is shown but not counted as judgement.',
   'Examples below are symbolic. They show the shape of a calculation, never a figure from a real episode.'
 ];
 
@@ -181,7 +181,13 @@ function guideDeps(){
 }
 const guideNum = (v) => String(Math.round(v * 1000) / 1000);
 // "Range and default" text, generated from the shared ranges and defaults (never typed by hand).
-function guideRange(k, d){
+// o (optional, case mode): { ranges: { pool: [min, max, step], capex: [...] }, values: { pool, capex: [by layer] }, unit }.
+function guideRange(k, d, o){
+  const cr = o && o.ranges && o.ranges[k];
+  if (cr) {
+    const v = o.values && o.values[k], vs = Array.isArray(v) ? 'case values by layer ' + v.map(guideNum).join(', ') : 'case value ' + guideNum(v);
+    return guideNum(cr[0]) + ' to ' + guideNum(cr[1]) + ', step ' + guideNum(cr[2]) + ' (this case\'s range' + (o.unit ? ', ' + o.unit : '') + '); ' + vs;
+  }
   const r = d.GLOBAL_RANGES[k] || d.LAYER_RANGES[k] || (k === 'phase2Start' ? d.PHASE_RANGES[0] : k === 'phase3Start' ? d.PHASE_RANGES[1] : null);
   if (k === 'entryDef') return 'A (premium) or B (multiple); default ' + d.DEFAULT_DEF;
   if (k === 'capexModel') return 'sustaining or vintage; default ' + d.DEFAULT_CAPEX;
@@ -200,12 +206,12 @@ function guideRange(k, d){
   return span + '; default ' + def;
 }
 // One row per input, in group order: what the guide table shows.
-function guideRows(){
+function guideRows(o){
   const d = guideDeps();
   const rows = [];
   GUIDE_GROUPS.forEach(g => Object.keys(GUIDE).filter(k => GUIDE[k].group === g).forEach(k => {
     const x = GUIDE[k];
-    rows.push({ key: k, group: g, label: x.label, meaning: x.meaning, range: guideRange(k, d),
+    rows.push({ key: k, group: g, label: x.label, meaning: x.meaning, range: guideRange(k, d, o),
       shownIn: GUIDE_FIRST_SCREEN.indexOf(k) >= 0 ? 'Basic, Advanced, Analyst' : 'Analyst', where: x.where, recipe: x.recipe, trap: x.trap });
   }));
   return rows;

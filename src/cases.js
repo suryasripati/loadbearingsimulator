@@ -7,27 +7,32 @@
 // date (a period source published on or before it, or a compiled series that ends on or before it). Outcomes cite
 // sources published after it. Sourced and derived values need sources; derived values show their calculation in the
 // note; judgement values need a rationale in the note, may have no source, and are always labelled on the page.
+// Schema 3: a "default" basis for neutral tool settings the case does not use (no source, no rationale needed; shown
+// and counted separately, never as judgement), a note on each source, a name for the base version, a description,
+// and per-case money ranges for the value pool and build capex in the case's own money unit.
 
 const CASE_FORMAT = 'load-bearing-simulator-case';
-const CASE_SCHEMA_VERSION = 2;
+const CASE_SCHEMA_VERSION = 3;
 // Schema 2 adds two optional settings: tvMode ("multiple" or "perpetuity") and tvGrowth (an input record, long-run
 // growth in % a year). Schema 1 cases stay valid and open as "multiple" with growth 0.
-const CASE_SCHEMAS = [1, 2];
+const CASE_SCHEMAS = [1, 2, 3];
+const CASE_MONEY_KEYS = ['pool', 'capex'];
+const CASE_DEFAULT_NOTE = 'Neutral default, not used.';
 const CASE_TV_MODES = ['multiple', 'perpetuity'];
 const CASE_MAX_LAYERS = 6;
 const CASE_MAX_VERSIONS = 3;
 const CASE_SETTING_KEYS = ['pool', 'speed', 'mid', 'disc', 'rd', 'tv', 'premium', 'entry', 'mult', 'phase2Start', 'phase3Start'];
 const CASE_LAYER_KEYS = ['evidence', 'share', 'offset', 'steepness', 'capex', 'buildStart', 'buildYears', 'unitCostDecline', 'passThrough', 'life', 'debt'];
 const CASE_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'buildStart', 'buildYears'];
-const CASE_BASIS = ['sourced', 'derived', 'judgement'];
+const CASE_BASIS = ['sourced', 'derived', 'judgement', 'default'];
 const CASE_SOURCE_KINDS = ['period', 'compiled', 'outcome'];
 const CASE_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
 const CASE_BANNER = 'Scored by someone who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){
-  if (typeof module !== 'undefined' && typeof require === 'function') return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: require('./model.js').TV_GROWTH_GAP });
-  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP };
+  if (typeof module !== 'undefined' && typeof require === 'function') { const m = require('./model.js'); return Object.assign({}, require('./defaults.js'), { TV_GROWTH_GAP: m.TV_GROWTH_GAP, runLayer: m.runLayer }); }
+  return { LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, TV_GROWTH_GAP, runLayer, DEFAULT_G };
 }
 
 /* ---------- Money unit ---------- */
@@ -84,7 +89,7 @@ function sourceForOutcome(src, asOfDate){ return src.publicationDate > asOfDate;
 function caseRecord(r, where, range, integer, ctx){
   caseKeys(r, ['value', 'basis', 'sourceIds', 'note'], [], where);
   const out = { value: caseNum(r.value, range, where + ' value', integer), basis: r.basis, sourceIds: [], note: caseText(r.note, where + ' note', 2000, true) };
-  if (CASE_BASIS.indexOf(r.basis) < 0) caseErr(where + ' basis', 'expected sourced, derived or judgement');
+  if (CASE_BASIS.indexOf(r.basis) < 0 || (r.basis === 'default' && ctx.schema < 3)) caseErr(where + ' basis', 'expected sourced, derived or judgement' + (ctx.schema >= 3 ? ', or default' : ''));
   if (!Array.isArray(r.sourceIds)) caseErr(where + ' sourceIds', 'expected a list');
   r.sourceIds.forEach(id => {
     const s = ctx.byId[id];
@@ -93,7 +98,8 @@ function caseRecord(r, where, range, integer, ctx){
       + (s.kind === 'compiled' ? ' (a compiled series must end on or before it)' : s.kind === 'outcome' ? ' (an outcome source cannot back an input)' : ' (published ' + s.publicationDate + ')'));
     out.sourceIds.push(id);
   });
-  if (out.basis !== 'judgement' && !out.sourceIds.length) caseErr(where, 'a ' + out.basis + ' value needs at least one source');
+  if (out.basis === 'default' && out.sourceIds.length) caseErr(where, 'a default value is a neutral tool setting and cites no source');
+  if ((out.basis === 'sourced' || out.basis === 'derived') && !out.sourceIds.length) caseErr(where, 'a ' + out.basis + ' value needs at least one source');
   if (out.basis === 'derived' && !out.note.trim()) caseErr(where, 'a derived value needs its calculation in the note');
   if (out.basis === 'judgement' && !out.note.trim()) caseErr(where, 'a judgement needs a rationale in the note');
   return out;
@@ -103,7 +109,7 @@ function caseSettings(S, where, ctx, partial){
   const d = caseDeps(), tvKeys = ctx.schema >= 2 ? ['tvMode', 'tvGrowth'] : [];
   caseKeys(S, partial ? [] : CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']), (partial ? CASE_SETTING_KEYS.concat(['entryDef', 'capexModel']) : []).concat(tvKeys), where);
   const out = {};
-  CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  CASE_SETTING_KEYS.forEach(k => { if (k in S) out[k] = caseRecord(S[k], where + ' ' + k, k === 'pool' && ctx.moneyRanges.pool ? ctx.moneyRanges.pool : settingRange(k, d), CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
   if ('tvGrowth' in S) out.tvGrowth = caseRecord(S.tvGrowth, where + ' tvGrowth', d.GLOBAL_RANGES.tvGrowth, false, ctx);
   if ('tvMode' in S) { if (CASE_TV_MODES.indexOf(S.tvMode) < 0) caseErr(where + ' tvMode', 'expected "multiple" or "perpetuity"'); out.tvMode = S.tvMode; }
   if ('entryDef' in S) { if (['A', 'B'].indexOf(S.entryDef) < 0) caseErr(where + ' entryDef', 'expected "A" or "B"'); out.entryDef = S.entryDef; }
@@ -114,7 +120,7 @@ function caseInputs(I, where, ctx, partial){
   const d = caseDeps(), all = CASE_LAYER_KEYS.concat(['driftP', 'marginP']);
   caseKeys(I, partial ? [] : all, partial ? all : [], where);
   const out = {};
-  CASE_LAYER_KEYS.forEach(k => { if (k in I) out[k] = caseRecord(I[k], where + ' ' + k, d.LAYER_RANGES[k], CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
+  CASE_LAYER_KEYS.forEach(k => { if (k in I) out[k] = caseRecord(I[k], where + ' ' + k, k === 'capex' && ctx.moneyRanges.capex ? ctx.moneyRanges.capex : d.LAYER_RANGES[k], CASE_INT_KEYS.indexOf(k) >= 0, ctx); });
   ['driftP', 'marginP'].forEach(k => {
     if (!(k in I)) return;
     if (!Array.isArray(I[k]) || I[k].length !== 3) caseErr(where + ' ' + k, 'expected three phase values');
@@ -134,7 +140,8 @@ function phaseOrder(settings, where){
 
 function validateCase(raw, where0){
   const where = where0 || 'Case';
-  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'], where);
+  const schema3 = raw && raw.schemaVersion >= 3 ? ['description', 'baseLabel', 'moneyRanges'] : [];
+  caseKeys(raw, ['format', 'schemaVersion', 'id', 'title', 'subtitle', 'asOfDate', 'asOfRule', 'hindsightDisclosure', 'moneyUnit', 'sources', 'settings', 'layers', 'outcomes'], ['versions'].concat(schema3), where);
   if (raw.format !== CASE_FORMAT) caseErr(where, 'format must be "' + CASE_FORMAT + '"');
   if (CASE_SCHEMAS.indexOf(raw.schemaVersion) < 0) caseErr(where, 'schemaVersion must be ' + CASE_SCHEMAS.join(' or '));
   const c = { format: CASE_FORMAT, schemaVersion: raw.schemaVersion };
@@ -148,13 +155,31 @@ function validateCase(raw, where0){
   if (/\n/.test(c.hindsightDisclosure)) caseErr(where + ' hindsightDisclosure', 'must be one line');
   if (!parseMoneyUnit(raw.moneyUnit)) caseErr(where + ' moneyUnit', 'expected a currency symbol and an optional unit, e.g. "$B" or "£m"');
   c.moneyUnit = raw.moneyUnit;
+  // Schema 3: description (context, not a finding), base version name, money ranges in the case's own unit.
+  c.description = raw.description === undefined ? '' : caseText(raw.description, where + ' description', 600);
+  if (/\n/.test(c.description)) caseErr(where + ' description', 'must be one paragraph');
+  c.baseLabel = raw.baseLabel === undefined ? 'Base' : caseText(raw.baseLabel, where + ' baseLabel', 30);
+  c.moneyRanges = {};
+  if (raw.moneyRanges !== undefined) {
+    caseKeys(raw.moneyRanges, [], CASE_MONEY_KEYS, where + ' moneyRanges');
+    CASE_MONEY_KEYS.forEach(k => {
+      if (!(k in raw.moneyRanges)) return;
+      const r = raw.moneyRanges[k], w = where + ' moneyRanges ' + k;
+      if (!Array.isArray(r) || r.length !== 2) caseErr(w, 'expected [min, max]');
+      r.forEach(v => { if (typeof v !== 'number' || !isFinite(v)) caseErr(w, 'expected numbers'); });
+      if (!(r[0] > 0)) caseErr(w, 'min must be above 0');
+      if (!(r[0] < r[1])) caseErr(w, 'min must be below max');
+      c.moneyRanges[k] = [r[0], r[1]];
+    });
+  }
   // Sources
   if (!Array.isArray(raw.sources) || raw.sources.length > 200) caseErr(where + ' sources', 'expected a list');
   const byId = {};
   c.sources = raw.sources.map((s, i) => {
     const w = where + ' source ' + (i + 1);
-    caseKeys(s, ['id', 'citation', 'publicationDate', 'kind'], ['seriesEndsOn'], w);
-    const o = { id: caseText(s.id, w + ' id', 40), citation: caseText(s.citation, w + ' citation', 1000), publicationDate: caseDay(s.publicationDate, w + ' publicationDate'), kind: s.kind, seriesEndsOn: null };
+    caseKeys(s, ['id', 'citation', 'publicationDate', 'kind'], ['seriesEndsOn'].concat(raw.schemaVersion >= 3 ? ['note'] : []), w);
+    const o = { id: caseText(s.id, w + ' id', 40), citation: caseText(s.citation, w + ' citation', 1000), publicationDate: caseDay(s.publicationDate, w + ' publicationDate'), kind: s.kind, seriesEndsOn: null,
+      note: s.note === undefined ? '' : caseText(s.note, w + ' note', 1000, true) };
     if (!/^[A-Za-z0-9_-]+$/.test(o.id)) caseErr(w + ' id', 'use letters, digits, hyphens and underscores');
     if (byId[o.id]) caseErr(w + ' id', 'duplicate source id "' + o.id + '"');
     if (CASE_SOURCE_KINDS.indexOf(s.kind) < 0) caseErr(w + ' kind', 'expected period, compiled or outcome');
@@ -164,7 +189,7 @@ function validateCase(raw, where0){
     byId[o.id] = o;
     return o;
   });
-  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion };
+  const ctx = { byId, asOfDate: c.asOfDate, schema: raw.schemaVersion, moneyRanges: c.moneyRanges };
   // Settings and layers
   c.settings = caseSettings(raw.settings, where + ' settings', ctx, false);
   phaseOrder(c.settings, where + ' settings');
@@ -258,7 +283,54 @@ function caseState(c, versionId){
     inp.marginP.forEach((r, j) => { recs['layer ' + L.id + '.marginP[' + j + ']'] = r; });
     return o;
   });
-  return { G, layers, recs, versionId: v ? v.id : 'base', versionLabel: v ? v.label : 'Base' };
+  return { G, layers, recs, versionId: v ? v.id : 'base', versionLabel: v ? v.label : c.baseLabel || 'Base', ranges: caseRanges(c) };
+}
+// Slider and input ranges [min, max, step] for the case's money inputs; empty when the case declares none. The step
+// is the finest precision of the case's own values for that input (base and versions), so no value is rounded.
+function caseRanges(c){
+  const out = {}, decimals = (v) => { const t = String(v); return t.indexOf('.') < 0 ? 0 : t.length - t.indexOf('.') - 1; };
+  CASE_MONEY_KEYS.forEach(k => {
+    const r = c.moneyRanges && c.moneyRanges[k]; if (!r) return;
+    const vals = [];
+    if (k === 'pool') { vals.push(c.settings.pool.value); c.versions.forEach(v => { if (v.settings.pool) vals.push(v.settings.pool.value); }); }
+    else { c.layers.forEach(L => vals.push(L.inputs.capex.value)); c.versions.forEach(v => Object.keys(v.layers).forEach(id => { if (v.layers[id].capex) vals.push(v.layers[id].capex.value); })); }
+    const d = Math.max(0, ...vals.concat(r).map(decimals));
+    out[k] = [r[0], r[1], Math.pow(10, -d)];
+  });
+  return out;
+}
+// How the case's inputs are based. Per-phase inputs (share drift, cash margin) count once per layer: judgement if any
+// phase is judgement, default only if every phase is default. Defaults (neutral settings the case does not use) are
+// counted separately and never as case-specific inputs. Base inputs only; versions are counted in versionInputs.
+function caseBasisCounts(c){
+  const n = { total: 0, judgement: 0, sourced: 0, derived: 0, defaults: 0, versionInputs: 0, versionJudgement: 0 };
+  const add = (recs) => {
+    const b = recs.every(r => r.basis === 'default') ? 'default' : recs.some(r => r.basis === 'judgement') ? 'judgement' : recs[0].basis;
+    if (b === 'default') { n.defaults++; return; }
+    n.total++; n[b]++;
+  };
+  CASE_SETTING_KEYS.concat(['tvGrowth']).forEach(k => { if (c.settings[k]) add([c.settings[k]]); });
+  c.layers.forEach(L => { CASE_LAYER_KEYS.forEach(k => add([L.inputs[k]])); add(L.inputs.driftP); add(L.inputs.marginP); });
+  c.versions.forEach(v => {
+    const recs = Object.keys(v.settings).filter(k => v.settings[k] && v.settings[k].basis).map(k => v.settings[k]);
+    Object.keys(v.layers).forEach(id => Object.keys(v.layers[id]).forEach(k => { const r = v.layers[id][k]; if (Array.isArray(r)) recs.push(...r); else recs.push(r); }));
+    recs.forEach(r => { if (r.basis !== 'default') { n.versionInputs++; if (r.basis === 'judgement') n.versionJudgement++; } });
+  });
+  return n;
+}
+function caseCountText(c){
+  const n = caseBasisCounts(c);
+  return n.judgement + ' of ' + n.total + ' case-specific inputs are judgement' + (n.defaults ? '; ' + n.defaults + ' neutral default' + (n.defaults === 1 ? '' : 's') + ' not counted' : '') + '.';
+}
+// Each version as defined in the case (no page edits), run through the model, beside each layer's recorded outcome.
+function caseVersionRows(c){
+  const d = caseDeps();
+  const versions = [{ id: 'base', label: c.baseLabel || 'Base' }].concat(c.versions.map(v => ({ id: v.id, label: v.label })));
+  return versions.map(v => {
+    const st = caseState(c, v.id), G = Object.assign({}, d.DEFAULT_G || {}, st.G);
+    return { id: v.id, label: v.label, layers: st.layers.map(L => { const o = d.runLayer(L, G), oc = c.outcomes.find(x => x.layer === L.id) || null;
+      return { layer: L.name, npv: o.npv, bin: o.bin, earnsCost: o.npv >= 0, outcome: oc ? oc.status : null }; }) };
+  });
 }
 
 /* ---------- What happened ---------- */
@@ -274,4 +346,4 @@ function caseOutcomeRows(c, layers, results){
   return { rows, counts, banner: CASE_BANNER };
 }
 
-if (typeof module !== 'undefined') module.exports = { CASE_FORMAT, CASE_SCHEMA_VERSION, CASE_MAX_LAYERS, CASE_BANNER, CASE_DEFAULT_ALLOC, CASE_SETTING_KEYS, CASE_LAYER_KEYS, parseMoneyUnit, formatMoney, validateCase, caseState, caseOutcomeRows, sourceForInput, sourceForOutcome };
+if (typeof module !== 'undefined') module.exports = { caseRanges, caseBasisCounts, caseCountText, caseVersionRows, CASE_DEFAULT_NOTE, CASE_SCHEMAS, CASE_FORMAT, CASE_SCHEMA_VERSION, CASE_MAX_LAYERS, CASE_BANNER, CASE_DEFAULT_ALLOC, CASE_SETTING_KEYS, CASE_LAYER_KEYS, parseMoneyUnit, formatMoney, validateCase, caseState, caseOutcomeRows, sourceForInput, sourceForOutcome };

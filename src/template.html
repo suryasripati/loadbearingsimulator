@@ -349,6 +349,7 @@ body.case-mode .tb-sub{display:none}
 .bchip.b-sourced{color:var(--green)}
 .bchip.b-derived{color:var(--ink)}
 .bchip.b-judgement{color:var(--amber);background:var(--amber-bg)}
+.bchip.b-default{color:var(--cap);border-style:dotted}
 .bchip.edited{border-style:dashed;opacity:.7}
 td .bchipwrap{margin-left:3px}
 .cctl-h .bchipwrap{margin-left:2px}
@@ -456,6 +457,9 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
     <p class="legend" id="whHindsight"></p>
     <div class="scroll"><table id="outcomeTable" class="outcomes" aria-label="What happened, by layer"></table></div>
     <p class="legend" id="whCounts"></p>
+    <div id="versionBlock" hidden><h3 style="margin:12px 0 4px">Each version as the case defines it</h3>
+    <p class="legend" style="margin:0 0 6px">Present value and verdict for every version, with the case's own inputs (your edits are not applied), beside the recorded outcome.</p>
+    <div class="scroll"><table id="versionTable" class="outcomes cards" aria-label="Each version against the recorded outcomes"></table></div></div>
   </div>
 </section>
 

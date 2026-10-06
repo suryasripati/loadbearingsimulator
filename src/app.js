@@ -102,8 +102,10 @@ function syncDriverLabels(){
 const SLIDERS = {g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_mult:'mult', g_entry:'entry', g_disc:'disc', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth'};
 // Long-run growth stays at least TV_GROWTH_GAP points below the discount rate: growth is pulled down when either moves.
 function keepGrowthGap(){ if(G.tvGrowth > G.disc - TV_GROWTH_GAP){ G.tvGrowth = G.disc - TV_GROWTH_GAP; if($('g_tvg')) $('g_tvg').value = G.tvGrowth; } }
+// Ranges for an input: a case's own money ranges (value pool, build capex) while it is open, the shared ones otherwise.
+function rangeOf(k){ const c = caseCtx && caseCtx.st.ranges && caseCtx.st.ranges[k]; return c || GLOBAL_RANGES[k] || LAYER_RANGES[k]; }
 function applyRanges(){
-  for(const id in SLIDERS){ const r = GLOBAL_RANGES[SLIDERS[id]], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
+  for(const id in SLIDERS){ const r = rangeOf(SLIDERS[id]), e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; }
   ['ph1','ph2'].forEach((id,i) => { const r = PHASE_RANGES[i], e = $(id); e.min = r[0]; e.max = r[1]; e.step = r[2]; });
 }
 function syncDriverInputs(){
@@ -200,6 +202,7 @@ const getV = (L, c) => c[5]===undefined ? L[c[0]] : L[c[0]][c[5]];
 const COL_MODE = {};
 const dm = (k) => COL_MODE[k] ? ' data-min="'+COL_MODE[k]+'"' : '';
 function cellInput(L, i, c){
+  if(c[5] === undefined){ const r = rangeOf(c[0]); c = [c[0], c[1], r[0], r[1], r[2]]; }
   return '<td'+(c[5]===undefined ? dm(c[0]) : '')+'><input type="number" data-i="'+i+'" data-k="'+c[0]+'"'+(c[5]===undefined?'':' data-p="'+c[5]+'"')+' min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+getV(L,c)+'" aria-label="'+L.name+': '+c[1]+(c[5]===undefined?'':', phase '+(c[5]+1))+'"></td>';
 }
 function phaseLabels(){
@@ -311,7 +314,8 @@ function onLayerInput(e){
   const col = COLS.concat(PCOLS).find(c => c[0]===k);
   let v = parseFloat(inp.value);
   if(!isFinite(v)) return;
-  v = clamp(v, col[2], col[3]);
+  const rg = p===undefined ? rangeOf(k) : col.slice(2, 4);
+  v = clamp(v, rg[0], rg[1]);
   if(p===undefined) layers[i][k] = v; else layers[i][k][+p] = v;
   // The allocation is editable in two places (compact scorecard and Analyst layer table): keep the other in step.
   if(k==='alloc') document.querySelectorAll('input[data-k="alloc"][data-i="'+i+'"]').forEach(x => { if(x !== inp) x.value = v; });
@@ -1270,7 +1274,10 @@ function renderGuide(){
   t.appendChild(el('thead', null, [el('tr', null, GUIDE_COLS.map(c => el('th', {scope:'col', cls: c[2] === 'cg' ? 'cg' : '', text: c[1]})))]));
   const tb = el('tbody');
   let group = null;
-  guideRows().forEach(r => {
+  // In a case, the money inputs show the case's own ranges and values.
+  const go = caseCtx && Object.keys(caseCtx.st.ranges || {}).length ? { ranges: caseCtx.st.ranges, unit: moneyUnit,
+    values: { pool: caseCtx.st.G.pool, capex: caseCtx.st.layers.map(L => L.capex) } } : undefined;
+  guideRows(go).forEach(r => {
     if(r.group !== group){ group = r.group; tb.appendChild(el('tr', {cls:'grp', 'data-group': group}, [el('th', {colspan: String(GUIDE_COLS.length), scope:'colgroup', text: group})])); }
     tb.appendChild(el('tr', {'data-key': r.key, 'data-group': r.group, 'data-name': guideLabel(r.label).toLowerCase()}, GUIDE_COLS.map(c => {
       const td = el('td', {cls: c[2] || '', 'data-label': c[1]});
@@ -1333,7 +1340,8 @@ function setCaseContext(ctx){
   document.querySelector('.tb-name').title = name + ': Load Bearing Simulator'; // full title when it is cut with an ellipsis
   document.body.classList.toggle('case-mode', !!ctx);
   if(!ctx && modalOpen === 'whModal') closeModal(true);
-  renderGuide(); // labels carry the money unit
+  applyRanges(); // a case may bring its own money ranges
+  renderGuide(); // labels carry the money unit; ranges follow the case
   $('caseBar').hidden = !ctx;
   $('whatHappened').hidden = !ctx;
   if(ctx) renderCaseBar();
@@ -1344,7 +1352,7 @@ function openCase(id, versionId, opts){
   const o = opts || {};
   const switching = caseCtx && caseCtx.c.id === id;
   if(!o.noConfirm){
-    const label = versionId === 'base' ? 'Base' : (c.versions.find(v => v.id === versionId) || {}).label;
+    const label = versionId === 'base' ? c.baseLabel : (c.versions.find(v => v.id === versionId) || {}).label;
     askConfirm(switching
       ? { title: 'Switch version', ok: 'Switch version', returnTo: o.returnTo,
           text: 'Switch to the \u201c' + label + '\u201d version of this case?' + (caseModified() ? ' Your edits to the case will be replaced.' : ''),
@@ -1379,10 +1387,10 @@ function renderCaseBar(){
   const c = caseCtx.c;
   $('caseBadgeText').textContent = c.title + ', as of ' + c.asOfDate;
   const tip = $('caseTip'); tip.textContent = '';
-  [c.subtitle, 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
+  [c.subtitle, c.description, caseCountText(c), 'As-of rule: ' + c.asOfRule, 'Hindsight: ' + c.hindsightDisclosure, 'Money in ' + c.moneyUnit + '.'].filter(Boolean).forEach(t => tip.appendChild(el('p', {text: t, style: 'margin:0 0 4px'})));
   const vb = $('caseVersions'); vb.textContent = '';
   if(c.versions.length){
-    [{ id: 'base', label: 'Base' }].concat(c.versions).forEach(v => {
+    [{ id: 'base', label: c.baseLabel }].concat(c.versions).forEach(v => {
       const b = el('button', {type:'button', 'data-version': v.id, 'aria-pressed': String(v.id === caseCtx.versionId)}, [v.label]);
       b.addEventListener('click', () => { if(v.id !== caseCtx.versionId) openCase(c.id, v.id, { returnTo: () => document.querySelector('#caseVersions button[aria-pressed="true"]') }); });
       vb.appendChild(b);
@@ -1396,23 +1404,25 @@ function renderCasesList(){
   CASES.forEach(c => {
     const open = el('button', {type:'button', 'data-case': c.id}, [caseCtx && caseCtx.c.id === c.id ? 'Open again' : 'Open']);
     open.addEventListener('click', () => openCase(c.id, 'base', { returnTo: $('casesBtn') }));
-    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'})]), open]));
+    list.appendChild(el('div', {cls:'case'}, [el('div', null, [el('h3', {text: c.title}), el('p', {cls:'muted', text: 'As of ' + c.asOfDate + '. ' + c.subtitle, style:'margin:2px 0 0;font-size:13px'}),
+      c.description ? el('p', {text: c.description, style:'margin:4px 0 0;font-size:13px'}) : null,
+      el('p', {cls:'muted casecount', text: caseCountText(c), style:'margin:4px 0 0;font-size:12.5px'})]), open]));
   });
   box.appendChild(list);
 }
 function renderSources(){
   const t = $('sourcesTable'); t.textContent = '';
   if(!caseCtx) return;
-  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 2 ? 'l' : '', text: h})))]));
+  t.appendChild(el('thead', null, [el('tr', null, ['Id', 'Citation', 'Note', 'Published', 'Kind', 'Series ends'].map((h,i) => el('th', {cls: i < 3 ? 'l' : '', text: h})))]));
   const tb = el('tbody');
-  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
+  caseCtx.c.sources.forEach(s => tb.appendChild(el('tr', null, [el('td', {cls:'l', text: s.id}), el('td', {cls:'l', text: s.citation, style:'white-space:normal'}), el('td', {cls:'l', text: s.note || '\u2014', style:'white-space:normal'}), el('td', {text: s.publicationDate}), el('td', {text: s.kind}), el('td', {text: s.seriesEndsOn || '\u2014'})])));
   t.appendChild(tb);
   labelCells(t);
 }
 // Basis chips: each case input shows sourced (S), derived (D) or judgement (J); its tooltip shows the citations, the
 // calculation or the rationale, and says when you have changed the value from the case.
 const SLIDER_KEYS = { g_speed:'speed', g_mid:'mid', g_pool:'pool', g_prem:'premium', g_disc:'disc', g_entry:'entry', g_mult:'mult', g_rd:'rd', g_tv:'tv', g_tvg:'tvGrowth' };
-const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J' };
+const BASIS_LETTER = { sourced: 'S', derived: 'D', judgement: 'J', default: 'N' };
 let chipN = 0;
 function chipTargets(){
   const out = [];
@@ -1429,6 +1439,8 @@ function chipTargets(){
 function chipTip(rec, edited, cur){
   const cite = (ids) => ids.map(id => { const s = caseCtx.c.sources.find(x => x.id === id); return s ? s.citation + ' (' + s.publicationDate + ')' : id; });
   const parts = [];
+  if(rec.basis === 'default'){ parts.push('Neutral default, not used by this case.'); if(rec.note && rec.note !== CASE_DEFAULT_NOTE) parts.push(rec.note);
+    if(edited) parts.push('You changed this from the case value ' + rec.value + ' (now ' + cur + ').'); return parts; }
   parts.push(rec.basis === 'sourced' ? 'Sourced.' : rec.basis === 'derived' ? 'Derived.' : 'Judgement.');
   if(rec.basis === 'derived') parts.push('Calculation: ' + rec.note);
   if(rec.basis === 'judgement') parts.push('Rationale: ' + rec.note);
@@ -1489,6 +1501,15 @@ function renderWhatHappened(res){
   t.appendChild(tb);
   const k = w.counts;
   $('whCounts').textContent = 'Layers: ' + k.layers + '. Outcomes recorded: yes ' + k.yes + ', no ' + k.no + ', contested ' + k.contested + ', unknown ' + k.unknown + '; not recorded ' + k.none + '. Too few cases for statistical conclusions.';
+  // Each version as the case defines it (page edits not applied), beside the recorded outcomes.
+  const vt = $('versionTable'); vt.textContent = '';
+  const vr = caseVersionRows(c);
+  $('versionBlock').hidden = vr.length < 2;
+  vt.appendChild(el('thead', null, [el('tr', null, ['Version', 'Layer', 'Present value', 'Model verdict', 'Model: capital earns its cost?', 'What happened'].map((h,i) => el('th', {cls: i === 2 ? '' : 'l', text: h})))]));
+  const vb = el('tbody');
+  vr.forEach(v => v.layers.forEach(r => vb.appendChild(el('tr', {'data-version': v.id}, [el('td', {cls:'l', text: v.label}), el('td', {cls:'l', text: r.layer}),
+    el('td', {cls: r.npv < 0 ? 'neg' : 'pos', text: money(r.npv)}), el('td', {cls:'l', text: r.bin}), el('td', {cls:'l', text: r.earnsCost ? 'yes' : 'no'}), el('td', {cls:'l', text: r.outcome || 'not recorded'})]))));
+  vt.appendChild(vb); labelCells(vt);
   if(modalOpen === 'whModal') renderWhModal();
 }
 // The "What happened" dialog (any mode) shows a copy of the card's content, without its ids.
@@ -1529,6 +1550,8 @@ function setupCollapsibles(){
   });
 }
 function init(){
+  // Case snapshots and case links are checked against the case's own money ranges.
+  snapSetCaseRanges(id => { const c = CASES.find(x => x.id === id); return c ? caseRanges(c) : null; });
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
   document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
