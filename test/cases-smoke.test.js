@@ -45,8 +45,8 @@ test('Cases pill: shown in the dev build; the dialog lists title, as-of date and
   assert.equal($(doc, 'casesModal').hidden, false);
   assert.equal(doc.activeElement, $(doc, 'casesClose'));
   const rows = [...doc.querySelectorAll('#casesList .case')];
-  // The dev build has the three synthetic fixtures plus the shipped railway case.
-  assert.equal(rows.length, 4);
+  // The dev build has the three synthetic fixtures plus the shipped railway and telecom cases.
+  assert.equal(rows.length, 5);
   rows.filter(r => /^Synthetic/.test(r.querySelector('h3').textContent)).forEach(r => { assert.match(r.querySelector('h3').textContent, /^Synthetic \d-layer case$/); assert.match(r.textContent, /As of 1845-06-30\. Test fixture, not data/); });
   assert.equal(rows.filter(r => /^Synthetic/.test(r.querySelector('h3').textContent)).length, 3);
   click(win, $(doc, 'casesClose'));
@@ -373,7 +373,7 @@ test('phone header: one non-sticky row; Behind the tool, Cases and Share in the 
   assert.deepEqual([...doc.querySelectorAll('#moreMenu [role="menuitem"]')].filter(b => !b.hidden).map(b => b.textContent), ['Behind the tool', 'Cases', 'Share a link']);
   more.focus(); click(win, more); click(win, $(doc, 'moreCases'));
   assert.equal($(doc, 'casesModal').hidden, false); assert.equal($(doc, 'moreMenu').hidden, true);
-  assert.equal(doc.querySelectorAll('#casesList .case').length, 4);
+  assert.equal(doc.querySelectorAll('#casesList .case').length, 5);
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(doc.activeElement, more, 'focus returns to More');
   click(win, more); click(win, $(doc, 'moreBehind'));

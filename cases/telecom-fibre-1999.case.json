@@ -1,0 +1,683 @@
+{
+  "format": "load-bearing-simulator-case",
+  "schemaVersion": 4,
+  "id": "telecom-fibre-1999",
+  "title": "Telecom and fibre, 1990s",
+  "subtitle": "Capacity builders, equipment and applications",
+  "description": "Most inputs are judgement. The model has no supply-and-demand link, so a capacity glut shows up only through share drift. Read the What must be true panel and compare with What happened before reading anything into the verdicts.",
+  "asOfDate": "1999-12-31",
+  "asOfRule": "Last quarter-end before the primary equity index peak (Nasdaq Composite, 10 March 2000; to be verified). Uses hindsight; applied the same way as for the railway case.",
+  "hindsightDisclosure": "Scored by someone who knew the outcome: that telecom capacity was overbuilt, that carriers and suppliers lost most of their value in 2000-2002, and that Internet traffic nonetheless kept roughly doubling each year.",
+  "moneyUnit": "$bn",
+  "moneyDecimals": 1,
+  "moneyRanges": {
+    "pool": [
+      1,
+      500
+    ],
+    "capex": [
+      1,
+      100
+    ]
+  },
+  "baseLabel": "Measured growth",
+  "sources": [
+    {
+      "id": "P1",
+      "citation": "Coffman, K. G. and Odlyzko, A. M., The size and growth rate of the Internet, First Monday 3(10), doi 10.5210/fm.v3i10.620",
+      "publicationDate": "1998-10-05",
+      "kind": "period",
+      "note": "Public Internet traffic growth about 100% a year. The paper reports a claim that bandwidth on UUNet's Internet links was growing 10-fold a year."
+    },
+    {
+      "id": "P2",
+      "citation": "Level 3 Communications, Form 10-K for FY1998, SEC accession 0000794323-99-000018",
+      "publicationDate": "1999-04-01",
+      "kind": "period",
+      "note": "US 1997 market sizes: local exchange $92.4bn, long distance $104.6bn, Internet services $6.3bn. Network completion planned Q1 2001. Capex $908m in 1998 and about $2.3bn expected in 1999. Competitors building networks with significantly more capacity, with a warning that added capacity may cause significant price decreases."
+    },
+    {
+      "id": "P3",
+      "citation": "Lucent Technologies, Form 10-K405 for the fiscal year ended 30 Sep 1999, SEC accession 0000950123-99-011082",
+      "publicationDate": "1999-12-21",
+      "kind": "period",
+      "note": "EX-27: revenues $38,303m; PP&E (gross) $14,292m."
+    },
+    {
+      "id": "P4",
+      "citation": "Lucent Technologies, Form 10-K/A for the fiscal year ended 30 Sep 1998, SEC accession 0000950116-99-001068",
+      "publicationDate": "1999-05-17",
+      "kind": "period",
+      "note": "Revenues $30,147m; operating income $2,461m; depreciation and amortisation $1,334m."
+    },
+    {
+      "id": "P5",
+      "citation": "America Online, Form 10-Q for the quarter ended 31 Mar 1999, SEC accession 0000883780-99-000047",
+      "publicationDate": "1999-05-17",
+      "kind": "period",
+      "note": "Revenues $1,253m against $757m a year earlier. Publication date approximate; confirm the filing date."
+    },
+    {
+      "id": "P6",
+      "citation": "Yahoo, Form 10-Q for the quarter ended 30 Sep 1999, SEC accession 0000912057-99-005434",
+      "publicationDate": "1999-11-15",
+      "kind": "period",
+      "note": "Nine-month revenue $387.5m against $153.8m; Q3 revenue $155.1m. Publication date approximate; confirm."
+    },
+    {
+      "id": "P7",
+      "citation": "Amazon.com, Form 10-Q for the quarter ended 30 Sep 1999, SEC accession 0000891020-99-001938",
+      "publicationDate": "1999-11-15",
+      "kind": "period",
+      "note": "Nine-month sales $963.8m against $357.0m; Q3 $355.8m; nine-month net loss $396.8m. Publication date approximate; confirm."
+    },
+    {
+      "id": "P8",
+      "citation": "eBay, Form 10-Q for the quarter ended 30 Sep 1999, SEC accession 0001012870-99-004228",
+      "publicationDate": "1999-11-15",
+      "kind": "period",
+      "note": "Nine-month revenue $150.8m against $55.2m; Q3 $58.5m. Publication date approximate; confirm."
+    },
+    {
+      "id": "P9",
+      "citation": "Merrill Lynch, Internet HOLDRS Trust, Form S-1/A Amendment No. 6, SEC accession 0000950130-99-005129",
+      "publicationDate": "1999-09-03",
+      "kind": "period",
+      "note": "The 20 companies, selection criteria applied on 31 Aug 1999, initial weights, and a risk factor that barriers to entry are minimal and competition is expected to intensify."
+    },
+    {
+      "id": "O1",
+      "citation": "Level 3 Communications, Form 10-K for FY1999 (accession to be added)",
+      "publicationDate": "2000-03-31",
+      "kind": "outcome",
+      "note": "1999 capex about $3.4bn against about $2.3bn expected; plan of $13-14bn over ten years. Details to verify. Publication date approximate."
+    },
+    {
+      "id": "O2",
+      "citation": "Level 3 Communications, Form 8-K (accession to be added)",
+      "publicationDate": "2002-02-01",
+      "kind": "outcome",
+      "note": "Capex projections cut by about $5bn. Details to verify. Publication date approximate."
+    },
+    {
+      "id": "O3",
+      "citation": "RHK, reported in Lightwave",
+      "publicationDate": "2003-12-31",
+      "kind": "outcome",
+      "note": "Capex 30-40% of revenue at some carriers in 1999-2000; Level 3 about 400%. Publication date is the latest possible; to verify."
+    },
+    {
+      "id": "O4",
+      "citation": "Odlyzko, A., This time is different (SSRN 1573974), revised",
+      "publicationDate": "2010-06-21",
+      "kind": "outcome",
+      "note": "About $100bn of wasted US long-haul fibre spending."
+    },
+    {
+      "id": "O5",
+      "citation": "Lucent Technologies, Form 10-K for FY2004",
+      "publicationDate": "2004-12-31",
+      "kind": "outcome",
+      "note": "Revenue $12.3bn (FY2002), $8.5bn (FY2003), $9.0bn (FY2004), on a restated basis excluding discontinued operations; the scope differs from the FY1999 figure. Publication date approximate."
+    },
+    {
+      "id": "O6",
+      "citation": "Ofek, E. and Richardson, M., DotCom Mania: The Rise and Fall of Internet Stock Prices, Journal of Finance 58(3), 1113-1137",
+      "publicationDate": "2003-06-30",
+      "kind": "outcome",
+      "note": "Long-run excess returns as low as -33% for Internet stocks after lockup expiry; Internet sector 6% of US market capitalisation by Feb 2000."
+    },
+    {
+      "id": "O7",
+      "citation": "Internet HOLDRS Trust, Form 424B3 prospectus supplement, SEC accession 0000947871-03-000938",
+      "publicationDate": "2003-04-02",
+      "kind": "outcome",
+      "note": "13 companies remained in the basket; Inktomi was acquired by Yahoo. Publication date approximate."
+    }
+  ],
+  "settings": {
+    "pool": {
+      "value": 121.1,
+      "basis": "judgement",
+      "sourceIds": [],
+      "note": "Sum of the three layers' full-adoption revenue: 11.1 + 50.0 + 60.0."
+    },
+    "speed": {
+      "value": 6.3,
+      "basis": "derived",
+      "sourceIds": [
+        "P1"
+      ],
+      "note": "Traffic about doubling each year; speed = ln(81)/ln(2) x doubling time of 1 year = 6.34, rounded to 6.3."
+    },
+    "mid": {
+      "value": 3.2,
+      "basis": "judgement",
+      "sourceIds": [],
+      "note": "Reference midpoint, rounded: speed / 2 = 3.15, stored as 3.2. The reference curve therefore starts at about, not exactly, 10% of full adoption. Offsets are computed from the stored values."
+    },
+    "disc": {
+      "value": 10,
+      "basis": "judgement",
+      "sourceIds": [],
+      "note": "No period source pulled; high sensitivity."
+    },
+    "rd": {
+      "value": 7,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "tv": {
+      "value": 5,
+      "basis": "judgement",
+      "sourceIds": [],
+      "note": "Tool default; no view."
+    },
+    "premium": {
+      "value": 0,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "entry": {
+      "value": 0,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "mult": {
+      "value": 10,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "phase2Start": {
+      "value": 5,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "phase3Start": {
+      "value": 10,
+      "basis": "default",
+      "sourceIds": [],
+      "note": "Neutral default, not used."
+    },
+    "entryDef": "A",
+    "capexModel": "sustaining"
+  },
+  "layers": [
+    {
+      "id": "capacity",
+      "name": "Long-haul transport capacity builders",
+      "inputs": {
+        "evidence": {
+          "value": 4,
+          "basis": "judgement",
+          "sourceIds": [
+            "P1"
+          ],
+          "note": "Traffic growth about 100% a year; no measured paid revenue per unit of capacity."
+        },
+        "share": {
+          "value": 9.2,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Full-adoption revenue $11.1bn (judgement; P2): 10% of the $110.9bn 1997 US long-distance ($104.6bn) plus Internet services ($6.3bn) market. The 10% is my choice. Arithmetic: 11.1 / 121.1. Both figures are judgement."
+        },
+        "offset": {
+          "value": 1.54,
+          "basis": "derived",
+          "sourceIds": [
+            "P2"
+          ],
+          "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = Level 3's 1998 revenue $0.392bn (P2, sourced) / full-adoption revenue $11.1bn (judgement) = 0.0353. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 6.3 and midpoint 3.2: k = ln(81) / 6.3 = 0.6975; ln((1 - f) / f) = 3.3075; 3.3075 / 0.6975 - 3.2 = 1.5417, kept to two decimals: 1.54. Level 3's total 1998 revenue of $392m includes non-telecom businesses, so f is probably overstated."
+        },
+        "steepness": {
+          "value": 1,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "capex": {
+          "value": 6.9,
+          "basis": "judgement",
+          "sourceIds": [
+            "P2"
+          ],
+          "note": "$2.3bn expected 1999 capex x 3 years, assuming the 1999 pace holds."
+        },
+        "buildStart": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "buildYears": {
+          "value": 3,
+          "basis": "derived",
+          "sourceIds": [
+            "P2"
+          ],
+          "note": "The filing plans network completion by Q1 2001."
+        },
+        "unitCostDecline": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "passThrough": {
+          "value": 0.5,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "life": {
+          "value": 15,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Fibre outlasts electronics."
+        },
+        "debt": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "driftP": [
+          {
+            "value": -5,
+            "basis": "judgement",
+            "sourceIds": [
+              "P2"
+            ],
+            "note": "Direction from Level 3's own warning that added capacity may cause significant price decreases; the size is my choice."
+          },
+          {
+            "value": -5,
+            "basis": "judgement",
+            "sourceIds": [
+              "P2"
+            ],
+            "note": "Direction from Level 3's own warning that added capacity may cause significant price decreases; the size is my choice."
+          },
+          {
+            "value": -5,
+            "basis": "judgement",
+            "sourceIds": [
+              "P2"
+            ],
+            "note": "Direction from Level 3's own warning that added capacity may cause significant price decreases; the size is my choice."
+          }
+        ],
+        "marginP": [
+          {
+            "value": 35,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "No period source pulled."
+          },
+          {
+            "value": 35,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "No period source pulled."
+          },
+          {
+            "value": 35,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "No period source pulled."
+          }
+        ]
+      }
+    },
+    {
+      "id": "equipment",
+      "name": "Network equipment suppliers",
+      "inputs": {
+        "evidence": {
+          "value": 4,
+          "basis": "judgement",
+          "sourceIds": [
+            "P3",
+            "P4"
+          ],
+          "note": "Lucent revenue up 27% in FY1999 ($38,303m against $30,147m)."
+        },
+        "share": {
+          "value": 41.3,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Full-adoption revenue $50.0bn (judgement; P3): Lucent's FY1999 revenue of $38.3bn plus other suppliers, which are not sourced. Arithmetic: 50.0 / 121.1. Both figures are judgement."
+        },
+        "offset": {
+          "value": -4.9,
+          "basis": "derived",
+          "sourceIds": [
+            "P3"
+          ],
+          "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = Lucent's FY1999 revenue $38.3bn (P3, sourced) / full-adoption revenue $50.0bn (judgement) = 0.7660. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 6.3 and midpoint 3.2: k = ln(81) / 6.3 = 0.6975; ln((1 - f) / f) = -1.1859; -1.1859 / 0.6975 - 3.2 = -4.9001, kept to two decimals: -4.90."
+        },
+        "steepness": {
+          "value": 1,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "capex": {
+          "value": 14.3,
+          "basis": "derived",
+          "sourceIds": [
+            "P3"
+          ],
+          "note": "Lucent's gross PP&E at 30 Sep 1999, $14,292m."
+        },
+        "buildStart": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "buildYears": {
+          "value": 1,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Existing asset base."
+        },
+        "unitCostDecline": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "passThrough": {
+          "value": 0.5,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "life": {
+          "value": 10,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Judgement: equipment lasts less long than fibre (15 years) and longer than application software (5 years); no source."
+        },
+        "debt": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "driftP": [
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Price erosion typical of equipment; no source."
+          },
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Price erosion typical of equipment; no source."
+          },
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Price erosion typical of equipment; no source."
+          }
+        ],
+        "marginP": [
+          {
+            "value": 12.6,
+            "basis": "derived",
+            "sourceIds": [
+              "P4"
+            ],
+            "note": "Lucent FY1998: (operating income $2,461m + depreciation and amortisation $1,334m) / revenue $30,147m."
+          },
+          {
+            "value": 12.6,
+            "basis": "derived",
+            "sourceIds": [
+              "P4"
+            ],
+            "note": "Lucent FY1998: (operating income $2,461m + depreciation and amortisation $1,334m) / revenue $30,147m."
+          },
+          {
+            "value": 12.6,
+            "basis": "derived",
+            "sourceIds": [
+              "P4"
+            ],
+            "note": "Lucent FY1998: (operating income $2,461m + depreciation and amortisation $1,334m) / revenue $30,147m."
+          }
+        ]
+      }
+    },
+    {
+      "id": "applications",
+      "name": "Internet applications and content",
+      "inputs": {
+        "evidence": {
+          "value": 3,
+          "basis": "judgement",
+          "sourceIds": [
+            "P5",
+            "P6",
+            "P7",
+            "P8"
+          ],
+          "note": "Revenue growth from 66% (AOL) to 173% (eBay), but margins near zero or negative."
+        },
+        "share": {
+          "value": 49.5,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Full-adoption revenue $60.0bn (judgement; P5, P6, P7, P8, P9): About 8 times the $7.3bn annualised latest-quarter run-rate of AOL, Yahoo, Amazon and eBay (AOL $1,253m x 4, Yahoo $155.1m x 4, Amazon $355.8m x 4, eBay $58.5m x 4; the quarters end on different dates). The 8 times is my choice. The four names are 58% of the basket's initial weight (about 75% of its applications weight). Arithmetic: 60.0 / 121.1. Both figures are judgement."
+        },
+        "offset": {
+          "value": -0.37,
+          "basis": "derived",
+          "sourceIds": [
+            "P5",
+            "P6",
+            "P7",
+            "P8"
+          ],
+          "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = observed revenue $7.3bn (P5-P8, sourced) / full-adoption revenue $60.0bn (judgement) = 0.1217. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 6.3 and midpoint 3.2: k = ln(81) / 6.3 = 0.6975; ln((1 - f) / f) = 1.9767; 1.9767 / 0.6975 - 3.2 = -0.3661, kept to two decimals: -0.37. Annualised latest-quarter revenue of AOL, Yahoo, Amazon and eBay; the quarters end on different dates."
+        },
+        "steepness": {
+          "value": 1,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "capex": {
+          "value": 6.0,
+          "basis": "judgement",
+          "sourceIds": [
+            "P6",
+            "P7"
+          ],
+          "note": "The combined balance sheets of Amazon and Yahoo alone total about $3.3bn of assets; the rest is my choice."
+        },
+        "buildStart": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "buildYears": {
+          "value": 4,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Judgement: the spending builds data centres, software and brand over several years; no source."
+        },
+        "unitCostDecline": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "passThrough": {
+          "value": 0.5,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "life": {
+          "value": 5,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Judgement: software and servers turn over faster than network assets; no source."
+        },
+        "debt": {
+          "value": 0,
+          "basis": "default",
+          "sourceIds": [],
+          "note": "Neutral default, not used."
+        },
+        "driftP": [
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [
+              "P9"
+            ],
+            "note": "Direction from the risk factor that barriers to entry are minimal and competition will intensify; the size is my choice."
+          },
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [
+              "P9"
+            ],
+            "note": "Direction from the risk factor that barriers to entry are minimal and competition will intensify; the size is my choice."
+          },
+          {
+            "value": -3,
+            "basis": "judgement",
+            "sourceIds": [
+              "P9"
+            ],
+            "note": "Direction from the risk factor that barriers to entry are minimal and competition will intensify; the size is my choice."
+          }
+        ],
+        "marginP": [
+          {
+            "value": 20,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Steady-state placeholder; reference-class comparators were not pulled."
+          },
+          {
+            "value": 20,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Steady-state placeholder; reference-class comparators were not pulled."
+          },
+          {
+            "value": 20,
+            "basis": "judgement",
+            "sourceIds": [],
+            "note": "Steady-state placeholder; reference-class comparators were not pulled."
+          }
+        ]
+      }
+    }
+  ],
+  "versions": [
+    {
+      "id": "period-claims",
+      "label": "Period claims",
+      "settings": {
+        "speed": {
+          "value": 1.9,
+          "basis": "derived",
+          "sourceIds": [
+            "P1"
+          ],
+          "note": "The reported 10-fold yearly growth in bandwidth gives a doubling time of ln 2 / ln 10 = 0.30 years; speed = 6.34 x 0.30 = 1.9. Year-0 adoption is sensitive to rounding at this speed; offsets are computed from the stored speed and midpoint and kept to two decimals."
+        },
+        "mid": {
+          "value": 1.0,
+          "basis": "judgement",
+          "sourceIds": [],
+          "note": "Reference midpoint, rounded: speed / 2 = 0.95, stored as 1.0. The reference curve therefore starts at about, not exactly, 10% of full adoption. Offsets are computed from the stored values."
+        }
+      },
+      "layers": {
+        "capacity": {
+          "offset": {
+            "value": 0.43,
+            "basis": "derived",
+            "sourceIds": [
+              "P2"
+            ],
+            "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = Level 3's 1998 revenue $0.392bn (P2, sourced) / full-adoption revenue $11.1bn (judgement) = 0.0353. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 1.9 and midpoint 1.0: k = ln(81) / 1.9 = 2.3129; ln((1 - f) / f) = 3.3075; 3.3075 / 2.3129 - 1.0 = 0.4300, kept to two decimals: 0.43. Level 3's total 1998 revenue of $392m includes non-telecom businesses, so f is probably overstated."
+          }
+        },
+        "equipment": {
+          "offset": {
+            "value": -1.51,
+            "basis": "derived",
+            "sourceIds": [
+              "P3"
+            ],
+            "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = Lucent's FY1999 revenue $38.3bn (P3, sourced) / full-adoption revenue $50.0bn (judgement) = 0.7660. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 1.9 and midpoint 1.0: k = ln(81) / 1.9 = 2.3129; ln((1 - f) / f) = -1.1859; -1.1859 / 2.3129 - 1.0 = -1.5127, kept to two decimals: -1.51."
+          }
+        },
+        "applications": {
+          "offset": {
+            "value": -0.15,
+            "basis": "derived",
+            "sourceIds": [
+              "P5",
+              "P6",
+              "P7",
+              "P8"
+            ],
+            "note": "Derived (numerator sourced, denominator judgement). Year-0 adoption f = observed revenue $7.3bn (P5-P8, sourced) / full-adoption revenue $60.0bn (judgement) = 0.1217. offset = ln((1 - f) / f) / k - midpoint, using the stored speed 1.9 and midpoint 1.0: k = ln(81) / 1.9 = 2.3129; ln((1 - f) / f) = 1.9767; 1.9767 / 2.3129 - 1.0 = -0.1453, kept to two decimals: -0.15. Annualised latest-quarter revenue of AOL, Yahoo, Amazon and eBay; the quarters end on different dates."
+          }
+        }
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "layer": "capacity",
+      "status": "no",
+      "summary": "Capex ran above plan and outlay far exceeded revenue.",
+      "sourceIds": [
+        "O1",
+        "O3",
+        "O4"
+      ],
+      "horizon": "to 2002"
+    },
+    {
+      "layer": "equipment",
+      "status": "no",
+      "summary": "Revenue fell from $38.3bn in FY1999 (period filing P3, listed under sources) to $12.3bn in FY2002 and $9.0bn in FY2004; the scopes differ (restated basis).",
+      "sourceIds": [
+        "O5"
+      ],
+      "horizon": "to 2004"
+    },
+    {
+      "layer": "applications",
+      "status": "contested",
+      "summary": "For: Yahoo, Amazon and eBay were still in the basket in 2003. Against: only 13 of the original 20 remained and long-run excess returns for Internet stocks after lockup expiry were as low as -33%.",
+      "sourceIds": [
+        "O7",
+        "O6"
+      ],
+      "horizon": "to 2003"
+    }
+  ]
+}

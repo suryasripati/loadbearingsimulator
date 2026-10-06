@@ -23,7 +23,7 @@ test('the shipped case validates, and the live build includes it (and no synthet
   assert.equal(CASE.schemaVersion, 4);
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'lbs-live-'));
   const r = build({ outDir: out });
-  assert.deepEqual(r.cases, ['railway-mania-1845']);
+  assert.ok(r.cases.includes('railway-mania-1845'));
   const html = fs.readFileSync(path.join(root, 'docs', 'index.html'), 'utf8');
   assert.ok(html.includes('"id":"railway-mania-1845"'), 'docs/index.html carries the case');
   assert.ok(!/synthetic-\d-layer/.test(html));
