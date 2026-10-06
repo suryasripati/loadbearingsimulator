@@ -268,6 +268,21 @@ body.case-mode .tb-sub{display:none}
 .menu [role="menuitem"]{text-align:left;background:none;border:none;padding:7px 10px;border-radius:4px;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 .menu [role="menuitem"]:hover,.menu [role="menuitem"]:focus{background:var(--tint);outline:none}
 @media (max-width:599px){#shareBtn{display:none}.morewrap{display:inline-block}}
+/* Phones: one header row (title, mode switch, More menu), not sticky. Behind the tool, Cases and Share sit in More;
+   the placeholder notice moves from the header pill to a line under the header. */
+.phonenote{display:none}
+@media (max-width:599px){
+  .topbar{position:static}
+  .tb-in{flex-wrap:nowrap;gap:8px;padding:6px 12px;row-gap:0}
+  .tb-title{flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+  .tb-name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-sub{display:none}
+  .tb-right{flex:0 0 auto;flex-wrap:nowrap;gap:6px}
+  .tb-right > .tipwrap,#behindBtn,#casesBtn{display:none}
+  .modes button{padding:3px 7px;font-size:12px}
+  #moreBtn{padding:2px 9px;font-size:15px;line-height:1}
+  .phonenote{display:block;margin:8px 0 0;font-size:12.5px;color:var(--cap)}
+}
 .warnline{margin:2px 0 0;color:var(--amber);font-weight:700}
 /* Behind the tool: tabbed dialog, internal scroll */
 .modal.tall{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -345,13 +360,14 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
       <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
       <button class="pill behind" type="button" id="casesBtn" aria-haspopup="dialog" aria-controls="casesModal" hidden>Cases</button>
       <button class="pill behind" type="button" id="shareBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="sharePop">Share</button>
-      <span class="morewrap"><button class="pill behind" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">More</button>
-        <span class="menu" id="moreMenu" role="menu" aria-label="More" hidden><button type="button" role="menuitem" id="moreShare" tabindex="-1">Share a link</button></span></span>
+      <span class="morewrap"><button class="pill behind" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" aria-label="More">⋯</button>
+        <span class="menu" id="moreMenu" role="menu" aria-label="More" hidden><button type="button" role="menuitem" id="moreBehind" tabindex="-1">Behind the tool</button><button type="button" role="menuitem" id="moreCases" tabindex="-1" hidden>Cases</button><button type="button" role="menuitem" id="moreShare" tabindex="-1">Share a link</button></span></span>
     </div>
   </div>
 </header>
 <main class="wrap">
 
+<p class="phonenote nocase"><b>Placeholders, not data.</b> Every number here was chosen to show the mechanics; none is sourced. Not financial advice.</p>
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
 
 <div class="casebar" id="caseBar" hidden>

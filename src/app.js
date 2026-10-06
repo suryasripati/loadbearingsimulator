@@ -988,7 +988,7 @@ function closeShare(focus){
   if(focus !== false && shareReturn){ const r = shareReturn.offsetParent !== null || !shareReturn.checkVisibility ? shareReturn : $('moreBtn'); r.focus(); }
   shareReturn = null;
 }
-function openMore(){ $('moreMenu').hidden = false; $('moreBtn').setAttribute('aria-expanded', 'true'); $('moreShare').focus(); }
+function openMore(){ $('moreMenu').hidden = false; $('moreBtn').setAttribute('aria-expanded', 'true'); $('moreMenu').querySelector('[role="menuitem"]:not([hidden])').focus(); }
 function closeMore(focus){ if($('moreMenu').hidden) return; $('moreMenu').hidden = true; $('moreBtn').setAttribute('aria-expanded', 'false'); if(focus) $('moreBtn').focus(); }
 function bindShare(){
   $('shareBtn').addEventListener('click', () => { if($('sharePop').hidden) openShare($('shareBtn')); else closeShare(); });
@@ -996,6 +996,16 @@ function bindShare(){
   $('shareCopy').addEventListener('click', () => copyLink('shareOut', 'shareMsg'));
   $('moreBtn').addEventListener('click', () => { if($('moreMenu').hidden) openMore(); else closeMore(true); });
   $('moreShare').addEventListener('click', () => openShare($('moreBtn')));
+  // On phones, Behind the tool and Cases live in this menu too; their dialogs return focus to the More button.
+  $('moreBehind').addEventListener('click', () => { closeMore(false); openModal('behindModal', $('moreBtn')); });
+  $('moreCases').addEventListener('click', () => { closeMore(false); renderCasesList(); openModal('casesModal', $('moreBtn')); });
+  // Arrow keys move between the menu items.
+  $('moreMenu').addEventListener('keydown', e => {
+    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const items = [...$('moreMenu').querySelectorAll('[role="menuitem"]')].filter(b => !b.hidden);
+    const i = items.indexOf(document.activeElement); if(i < 0) return;
+    e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+  });
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
     if(!$('sharePop').hidden){ e.stopPropagation(); closeShare(); }
@@ -1300,7 +1310,7 @@ function setCaseContext(ctx){
   const name = ctx ? ctx.c.title : CASE_NAME;
   $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
   // The subtitle is hidden in a case (CSS); the full title stays available when the name is cut with an ellipsis.
-  document.querySelector('.tb-name').title = ctx ? name + ': Load Bearing Simulator' : '';
+  document.querySelector('.tb-name').title = name + ': Load Bearing Simulator'; // full title when it is cut with an ellipsis
   document.body.classList.toggle('case-mode', !!ctx);
   if(!ctx && modalOpen === 'whModal') closeModal(true);
   renderGuide(); // labels carry the money unit
@@ -1469,7 +1479,7 @@ function renderWhModal(){
   box.textContent = ''; box.appendChild(copy);
 }
 function bindCases(){
-  $('casesBtn').hidden = !CASES.length;
+  $('casesBtn').hidden = !CASES.length; $('moreCases').hidden = !CASES.length;
   $('caseReturn').addEventListener('click', returnToScenario);
   $('caseReset').addEventListener('click', () => {
     if(!caseModified()) return resetToCase();
@@ -1478,6 +1488,7 @@ function bindCases(){
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
+  document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
   setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();

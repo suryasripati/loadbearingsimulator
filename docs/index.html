@@ -268,6 +268,21 @@ body.case-mode .tb-sub{display:none}
 .menu [role="menuitem"]{text-align:left;background:none;border:none;padding:7px 10px;border-radius:4px;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 .menu [role="menuitem"]:hover,.menu [role="menuitem"]:focus{background:var(--tint);outline:none}
 @media (max-width:599px){#shareBtn{display:none}.morewrap{display:inline-block}}
+/* Phones: one header row (title, mode switch, More menu), not sticky. Behind the tool, Cases and Share sit in More;
+   the placeholder notice moves from the header pill to a line under the header. */
+.phonenote{display:none}
+@media (max-width:599px){
+  .topbar{position:static}
+  .tb-in{flex-wrap:nowrap;gap:8px;padding:6px 12px;row-gap:0}
+  .tb-title{flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+  .tb-name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-sub{display:none}
+  .tb-right{flex:0 0 auto;flex-wrap:nowrap;gap:6px}
+  .tb-right > .tipwrap,#behindBtn,#casesBtn{display:none}
+  .modes button{padding:3px 7px;font-size:12px}
+  #moreBtn{padding:2px 9px;font-size:15px;line-height:1}
+  .phonenote{display:block;margin:8px 0 0;font-size:12.5px;color:var(--cap)}
+}
 .warnline{margin:2px 0 0;color:var(--amber);font-weight:700}
 /* Behind the tool: tabbed dialog, internal scroll */
 .modal.tall{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -345,13 +360,14 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
       <button class="pill behind" type="button" id="behindBtn" aria-haspopup="dialog" aria-controls="behindModal">Behind the tool</button>
       <button class="pill behind" type="button" id="casesBtn" aria-haspopup="dialog" aria-controls="casesModal" hidden>Cases</button>
       <button class="pill behind" type="button" id="shareBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="sharePop">Share</button>
-      <span class="morewrap"><button class="pill behind" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">More</button>
-        <span class="menu" id="moreMenu" role="menu" aria-label="More" hidden><button type="button" role="menuitem" id="moreShare" tabindex="-1">Share a link</button></span></span>
+      <span class="morewrap"><button class="pill behind" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" aria-label="More">⋯</button>
+        <span class="menu" id="moreMenu" role="menu" aria-label="More" hidden><button type="button" role="menuitem" id="moreBehind" tabindex="-1">Behind the tool</button><button type="button" role="menuitem" id="moreCases" tabindex="-1" hidden>Cases</button><button type="button" role="menuitem" id="moreShare" tabindex="-1">Share a link</button></span></span>
     </div>
   </div>
 </header>
 <main class="wrap">
 
+<p class="phonenote nocase"><b>Placeholders, not data.</b> Every number here was chosen to show the mechanics; none is sourced. Not financial advice.</p>
 <p class="intro">If the technology works the way you expect, which layers of the stack earn back what is put into them, and which only look good on paper? A scenario tool for testing where your money sits; not a forecast, and it does not pick winners.</p>
 
 <div class="casebar" id="caseBar" hidden>
@@ -3111,7 +3127,7 @@ function closeShare(focus){
   if(focus !== false && shareReturn){ const r = shareReturn.offsetParent !== null || !shareReturn.checkVisibility ? shareReturn : $('moreBtn'); r.focus(); }
   shareReturn = null;
 }
-function openMore(){ $('moreMenu').hidden = false; $('moreBtn').setAttribute('aria-expanded', 'true'); $('moreShare').focus(); }
+function openMore(){ $('moreMenu').hidden = false; $('moreBtn').setAttribute('aria-expanded', 'true'); $('moreMenu').querySelector('[role="menuitem"]:not([hidden])').focus(); }
 function closeMore(focus){ if($('moreMenu').hidden) return; $('moreMenu').hidden = true; $('moreBtn').setAttribute('aria-expanded', 'false'); if(focus) $('moreBtn').focus(); }
 function bindShare(){
   $('shareBtn').addEventListener('click', () => { if($('sharePop').hidden) openShare($('shareBtn')); else closeShare(); });
@@ -3119,6 +3135,16 @@ function bindShare(){
   $('shareCopy').addEventListener('click', () => copyLink('shareOut', 'shareMsg'));
   $('moreBtn').addEventListener('click', () => { if($('moreMenu').hidden) openMore(); else closeMore(true); });
   $('moreShare').addEventListener('click', () => openShare($('moreBtn')));
+  // On phones, Behind the tool and Cases live in this menu too; their dialogs return focus to the More button.
+  $('moreBehind').addEventListener('click', () => { closeMore(false); openModal('behindModal', $('moreBtn')); });
+  $('moreCases').addEventListener('click', () => { closeMore(false); renderCasesList(); openModal('casesModal', $('moreBtn')); });
+  // Arrow keys move between the menu items.
+  $('moreMenu').addEventListener('keydown', e => {
+    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const items = [...$('moreMenu').querySelectorAll('[role="menuitem"]')].filter(b => !b.hidden);
+    const i = items.indexOf(document.activeElement); if(i < 0) return;
+    e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+  });
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
     if(!$('sharePop').hidden){ e.stopPropagation(); closeShare(); }
@@ -3423,7 +3449,7 @@ function setCaseContext(ctx){
   const name = ctx ? ctx.c.title : CASE_NAME;
   $('caseName').textContent = name; document.title = name + ': Load Bearing Simulator';
   // The subtitle is hidden in a case (CSS); the full title stays available when the name is cut with an ellipsis.
-  document.querySelector('.tb-name').title = ctx ? name + ': Load Bearing Simulator' : '';
+  document.querySelector('.tb-name').title = name + ': Load Bearing Simulator'; // full title when it is cut with an ellipsis
   document.body.classList.toggle('case-mode', !!ctx);
   if(!ctx && modalOpen === 'whModal') closeModal(true);
   renderGuide(); // labels carry the money unit
@@ -3592,7 +3618,7 @@ function renderWhModal(){
   box.textContent = ''; box.appendChild(copy);
 }
 function bindCases(){
-  $('casesBtn').hidden = !CASES.length;
+  $('casesBtn').hidden = !CASES.length; $('moreCases').hidden = !CASES.length;
   $('caseReturn').addEventListener('click', returnToScenario);
   $('caseReset').addEventListener('click', () => {
     if(!caseModified()) return resetToCase();
@@ -3601,6 +3627,7 @@ function bindCases(){
 }
 function init(){
   $('caseName').textContent = CASE_NAME; document.title = CASE_NAME + ': Load Bearing Simulator';
+  document.querySelector('.tb-name').title = document.title;
   const linkHash = /^#s=/.test(location.hash) ? location.hash : ''; // read before the mode takes over the address
   setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindShare(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();

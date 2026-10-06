@@ -87,12 +87,12 @@ test('case header: subtitle hidden, full title in a title attribute; example and
   assert.ok(css.includes('body.case-mode .nocase{display:none !important}'));
   for (const id of ['arch_rail', 'arch_app', 'leadlag', 'ucdExample']) assert.ok($(doc, id).classList.contains('nocase'), id);
   assert.ok(doc.querySelector('[aria-controls="tip24"]').closest('.tipwrap').classList.contains('nocase'));
-  assert.equal(doc.querySelector('.tb-name').title, '');
+  assert.equal(doc.querySelector('.tb-name').title, 'AI Stack: Load Bearing Simulator');
   openCase(win, doc, 'synthetic-6-layer');
   assert.equal(doc.querySelector('.tb-name').title, 'Synthetic 6-layer case: Load Bearing Simulator');
   assert.ok(doc.body.classList.contains('case-mode'));
   click(win, $(doc, 'caseReturn'));
-  assert.equal(doc.querySelector('.tb-name').title, '');
+  assert.equal(doc.querySelector('.tb-name').title, 'AI Stack: Load Bearing Simulator');
   assert.ok(!doc.body.classList.contains('case-mode'));
   win.close();
 });
@@ -354,5 +354,31 @@ test('What happened: the card and the dialog copy share the wrapping rule (a cla
   const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
   assert.ok(css.includes('table.outcomes td{white-space:normal;vertical-align:top}'));
   assert.ok([...doc.querySelectorAll('#outcomeTable tbody td')].every(td => td.dataset.label), 'cells carry column names for the phone cards');
+  win.close();
+});
+
+test('phone header: one non-sticky row; Behind the tool, Cases and Share in the More menu; Cases opens its dialog from there', () => {
+  const { doc, win } = load();
+  const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  assert.ok(/@media \(max-width:599px\)\{\s*\.topbar\{position:static\}\s*\.tb-in\{flex-wrap:nowrap/.test(css), 'not sticky, no wrapping');
+  assert.ok(css.includes('.tb-right > .tipwrap,#behindBtn,#casesBtn{display:none}'));
+  assert.ok(css.includes('.tb-sub{display:none}'));
+  assert.ok(/\.phonenote\{display:block/.test(css), 'the placeholder notice stays on the page on phones');
+  assert.match(doc.querySelector('.phonenote').textContent, /^Placeholders, not data\./);
+  // jsdom has no media queries: show the phone menu as the phone CSS does.
+  const st = doc.createElement('style'); st.textContent = '#shareBtn,#behindBtn,#casesBtn{display:none}.morewrap{display:inline-block}'; doc.head.appendChild(st);
+  const more = $(doc, 'moreBtn');
+  assert.deepEqual([...doc.querySelectorAll('#moreMenu [role="menuitem"]')].filter(b => !b.hidden).map(b => b.textContent), ['Behind the tool', 'Cases', 'Share a link']);
+  more.focus(); click(win, more); click(win, $(doc, 'moreCases'));
+  assert.equal($(doc, 'casesModal').hidden, false); assert.equal($(doc, 'moreMenu').hidden, true);
+  assert.equal(doc.querySelectorAll('#casesList .case').length, 3);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(doc.activeElement, more, 'focus returns to More');
+  click(win, more); click(win, $(doc, 'moreBehind'));
+  assert.equal($(doc, 'behindModal').hidden, false);
+  click(win, $(doc, 'behindClose')); assert.equal(doc.activeElement, more);
+  // Opening a case from the More menu path works end to end.
+  click(win, more); click(win, $(doc, 'moreCases')); click(win, doc.querySelector('[data-case="synthetic-1-layer"]')); click(win, $(doc, 'confirmOk'));
+  assert.equal($(doc, 'caseBar').hidden, false);
   win.close();
 });

@@ -206,13 +206,16 @@ test('phones: Share moves into a "More" overflow menu (CSS below 600px); the men
   const { doc, win } = load();
   const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
   assert.ok(css.includes('@media (max-width:599px){#shareBtn{display:none}.morewrap{display:inline-block}}'));
+  assert.equal(doc.getElementById('moreBtn').getAttribute('aria-label'), 'More');
   assert.ok(/\.morewrap\{display:none/.test(css));
   // jsdom has no media queries: show the phone menu the way the phone CSS does.
   const st = doc.createElement('style'); st.textContent = '#shareBtn{display:none}.morewrap{display:inline-block}'; doc.head.appendChild(st);
   const more = doc.getElementById('moreBtn'), menu = doc.getElementById('moreMenu');
   assert.equal(more.getAttribute('aria-haspopup'), 'menu');
   more.focus(); click(win, more);
-  assert.equal(menu.hidden, false); assert.equal(doc.activeElement, doc.getElementById('moreShare'));
+  assert.equal(menu.hidden, false); assert.equal(doc.activeElement, doc.getElementById('moreBehind'), 'focus on the first item');
+  doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  assert.equal(doc.activeElement, doc.getElementById('moreShare'), 'Cases is hidden without cases, so Share is next');
   assert.equal(doc.getElementById('moreShare').getAttribute('role'), 'menuitem');
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(menu.hidden, true); assert.equal(doc.activeElement, more);
