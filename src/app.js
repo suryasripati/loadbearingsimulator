@@ -712,8 +712,8 @@ function undoReset(){
   $('reset').focus();
 }
 /* ---------- snapshots ---------- */
-// Separate storage key from the settings. Snapshots keep allocations in this browser; exports leave them out unless
-// the box is ticked. Every piece of user text is written with textContent or .value, never as HTML.
+// Separate storage key from the settings. Snapshots keep allocations in this browser only; nothing is sent anywhere,
+// and links never carry allocations. Every piece of user text is written with textContent or .value, never as HTML.
 const SNAP_KEY = 'load-bearing-snapshots-v1';
 let snapStore = { snapshots: [], draftKill: snapBlankKill() };
 let snapOpen = -1;
@@ -858,7 +858,7 @@ function snapPick(v){ return v==='current' ? snapCurrent() : snapStore.snapshots
 function snapSaveNew(){
   const name = $('snapName').value.trim();
   if(!name){ $('snapMsg').textContent = 'Give the snapshot a name first.'; $('snapName').focus(); return; }
-  if(snapStore.snapshots.length >= SNAP_MAX_COUNT){ $('snapMsg').textContent = 'This browser holds at most ' + SNAP_MAX_COUNT + ' snapshots. Export and delete some first.'; return; }
+  if(snapStore.snapshots.length >= SNAP_MAX_COUNT){ $('snapMsg').textContent = 'This browser holds at most ' + SNAP_MAX_COUNT + ' snapshots. Delete some first.'; return; }
   const trig = snapTriggeredList(snapStore.snapshots);
   if(trig.length){ snapShowRespond(trig); return; }
   snapCommitSave(null);
@@ -885,7 +885,7 @@ function snapCommitSave(response){
   snapHideRespond();
   snapStore.snapshots.push(makeSnapshot({ name: name, note: $('snapNote').value, G: G, layers: layers, kill: snapStore.draftKill, response: response, caseId: caseCtx ? caseCtx.c.id : null }));
   if(snapSaveStore()){ $('snapMsg').textContent = 'Saved “' + name.slice(0,120) + '”.'; $('snapName').value = ''; $('snapNote').value = ''; }
-  else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Export and delete some snapshots, then try again.'; }
+  else { snapStore.snapshots.pop(); $('snapMsg').textContent = 'Not saved: the browser refused to store more. Delete some snapshots, then try again.'; }
   snapRenderList();
 }
 // One-step undo for "Load into simulator": the settings, layers, selection and kill-criteria draft just before it.

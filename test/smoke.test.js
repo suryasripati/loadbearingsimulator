@@ -644,3 +644,12 @@ test('"Reset everything": shows "Scenario reset. Undo" for 10 seconds; Undo rest
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('no page text mentions exporting, importing or downloading snapshot files', () => {
+  const { doc } = load({ hash: '#analyst' });
+  assert.equal(doc.getElementById('tip27').textContent.endsWith('Snapshots stay in this browser; nothing is sent anywhere. Use Copy link to share a scenario.'), true);
+  const text = doc.body.textContent;
+  assert.ok(!/export writes|\bExport (and|snapshots)|\bImport snapshots|download/i.test(text), 'no stale export, import or download wording on the page');
+  const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
+  assert.ok(!/'[^']*\bExport and delete[^']*'/.test(js), 'no message asks users to export');
+});
