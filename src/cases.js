@@ -28,7 +28,7 @@ const CASE_INT_KEYS = ['entry', 'phase2Start', 'phase3Start', 'evidence', 'build
 const CASE_BASIS = ['sourced', 'derived', 'judgement', 'default'];
 const CASE_SOURCE_KINDS = ['period', 'compiled', 'outcome'];
 const CASE_OUTCOMES = ['yes', 'no', 'unknown', 'contested'];
-const CASE_BANNER = 'Scored by the tool\'s author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
+const CASE_BANNER = 'Scored by the tool\'s author, who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.';
 const CASE_DEFAULT_ALLOC = 20; // placeholder equal split; allocations are personal and never part of a case
 
 function caseDeps(){

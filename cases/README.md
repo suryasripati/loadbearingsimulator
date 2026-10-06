@@ -25,7 +25,7 @@ In a case the header pill reads "Case data" instead of "Placeholder data". Every
   - each has a `status` (`yes`, `no`, `unknown` or `contested`), a `summary`, sources and a `horizon`;
   - `yes` and `no` need a source;
   - `contested` needs at least two sources, and a summary that states both positions ("For: … Against: …").
-- **Hindsight.** The page shows, for every case: "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
+- **Hindsight.** The page shows, for every case: "Scored by the tool's author, who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions." It never shows a hit rate.
 - **Allocations are personal** and are never part of a case. A case opens with a placeholder equal split.
 
 ## File format (`schemaVersion` 4; schema 1 to 3 files stay valid)

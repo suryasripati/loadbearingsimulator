@@ -169,7 +169,7 @@ test('What happened: Advanced and Analyst only; the banner, outcomes with source
   openCase(win, doc, c.id);
   const sec = $(doc, 'whatHappened');
   assert.equal(sec.hidden, false); assert.equal(sec.getAttribute('data-min'), 'advanced');
-  assert.equal($(doc, 'whBanner').textContent, "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
+  assert.equal($(doc, 'whBanner').textContent, "Scored by the tool's author, who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
   assert.equal($(doc, 'whHindsight'), null, 'no separate hindsight line');
   const rows = [...doc.querySelectorAll('#outcomeTable tbody tr')];
   assert.deepEqual(rows.map(r => r.querySelector('[data-outcome]').textContent), c.outcomes.map(o => o.status));

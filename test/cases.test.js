@@ -172,7 +172,7 @@ test('what happened: verdict against outcome per layer, counts by status, the ba
   const G = Object.assign({}, D.DEFAULT_G, st.G);
   const res = st.layers.map(L => M.runLayer(L, G));
   const w = C.caseOutcomeRows(c, st.layers, res);
-  assert.equal(w.banner, "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
+  assert.equal(w.banner, "Scored by the tool's author, who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
   assert.deepEqual(w.counts, { layers: 6, yes: 2, no: 2, unknown: 1, contested: 1, none: 0 });
   w.rows.forEach((r, i) => { assert.equal(r.verdict, res[i].bin); assert.equal(r.earnsCost, res[i].npv >= 0); });
   assert.ok(!('hitRate' in w) && !Object.keys(w.counts).some(k => /hit|rate|accur/i.test(k)));

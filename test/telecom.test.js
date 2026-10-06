@@ -204,8 +204,8 @@ test('caseAgreement: yes/no outcomes are decided; contested, unknown and not rec
   assert.equal(C.caseAgreementText(C.caseAgreement([{ outcome: 'contested', earnsCost: true }])), 'No decided outcomes; 1 contested');
 });
 
-test('banner: "Scored by the tool\'s author." for every case; no separate hindsight line; the field is optional', () => {
-  assert.equal(C.CASE_BANNER, "Scored by the tool's author. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
+test('banner: "Scored by the tool\'s author, who knew the outcome. …" for every case; no separate hindsight line; the field is optional', () => {
+  assert.equal(C.CASE_BANNER, "Scored by the tool's author, who knew the outcome. Treat as a sanity check, not calibration. Too few cases for statistical conclusions.");
   for (const f of ['railway-mania-1845', 'telecom-fibre-1999']) {
     const raw = JSON.parse(fs.readFileSync(path.join(root, 'cases', f + '.case.json'), 'utf8'));
     assert.ok(!('hindsightDisclosure' in raw), f + ' carries no hindsight line');
