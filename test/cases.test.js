@@ -93,9 +93,11 @@ test('case schema 1 stays valid and opens as "multiple"; schema 2 adds tvMode an
   assert.deepEqual([lr.G.tvMode, lr.G.tvGrowth], ['perpetuity', 2]);
   assert.equal(lr.recs['settings.tvGrowth'].basis, 'judgement');
   assert.equal(C.caseState(c2, 'base').G.tvMode, 'multiple');
-  const g = fresh(); g.settings.tvMode = 'perpetuity'; g.settings.tvGrowth = { value: 9.5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' };
-  assert.throws(() => C.validateCase(g), /long-run growth 9.5% must be at least 1 point below the discount rate \(10%\)/);
-  g.settings.tvGrowth.value = 9; assert.doesNotThrow(() => C.validateCase(g));
+  const g = fresh(); g.settings.tvMode = 'perpetuity'; g.settings.disc.value = 6; g.settings.tvGrowth = { value: 5.5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' };
+  assert.throws(() => C.validateCase(g), /long-run growth 5.5% must be at least 1 point below the discount rate \(6%\)/);
+  g.settings.tvGrowth.value = 5; assert.doesNotThrow(() => C.validateCase(g));
+  // Case files are checked at build time, so growth above 6% is an error there, not clamped.
+  g.settings.disc.value = 10; g.settings.tvGrowth.value = 6.5; assert.throws(() => C.validateCase(g), /outside the tool’s range -5 to 6/);
   const v = fresh(); v.versions[0].settings.disc = { value: 5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' }; v.settings.tvGrowth = { value: 4.5, basis: 'judgement', sourceIds: [], note: 'Synthetic.' };
   assert.throws(() => C.validateCase(v), /version 1 settings: long-run growth 4.5% must be at least 1 point below/);
   const m = fresh(); m.settings.tvMode = 'forever'; assert.throws(() => C.validateCase(m), /expected "multiple" or "perpetuity"/);

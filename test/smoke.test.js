@@ -270,7 +270,8 @@ test('every input range on the page equals the range the snapshot import validat
     // Growth must stay 1 point below the discount rate, so its top end is tried with the highest discount rate.
     const room = (s) => { if (k === 'tvGrowth') s.inputs.G.disc = D.GLOBAL_RANGES.disc[1]; };
     assert.ok(tryVal(s => { s.inputs.G[k] = lo; }) && tryVal(s => { room(s); s.inputs.G[k] = hi; }), k + ' ends accepted');
-    assert.ok(!tryVal(s => { s.inputs.G[k] = lo - 1; }) && !tryVal(s => { s.inputs.G[k] = hi + 1; }), k + ' beyond the ends rejected');
+    // Growth above the maximum loads clamped (older pages allowed 10); every other value beyond the ends is rejected.
+    assert.ok(!tryVal(s => { s.inputs.G[k] = lo - 1; }) && (k === 'tvGrowth' || !tryVal(s => { s.inputs.G[k] = hi + 1; })), k + ' beyond the ends rejected');
   }
   assert.ok(tryVal(s => { s.inputs.G.phases = [D.PHASE_RANGES[0][0], D.PHASE_RANGES[1][1]]; }));
   // Model version 2 widened asset life to 1-100 and the terminal multiple to 0-30; the page's inputs reach the new ends.
@@ -280,8 +281,10 @@ test('every input range on the page equals the range the snapshot import validat
   doc.querySelectorAll('#inputs input[data-k="life"]').forEach(i => assert.equal(i.max, '100'));
   assert.ok(tryVal(s => { s.inputs.layers[0].life = 100; s.inputs.G.tv = 30; }));
   // Growth above the discount rate minus 1 point is refused.
-  assert.ok(tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 10; s.inputs.G.tvGrowth = 9; }));
-  assert.ok(!tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 10; s.inputs.G.tvGrowth = 9.5; }));
+  assert.deepEqual([D.GLOBAL_RANGES.tvGrowth[0], D.GLOBAL_RANGES.tvGrowth[1]], [-5, 6]);
+  assert.equal(doc.getElementById('g_tvg').max, '6');
+  assert.ok(tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 6; s.inputs.G.tvGrowth = 5; }));
+  assert.ok(!tryVal(s => { s.inputs.G.tvMode = 'perpetuity'; s.inputs.G.disc = 6; s.inputs.G.tvGrowth = 5.5; }));
   assert.ok(!tryVal(s => { s.inputs.G.phases = [D.PHASE_RANGES[0][0] - 1, 10]; }) && !tryVal(s => { s.inputs.G.phases = [5, D.PHASE_RANGES[1][1] + 1]; }));
   win.close();
 });

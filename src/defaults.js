@@ -35,10 +35,13 @@ const LAYER_RANGES = {
 };
 const GLOBAL_RANGES = {
   pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
-  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,10,0.5]
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,6,0.5]
 };
-// tvGrowth range (-5 to 10 % a year) is a display choice, not evidence; growth must also stay at least TV_GROWTH_GAP
-// (1 point) below the discount rate, which the inputs and every validator enforce.
+// tvGrowth range (-5 to 6 % a year) is a display choice, not evidence; values saved above 6 (older pages allowed 10)
+// load clamped to 6 with a message. Above TV_GROWTH_WARN (4 % a year) the page shows a warning; that line is also a
+// display choice, not evidence. Growth growth must also stay at least TV_GROWTH_GAP
+// must also stay at least TV_GROWTH_GAP (1 point) below the discount rate, which the inputs and every validator enforce.
+const TV_GROWTH_WARN = 4;
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
-if (typeof module !== 'undefined') module.exports = { DEFAULT_TV_MODE, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };
+if (typeof module !== 'undefined') module.exports = { TV_GROWTH_WARN, DEFAULT_TV_MODE, LAYER_RANGES, GLOBAL_RANGES, PHASE_RANGES, DEFAULT_G, DEFAULT_DEF, DEFAULT_CAPEX, UCD_EXAMPLE, DEFAULT_PHASES, SCEN, SCEN_NAMES, DEFAULT_LAYERS, LEAD_LAG_EXAMPLE };

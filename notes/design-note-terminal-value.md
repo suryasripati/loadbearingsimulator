@@ -1,6 +1,6 @@
 # Design note: terminal value and long-lived assets
 
-Status: **approved (both parts) and implemented in model version 2.** Kept here for the reasoning; not published on the site. Nothing here is data; the numbers below are arithmetic on the formulas, not estimates.
+Status: **approved (both parts) and implemented in model version 2.** Later change: the growth range was narrowed to -5% to 6% a year, with a warning above 4% (a display choice, not evidence). Kept here for the reasoning; not published on the site. Nothing here is data; the numbers below are arithmetic on the formulas, not estimates.
 
 ## Why
 

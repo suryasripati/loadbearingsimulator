@@ -330,3 +330,26 @@ test('value beyond year 15: multiple by default; perpetuity shows growth with it
   assert.deepEqual(errors, []);
   win.close();
 });
+
+test('long-run growth: a warning shows above 4% a year (a display choice, not evidence); a saved value above 6% loads as 6% with a plain message', () => {
+  let { doc, win, errors } = load({ hash: '#analyst' });
+  const $ = (id) => doc.getElementById(id);
+  const set = (id, v) => { $(id).value = String(v); $(id).dispatchEvent(new win.Event('input', { bubbles: true })); };
+  click(win, doc.querySelector('#tvSwitch [data-t="perpetuity"]'));
+  set('g_tvg', 4); assert.equal($('tvgWarn').hidden, true, 'not at 4');
+  set('g_tvg', 4.5); assert.equal($('tvgWarn').hidden, false);
+  assert.equal($('tvgWarn').textContent, 'Growth above 4% a year. The 4% line is a display choice, not evidence.');
+  set('g_tvg', 9); assert.equal(+$('g_tvg').value, 6, 'the slider stops at 6');
+  assert.deepEqual(errors, []);
+  win.close();
+  const saved = { G: { ...D.DEFAULT_G, tvMode: 'perpetuity', tvGrowth: 8, entryDef: 'A', capexModel: 'sustaining', phases: [5, 10] }, layers: D.DEFAULT_LAYERS, sel: 1 };
+  ({ doc, win, errors } = load({ hash: '#analyst', storage: { 'load-bearing-sim-v3': JSON.stringify(saved) } }));
+  assert.equal(+doc.getElementById('g_tvg').value, 6);
+  assert.match(doc.getElementById('o_tvg').textContent, /^6\.0% · /);
+  const n = doc.getElementById('linkNotice');
+  assert.equal(n.hidden, false);
+  assert.equal(n.textContent, 'Your saved long-run growth of 8% a year is above the current maximum of 6%, so it loads as 6%.');
+  assert.ok(!/undefined/.test(n.textContent));
+  assert.deepEqual(errors, []);
+  win.close();
+});

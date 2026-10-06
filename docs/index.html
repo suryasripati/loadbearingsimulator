@@ -242,6 +242,7 @@ table.lite input[type=number]{width:56px;font:inherit;font-size:12.5px;padding:3
 body.case-mode .intro{display:none}
 body.case-mode .nocase{display:none !important}
 body.case-mode .tb-sub{display:none}
+.warnline{margin:2px 0 0;color:var(--amber);font-weight:700}
 /* Behind the tool: tabbed dialog, internal scroll */
 .modal.tall{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
 .modal.tall .modal-body{overflow:auto;flex:1 1 auto;min-height:0;margin:0 -20px;padding:0 20px 4px}
@@ -381,7 +382,7 @@ table.outcomes td:nth-child(5),table.outcomes td:nth-child(6){min-width:180px}
       <span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15, mode" aria-expanded="false" aria-controls="tipTvMode">i</button><span class="tip" role="tooltip" id="tipTvMode" data-guide="tvMode"></span></span>
     </div>
     <div class="cctl" id="ctl_tv"><div class="cctl-h"><label for="g_tv">Value beyond year 15</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Value beyond year 15" aria-expanded="false" aria-controls="tip16">i</button><span class="tip" role="tooltip" id="tip16" data-guide="tv"></span></span><output id="o_tv"></output></div><input type="range" id="g_tv"></div>
-    <div class="cctl" id="ctl_tvg" hidden><div class="cctl-h"><label for="g_tvg">Long-run growth</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Long-run growth" aria-expanded="false" aria-controls="tipTvg">i</button><span class="tip" role="tooltip" id="tipTvg" data-guide="tvGrowth"></span></span><output id="o_tvg"></output></div><input type="range" id="g_tvg"></div>
+    <div class="cctl" id="ctl_tvg" hidden><div class="cctl-h"><label for="g_tvg">Long-run growth</label><span class="tipwrap"><button class="info" type="button" aria-label="About: Long-run growth" aria-expanded="false" aria-controls="tipTvg">i</button><span class="tip" role="tooltip" id="tipTvg" data-guide="tvGrowth"></span></span><output id="o_tvg"></output></div><input type="range" id="g_tvg"><p class="legend warnline" id="tvgWarn" role="status" hidden>Growth above 4% a year. The 4% line is a display choice, not evidence.</p></div>
     <div class="seg compact" id="capexSwitch" role="group" aria-label="Capex model" style="margin-top:6px">
       <button data-c="sustaining" aria-pressed="false">Sustaining spend (v0.1)</button>
       <button data-c="vintage" aria-pressed="false">Vintage cohorts</button>
@@ -952,10 +953,13 @@ const LAYER_RANGES = {
 };
 const GLOBAL_RANGES = {
   pool:[200,3000,50], speed:[3,20,0.5], mid:[2,14,0.5], premium:[-50,300,5], mult:[0,60,0.5],
-  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,10,0.5]
+  entry:[0,10,1], disc:[5,20,0.5], rd:[2,14,0.5], tv:[0,30,0.5], tvGrowth:[-5,6,0.5]
 };
-// tvGrowth range (-5 to 10 % a year) is a display choice, not evidence; growth must also stay at least TV_GROWTH_GAP
-// (1 point) below the discount rate, which the inputs and every validator enforce.
+// tvGrowth range (-5 to 6 % a year) is a display choice, not evidence; values saved above 6 (older pages allowed 10)
+// load clamped to 6 with a message. Above TV_GROWTH_WARN (4 % a year) the page shows a warning; that line is also a
+// display choice, not evidence. Growth growth must also stay at least TV_GROWTH_GAP
+// must also stay at least TV_GROWTH_GAP (1 point) below the discount rate, which the inputs and every validator enforce.
+const TV_GROWTH_WARN = 4;
 // Phase boundaries: phase 2 starts in [1, 14], phase 3 in [2, 15] (whole years; phase 2 must start first).
 const PHASE_RANGES = [[1, 14, 1], [2, 15, 1]];
 
@@ -1016,8 +1020,8 @@ const GUIDE = {
     recipe: 'Use the perpetuity when you can state a long-run growth rate g and want the multiple to move with the discount rate; otherwise keep the multiple.',
     trap: 'Switching mode to get a terminal value you already like.' },
   tvGrowth: { group: 'Money', label: 'Long-run growth (% a year, perpetuity mode)',
-    tip: "Growth of year-15 cash for ever, in % a year, used only in the growing-perpetuity mode. Default 0 is a placeholder with no view behind it, unsourced. The value shows the multiple it implies at your discount rate. Kept at least 1 point below the discount rate.",
-    meaning: 'Growth of year-15 cash for ever. Must stay at least 1 point below the discount rate.',
+    tip: "Growth of year-15 cash for ever, in % a year, used only in the growing-perpetuity mode. Default 0 is a placeholder with no view behind it, unsourced. The value shows the multiple it implies at your discount rate. Kept at least 1 point below the discount rate. Above 4% a year a warning shows; that line is a display choice, not evidence.",
+    meaning: 'Growth of year-15 cash for ever. Must stay at least 1 point below the discount rate. Above 4% a year the page shows a warning (the 4% line is a display choice, not evidence).',
     where: 'Long-run growth of the economy or of the asset class as stated at the time.',
     recipe: '`g` = long-run nominal growth stated in period sources; implied multiple `= (1 + g) / (r - g)`.',
     trap: 'Using growth that only later turned out to be achievable.' },
@@ -1682,7 +1686,9 @@ function snapReadStoredText(text){
     snapKeys(data, ['snapshots'], ['draftKill'], 'Stored data');
     if (!Array.isArray(data.snapshots)) snapErr('Stored snapshots', 'expected a list');
     if (data.snapshots.length > SNAP_MAX_COUNT) snapErr('Stored snapshots', 'more than ' + SNAP_MAX_COUNT + ' snapshots');
-    return { ok: true, snapshots: data.snapshots.map((x, i) => snapCheckOne(x, 'Snapshot ' + (i + 1))) };
+    const notes = [];
+    const snapshots = data.snapshots.map((x, i) => snapCheckOne(x, 'Snapshot ' + (i + 1), notes));
+    return { ok: true, snapshots, notes };
   } catch (e) { return fail(e.message); }
 }
 function snapByteLength(text){
@@ -1750,7 +1756,11 @@ function snapCheckInputs(G, Ls, where, o){
   res.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
   res.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
   res.G.tvMode = o.schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
-  res.G.tvGrowth = o.schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
+  // Growth saved above today's maximum (older pages allowed up to 10 % a year) loads clamped, with a note.
+  let gIn = G.tvGrowth;
+  const gMax = d.GLOBAL_RANGES.tvGrowth[1];
+  if (o.schema >= 5 && typeof gIn === 'number' && isFinite(gIn) && gIn > gMax) { if (o.clamped) o.clamped.push({ path: 'settings.tvGrowth', from: gIn, to: gMax }); gIn = gMax; }
+  res.G.tvGrowth = o.schema >= 5 ? snapNum(gIn, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
   snapGrowthGap(res.G, where + ' setting tvGrowth');
   if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
   const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
@@ -1783,7 +1793,9 @@ function snapCheckInputs(G, Ls, where, o){
   return res;
 }
 // Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
-function snapCheckOne(s, where){
+// Plain message for a value that loaded clamped.
+function snapClampNote(label, c){ return label + ': long-run growth of ' + c.from + '% a year is above the current maximum of ' + c.to + '%, so it loads as ' + c.to + '%.'; }
+function snapCheckOne(s, where, notes){
   const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
   const schema = snapSchema(s.schemaVersion, where);
@@ -1799,7 +1811,8 @@ function snapCheckOne(s, where){
   }
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
-  out.inputs = snapCheckInputs(s.inputs.G, s.inputs.layers, where, { schema, caseId: out.caseId, alloc: true, names: schema >= 4 });
+  const clamped = [];
+  out.inputs = snapCheckInputs(s.inputs.G, s.inputs.layers, where, { schema, caseId: out.caseId, alloc: true, names: schema >= 4, clamped });
   const ids = out.inputs.layers.map(L => L.id);
   // Outputs (kept for comparison; recomputed when the model version differs)
   if (!Array.isArray(s.outputs) || s.outputs.length !== ids.length) snapErr(where + ' outputs', 'expected ' + ids.length + ' layers');
@@ -1831,6 +1844,11 @@ function snapCheckOne(s, where){
   });
   // Trigger response (schema 3): null, or how the user responded to triggered criteria when saving.
   if (schema >= 3 && s.response !== null) out.response = snapCheckResponse(s.response, where + ' response', ids);
+  // A clamped input means the stored results no longer match the inputs: recompute them.
+  if (clamped.length) {
+    out.outputs = snapOutputs(out.inputs).map(x => ({ id: x.id, npv: x.npv, bin: x.bin, flags: x.flags, breakEven: x.breakEven, breakEvenM: x.breakEvenM, fragility: x.fragility }));
+    if (notes) clamped.forEach(c => notes.push(snapClampNote('Snapshot \u201c' + out.name + '\u201d', c) + ' Its results are recomputed.'));
+  }
   return out;
 }
 function snapCheckResponse(r, where, ids){
@@ -2035,8 +2053,9 @@ function parseLinkText(text){
       return { ok: true, kind: 'case', caseId, versionId, diffs, modelVersion: p.m };
     }
     snapKeys(p, ['v', 'm', 'g', 'l'], [], 'Link');
-    const state = snapCheckInputs(p.g, p.l, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: null, alloc: false, names: false });
-    return { ok: true, kind: 'own', state, modelVersion: p.m };
+    const clamped = [];
+    const state = snapCheckInputs(p.g, p.l, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: null, alloc: false, names: false, clamped });
+    return { ok: true, kind: 'own', state, modelVersion: p.m, notes: clamped.map(c => snapClampNote('This link', c)) };
   } catch (e) { return fail(e.message); }
 }
 // Applies a case link's changes to fresh copies of the case version's inputs and checks the result in full.
@@ -2056,7 +2075,9 @@ function linkApplyCase(parsed, base){
     });
     const inputs = snapInputs(G, layers);
     inputs.layers.forEach(L => { delete L.alloc; });
-    return { ok: true, state: snapCheckInputs(inputs.G, inputs.layers, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: parsed.caseId, alloc: false, names: true }) };
+    const clamped = [];
+    const state = snapCheckInputs(inputs.G, inputs.layers, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: parsed.caseId, alloc: false, names: true, clamped });
+    return { ok: true, state, notes: clamped.map(c => snapClampNote('This link', c)) };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
@@ -2081,6 +2102,10 @@ function load(){
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
       if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
       if(o.G.tvMode==='multiple' || o.G.tvMode==='perpetuity') G.tvMode = o.G.tvMode;
+      // Older pages allowed growth up to 10% a year: clamp to today's range and say so.
+      const gMax = GLOBAL_RANGES.tvGrowth[1], gMin = GLOBAL_RANGES.tvGrowth[0];
+      if(G.tvGrowth > gMax){ loadNotes.push('Your saved long-run growth of ' + G.tvGrowth + '% a year is above the current maximum of ' + gMax + '%, so it loads as ' + gMax + '%.'); G.tvGrowth = gMax; }
+      if(G.tvGrowth < gMin) G.tvGrowth = gMin;
       keepGrowthGap();
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
@@ -2101,6 +2126,8 @@ function load(){
   }catch(e){}
 }
 // While a case is open, edits are not saved over your own scenario (which waits in memory for "Return to my scenario").
+// Plain messages from loading saved settings or snapshots (for example a value clamped to today's range).
+const loadNotes = [];
 function save(){ if(caseCtx) return; try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
 
 const $ = (id) => document.getElementById(id);
@@ -2141,6 +2168,7 @@ function syncDriverLabels(){
   $('o_tvg').textContent = G.tvGrowth.toFixed(1) + '% \u00b7 ' + mx(perpetuityMultiple(G.tvGrowth, G.disc));
   document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.setAttribute('aria-pressed', b.dataset.t===G.tvMode ? 'true':'false'));
   $('ctl_tv').hidden = G.tvMode === 'perpetuity'; $('ctl_tvg').hidden = G.tvMode !== 'perpetuity';
+  $('tvgWarn').hidden = !(G.tvGrowth > TV_GROWTH_WARN);
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
@@ -2753,7 +2781,7 @@ function snapLoad(){
     // Stored data goes through the strict check (fresh objects, whitelisted fields only).
     const list = o && Array.isArray(o.snapshots) ? o.snapshots.slice(0, SNAP_MAX_COUNT) : [];
     const r = snapReadStoredText(JSON.stringify({ snapshots: list }));
-    if(r.ok) snapStore.snapshots = r.snapshots; else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
+    if(r.ok){ snapStore.snapshots = r.snapshots; r.notes.forEach(n => loadNotes.push(n)); } else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
     if(Array.isArray(o.draftKill) && o.draftKill.length === layers.length) snapStore.draftKill = o.draftKill.map((k,i) => snapCleanKill(k, i));
   }catch(e){ $('snapErr').textContent = 'Saved snapshots could not be read and were ignored.'; }
 }
@@ -3016,6 +3044,7 @@ function copyLink(){
 // The address keeps the view mode only, once a link has been read.
 function clearLinkHash(){ try{ history.replaceState(null, '', location.pathname + location.search + '#' + mode); }catch(e){} }
 function linkNotice(text){ const n = $('linkNotice'); n.textContent = text; n.hidden = !text; }
+function showLoadNotes(){ if(loadNotes.length) linkNotice(loadNotes.join(' ')); }
 // Opening a link: strict checks first; then ask (in-page) before replacing anything. Your allocations stay.
 function openLink(hash){
   if(!/^#s=/.test(hash || '')) return;
@@ -3028,7 +3057,7 @@ function openLink(hash){
     const same = !caseCtx && caseInputsOf(G, layers) === caseInputsOf(st.G, st.layers.map((L, i) => Object.assign({}, L, { name: layers[i].name })));
     if(same){ clearLinkHash(); return; }
     askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
-      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : ''),
+      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : '') + (r.notes.length ? '\n\n' + r.notes.join(' ') : ''),
       onOk: () => {
         snapUndo = snapPageState();
         const mine = caseCtx ? caseCtx.mine : null;
@@ -3049,7 +3078,7 @@ function openLink(hash){
   const st = caseState(c, r.versionId), a = linkApplyCase(r, st);
   if(!a.ok) return fail(a.error);
   askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
-    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.',
+    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.' + (a.notes.length ? '\n\n' + a.notes.join(' ') : ''),
     onOk: () => {
       openCase(c.id, r.versionId, { noConfirm: true });
       G = Object.assign(freshG(), a.state.G);
@@ -3486,6 +3515,7 @@ function init(){
   setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
+  showLoadNotes();
   if(linkHash) openLink(linkHash);
   let rz = null;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { adoptChart(); quadChart(runAll(G)); }, 80); });

@@ -18,6 +18,10 @@ function load(){
       if(o.G.entryDef==='A' || o.G.entryDef==='B') G.entryDef = o.G.entryDef;
       if(o.G.capexModel==='sustaining' || o.G.capexModel==='vintage') G.capexModel = o.G.capexModel;
       if(o.G.tvMode==='multiple' || o.G.tvMode==='perpetuity') G.tvMode = o.G.tvMode;
+      // Older pages allowed growth up to 10% a year: clamp to today's range and say so.
+      const gMax = GLOBAL_RANGES.tvGrowth[1], gMin = GLOBAL_RANGES.tvGrowth[0];
+      if(G.tvGrowth > gMax){ loadNotes.push('Your saved long-run growth of ' + G.tvGrowth + '% a year is above the current maximum of ' + gMax + '%, so it loads as ' + gMax + '%.'); G.tvGrowth = gMax; }
+      if(G.tvGrowth < gMin) G.tvGrowth = gMin;
       keepGrowthGap();
       if(Array.isArray(o.G.phases) && o.G.phases.length===2 && o.G.phases.every(num) && o.G.phases[0]<o.G.phases[1]) G.phases = o.G.phases.slice();
     }
@@ -38,6 +42,8 @@ function load(){
   }catch(e){}
 }
 // While a case is open, edits are not saved over your own scenario (which waits in memory for "Return to my scenario").
+// Plain messages from loading saved settings or snapshots (for example a value clamped to today's range).
+const loadNotes = [];
 function save(){ if(caseCtx) return; try{ localStorage.setItem(KEY, JSON.stringify({G:G, layers:layers, sel:sel})); }catch(e){} }
 
 const $ = (id) => document.getElementById(id);
@@ -78,6 +84,7 @@ function syncDriverLabels(){
   $('o_tvg').textContent = G.tvGrowth.toFixed(1) + '% \u00b7 ' + mx(perpetuityMultiple(G.tvGrowth, G.disc));
   document.querySelectorAll('#tvSwitch button[data-t]').forEach(b => b.setAttribute('aria-pressed', b.dataset.t===G.tvMode ? 'true':'false'));
   $('ctl_tv').hidden = G.tvMode === 'perpetuity'; $('ctl_tvg').hidden = G.tvMode !== 'perpetuity';
+  $('tvgWarn').hidden = !(G.tvGrowth > TV_GROWTH_WARN);
   const btns = document.querySelectorAll('#scen button');
   btns.forEach(b => { const s = SCEN[b.dataset.s]; b.setAttribute('aria-pressed', (s.speed===G.speed && s.mid===G.mid) ? 'true':'false'); });
   document.querySelectorAll('#defSwitch button[data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d===G.entryDef ? 'true':'false'));
@@ -690,7 +697,7 @@ function snapLoad(){
     // Stored data goes through the strict check (fresh objects, whitelisted fields only).
     const list = o && Array.isArray(o.snapshots) ? o.snapshots.slice(0, SNAP_MAX_COUNT) : [];
     const r = snapReadStoredText(JSON.stringify({ snapshots: list }));
-    if(r.ok) snapStore.snapshots = r.snapshots; else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
+    if(r.ok){ snapStore.snapshots = r.snapshots; r.notes.forEach(n => loadNotes.push(n)); } else $('snapErr').textContent = 'Saved snapshots could not be read and were ignored: ' + r.error;
     if(Array.isArray(o.draftKill) && o.draftKill.length === layers.length) snapStore.draftKill = o.draftKill.map((k,i) => snapCleanKill(k, i));
   }catch(e){ $('snapErr').textContent = 'Saved snapshots could not be read and were ignored.'; }
 }
@@ -953,6 +960,7 @@ function copyLink(){
 // The address keeps the view mode only, once a link has been read.
 function clearLinkHash(){ try{ history.replaceState(null, '', location.pathname + location.search + '#' + mode); }catch(e){} }
 function linkNotice(text){ const n = $('linkNotice'); n.textContent = text; n.hidden = !text; }
+function showLoadNotes(){ if(loadNotes.length) linkNotice(loadNotes.join(' ')); }
 // Opening a link: strict checks first; then ask (in-page) before replacing anything. Your allocations stay.
 function openLink(hash){
   if(!/^#s=/.test(hash || '')) return;
@@ -965,7 +973,7 @@ function openLink(hash){
     const same = !caseCtx && caseInputsOf(G, layers) === caseInputsOf(st.G, st.layers.map((L, i) => Object.assign({}, L, { name: layers[i].name })));
     if(same){ clearLinkHash(); return; }
     askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
-      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : ''),
+      text: 'Open the settings in this link? Your current settings are replaced (undo once from Snapshots); your allocations stay.' + (r.modelVersion < MODEL_VERSION ? ' The link was made with an older model version, so results are recomputed.' : '') + (r.notes.length ? '\n\n' + r.notes.join(' ') : ''),
       onOk: () => {
         snapUndo = snapPageState();
         const mine = caseCtx ? caseCtx.mine : null;
@@ -986,7 +994,7 @@ function openLink(hash){
   const st = caseState(c, r.versionId), a = linkApplyCase(r, st);
   if(!a.ok) return fail(a.error);
   askConfirm({ title: 'Open link', ok: 'Open link', returnTo: $('behindBtn'),
-    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.',
+    text: 'Open the case “' + c.title + '” (as of ' + c.asOfDate + ') with the ' + Object.keys(r.diffs).length + ' change' + (Object.keys(r.diffs).length === 1 ? '' : 's') + ' in this link? Your current scenario is kept in memory; use “Return to my scenario” to get it back.' + (a.notes.length ? '\n\n' + a.notes.join(' ') : ''),
     onOk: () => {
       openCase(c.id, r.versionId, { noConfirm: true });
       G = Object.assign(freshG(), a.state.G);
@@ -1423,6 +1431,7 @@ function init(){
   setMode(initialMode(), { noStore: false, noHash: !!linkHash }); bindModes(); bindCases(); bindTabs(); fillGuideTips(); renderGuide();
   applyRanges(); load(); syncDriverInputs(); buildInputs(); bind(); renderDrivers(); renderResults(); snapInit();
   layersReady = true;
+  showLoadNotes();
   if(linkHash) openLink(linkHash);
   let rz = null;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { adoptChart(); quadChart(runAll(G)); }, 80); });

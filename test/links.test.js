@@ -40,7 +40,11 @@ test('malformed links are rejected with a reason: not a link, bad characters, ba
   bad(encode({ ...p, extra: 1 }), /Link: unknown field "extra"/);
   bad(encode({ ...p, g: { ...p.g, disc: 99 } }), /Link setting disc: value 99 is outside 5 to 20/);
   bad(encode({ ...p, g: { ...p.g, disc: '10' } }), /setting disc: expected a finite number/);
-  bad(encode({ ...p, g: { ...p.g, tvGrowth: 9.5 } }), /long-run growth 9.5% must be at least 1 point below/);
+  bad(encode({ ...p, g: { ...p.g, disc: 6, tvGrowth: 5.5 } }), /long-run growth 5.5% must be at least 1 point below/);
+  // Growth above today's 6% maximum (an older link) opens clamped, with a plain note.
+  const old = S.parseLinkText(encode({ ...p, g: { ...p.g, tvGrowth: 8 } }));
+  assert.equal(old.ok, true, old.error); assert.equal(old.state.G.tvGrowth, 6);
+  assert.deepEqual(old.notes, ['This link: long-run growth of 8% a year is above the current maximum of 6%, so it loads as 6%.']);
   bad(encode({ ...p, l: p.l.slice(0, 4) }), /expected 5 layers/);
   bad(encode({ ...p, l: p.l.map((L, i) => i ? L : { ...L, alloc: 20 }) }), /Link layer 1: unknown field "alloc"/);
   bad(encode({ ...p, l: p.l.map((L, i) => i ? L : { ...L, name: 'x' }) }), /unknown field "name"/);

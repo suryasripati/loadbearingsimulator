@@ -125,7 +125,9 @@ function snapReadStoredText(text){
     snapKeys(data, ['snapshots'], ['draftKill'], 'Stored data');
     if (!Array.isArray(data.snapshots)) snapErr('Stored snapshots', 'expected a list');
     if (data.snapshots.length > SNAP_MAX_COUNT) snapErr('Stored snapshots', 'more than ' + SNAP_MAX_COUNT + ' snapshots');
-    return { ok: true, snapshots: data.snapshots.map((x, i) => snapCheckOne(x, 'Snapshot ' + (i + 1))) };
+    const notes = [];
+    const snapshots = data.snapshots.map((x, i) => snapCheckOne(x, 'Snapshot ' + (i + 1), notes));
+    return { ok: true, snapshots, notes };
   } catch (e) { return fail(e.message); }
 }
 function snapByteLength(text){
@@ -193,7 +195,11 @@ function snapCheckInputs(G, Ls, where, o){
   res.G.entryDef = snapOneOf(G.entryDef, ['A', 'B'], where + ' setting entryDef');
   res.G.capexModel = snapOneOf(G.capexModel, ['sustaining', 'vintage'], where + ' setting capexModel');
   res.G.tvMode = o.schema >= 5 ? snapOneOf(G.tvMode, SNAP_TV_MODES, where + ' setting tvMode') : 'multiple';
-  res.G.tvGrowth = o.schema >= 5 ? snapNum(G.tvGrowth, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
+  // Growth saved above today's maximum (older pages allowed up to 10 % a year) loads clamped, with a note.
+  let gIn = G.tvGrowth;
+  const gMax = d.GLOBAL_RANGES.tvGrowth[1];
+  if (o.schema >= 5 && typeof gIn === 'number' && isFinite(gIn) && gIn > gMax) { if (o.clamped) o.clamped.push({ path: 'settings.tvGrowth', from: gIn, to: gMax }); gIn = gMax; }
+  res.G.tvGrowth = o.schema >= 5 ? snapNum(gIn, d.GLOBAL_RANGES.tvGrowth, where + ' setting tvGrowth') : 0;
   snapGrowthGap(res.G, where + ' setting tvGrowth');
   if (!Array.isArray(G.phases) || G.phases.length !== 2) snapErr(where + ' setting phases', 'expected two years');
   const p1 = snapNum(G.phases[0], d.PHASE_RANGES[0], where + ' setting phases', true);
@@ -226,7 +232,9 @@ function snapCheckInputs(G, Ls, where, o){
   return res;
 }
 // Validates one snapshot and returns a fresh object built only from whitelisted, checked fields.
-function snapCheckOne(s, where){
+// Plain message for a value that loaded clamped.
+function snapClampNote(label, c){ return label + ': long-run growth of ' + c.from + '% a year is above the current maximum of ' + c.to + '%, so it loads as ' + c.to + '%.'; }
+function snapCheckOne(s, where, notes){
   const d = snapDeps(), defIds = d.DEFAULT_LAYERS.map(L => L.id);
   if (!snapIsObj(s)) snapErr(where, 'expected an object');
   const schema = snapSchema(s.schemaVersion, where);
@@ -242,7 +250,8 @@ function snapCheckOne(s, where){
   }
   // Inputs
   snapKeys(s.inputs, ['G', 'layers'], [], where + ' inputs');
-  out.inputs = snapCheckInputs(s.inputs.G, s.inputs.layers, where, { schema, caseId: out.caseId, alloc: true, names: schema >= 4 });
+  const clamped = [];
+  out.inputs = snapCheckInputs(s.inputs.G, s.inputs.layers, where, { schema, caseId: out.caseId, alloc: true, names: schema >= 4, clamped });
   const ids = out.inputs.layers.map(L => L.id);
   // Outputs (kept for comparison; recomputed when the model version differs)
   if (!Array.isArray(s.outputs) || s.outputs.length !== ids.length) snapErr(where + ' outputs', 'expected ' + ids.length + ' layers');
@@ -274,6 +283,11 @@ function snapCheckOne(s, where){
   });
   // Trigger response (schema 3): null, or how the user responded to triggered criteria when saving.
   if (schema >= 3 && s.response !== null) out.response = snapCheckResponse(s.response, where + ' response', ids);
+  // A clamped input means the stored results no longer match the inputs: recompute them.
+  if (clamped.length) {
+    out.outputs = snapOutputs(out.inputs).map(x => ({ id: x.id, npv: x.npv, bin: x.bin, flags: x.flags, breakEven: x.breakEven, breakEvenM: x.breakEvenM, fragility: x.fragility }));
+    if (notes) clamped.forEach(c => notes.push(snapClampNote('Snapshot \u201c' + out.name + '\u201d', c) + ' Its results are recomputed.'));
+  }
   return out;
 }
 function snapCheckResponse(r, where, ids){
@@ -478,8 +492,9 @@ function parseLinkText(text){
       return { ok: true, kind: 'case', caseId, versionId, diffs, modelVersion: p.m };
     }
     snapKeys(p, ['v', 'm', 'g', 'l'], [], 'Link');
-    const state = snapCheckInputs(p.g, p.l, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: null, alloc: false, names: false });
-    return { ok: true, kind: 'own', state, modelVersion: p.m };
+    const clamped = [];
+    const state = snapCheckInputs(p.g, p.l, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: null, alloc: false, names: false, clamped });
+    return { ok: true, kind: 'own', state, modelVersion: p.m, notes: clamped.map(c => snapClampNote('This link', c)) };
   } catch (e) { return fail(e.message); }
 }
 // Applies a case link's changes to fresh copies of the case version's inputs and checks the result in full.
@@ -499,7 +514,9 @@ function linkApplyCase(parsed, base){
     });
     const inputs = snapInputs(G, layers);
     inputs.layers.forEach(L => { delete L.alloc; });
-    return { ok: true, state: snapCheckInputs(inputs.G, inputs.layers, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: parsed.caseId, alloc: false, names: true }) };
+    const clamped = [];
+    const state = snapCheckInputs(inputs.G, inputs.layers, 'Link', { schema: SNAP_SCHEMA_VERSION, caseId: parsed.caseId, alloc: false, names: true, clamped });
+    return { ok: true, state, notes: clamped.map(c => snapClampNote('This link', c)) };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 

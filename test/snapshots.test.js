@@ -394,7 +394,17 @@ test('schema 5: terminal-value mode and growth are saved and checked; older sche
   assert.deepEqual([r.snapshots[0].inputs.G.tvMode, r.snapshots[0].inputs.G.tvGrowth], ['perpetuity', 2]);
   assert.equal(snap().inputs.G.tvMode, 'multiple', 'inputs without a mode are "multiple"');
   reject(mutate(f => { f.snapshots[0].inputs.G.tvMode = 'forever'; }), /setting tvMode/);
-  reject(mutate(f => { f.snapshots[0].inputs.G.tvGrowth = 9.5; }), /long-run growth 9.5% must be at least 1 point below the discount rate \(10%\)/);
+  reject(mutate(f => { f.snapshots[0].inputs.G.disc = 6; f.snapshots[0].inputs.G.tvGrowth = 5.5; }), /long-run growth 5.5% must be at least 1 point below the discount rate \(6%\)/);
+  // A snapshot saved with growth above today's 6% maximum loads clamped, with recomputed results and a plain note.
+  const hi = S.makeSnapshot({ name: 'Old', G: { ...baseG(), tvMode: 'perpetuity', tvGrowth: 6 }, layers: baseLayers(), now: NOW });
+  const stored = JSON.parse(fileOf([snap()])); stored.snapshots[0] = JSON.parse(JSON.stringify(hi)); stored.snapshots[0].inputs.G.tvGrowth = 8;
+  stored.snapshots[0].outputs.forEach(o => { o.npv = 123; });
+  const rc = S.snapReadStoredText(JSON.stringify(stored));
+  assert.equal(rc.ok, true, rc.error);
+  assert.equal(rc.snapshots[0].inputs.G.tvGrowth, 6);
+  assert.deepEqual(rc.snapshots[0].outputs.map(o => o.npv), hi.outputs.map(o => o.npv), 'results recomputed at 6%');
+  assert.deepEqual(rc.notes, ['Snapshot “Old”: long-run growth of 8% a year is above the current maximum of 6%, so it loads as 6%. Its results are recomputed.']);
+  assert.deepEqual(S.snapReadStoredText(fileOf([snap()])).notes, []);
   reject(mutate(f => { delete f.snapshots[0].inputs.G.tvGrowth; }), /missing field "tvGrowth"/);
   const plan = S.snapPrepareLoad(s, baseLayers());
   assert.deepEqual([plan.state.G.tvMode, plan.state.G.tvGrowth], ['perpetuity', 2]);
